@@ -74,6 +74,40 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.Parent = model
 
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "HealthBar"
+	billboard.Size = UDim2.fromOffset(96, 12)
+	billboard.StudsOffset = Vector3.new(0, 3.2, 0)
+	billboard.AlwaysOnTop = true
+	billboard.Parent = head
+
+	local background = Instance.new("Frame")
+	background.Name = "Background"
+	background.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+	background.BorderSizePixel = 0
+	background.Size = UDim2.fromScale(1, 1)
+	background.Parent = billboard
+
+	local backgroundStroke = Instance.new("UIStroke")
+	backgroundStroke.Color = Color3.fromRGB(0, 0, 0)
+	backgroundStroke.Thickness = 1
+	backgroundStroke.Parent = background
+
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.Parent = background
+
+	local function updateHealthBar()
+		local ratio = if humanoid.MaxHealth > 0 then math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1) else 0
+		fill.Size = UDim2.new(ratio, 0, 1, 0)
+	end
+
+	humanoid.HealthChanged:Connect(updateHealthBar)
+	updateHealthBar()
+
 	model.PrimaryPart = humanoidRootPart
 	model:PivotTo(CFrame.new(spawnPosition))
 	model.Parent = monstersFolder
