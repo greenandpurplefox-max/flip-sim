@@ -7,6 +7,7 @@ local WaveService = {}
 
 local activeMonsters: { Model } = {}
 local lastAttackTimes: { [Model]: number } = {}
+local attackingMonsters: { [Model]: boolean } = {}
 local monstersFolder: Folder
 local aiRunning = false
 
@@ -21,6 +22,31 @@ local function weld(part0: BasePart, part1: BasePart)
 	weld.Part0 = part0
 	weld.Part1 = part1
 	weld.Parent = part0
+end
+
+local function attachArmMotor(root: BasePart, arm: BasePart, restOffset: CFrame): Motor6D
+	local motor = Instance.new("Motor6D")
+	motor.Name = `{arm.Name}Motor`
+	motor.Part0 = root
+	motor.Part1 = arm
+	motor.C0 = restOffset
+	motor.C1 = CFrame.new()
+	motor.Parent = root
+	return motor
+end
+
+local function getNearestPlayerDistance(position: Vector3): number
+	local nearestDistance = math.huge
+
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if humanoidRootPart then
+			nearestDistance = math.min(nearestDistance, (humanoidRootPart.Position - position).Magnitude)
+		end
+	end
+
+	return nearestDistance
 end
 
 local function createPart(name: string, size: Vector3, color: Color3, parent: Instance): Part
@@ -62,10 +88,11 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 
 	weld(humanoidRootPart, torso)
 	weld(humanoidRootPart, head)
-	weld(humanoidRootPart, leftArm)
-	weld(humanoidRootPart, rightArm)
 	weld(humanoidRootPart, leftLeg)
 	weld(humanoidRootPart, rightLeg)
+
+	local leftArmMotor = attachArmMotor(humanoidRootPart, leftArm, CFrame.new(-2, 0.2, 0))
+	local rightArmMotor = attachArmMotor(humanoidRootPart, rightArm, CFrame.new(2, 0.2, 0))
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.WalkSpeed = WaveConfig.MONSTER_WALK_SPEED
@@ -79,6 +106,7 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	billboard.Size = UDim2.fromOffset(96, 12)
 	billboard.StudsOffset = Vector3.new(0, 3.2, 0)
 	billboard.AlwaysOnTop = true
+	billboard.Enabled = false
 	billboard.Parent = head
 
 	local background = Instance.new("Frame")
@@ -103,10 +131,17 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	local function updateHealthBar()
 		local ratio = if humanoid.MaxHealth > 0 then math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1) else 0
 		fill.Size = UDim2.new(ratio, 0, 1, 0)
+
+		local distance = getNearestPlayerDistance(humanoidRootPart.Position)
+		local hasTakenDamage = humanoid.Health < humanoid.MaxHealth
+		billboard.Enabled = hasTakenDamage and distance <= WaveConfig.MONSTER_HEALTHBAR_DISTANCE
 	end
 
 	humanoid.HealthChanged:Connect(updateHealthBar)
 	updateHealthBar()
+
+	model:SetAttribute("LeftArmMotorName", leftArmMotor.Name)
+	model:SetAttribute("RightArmMotorName", rightArmMotor.Name)
 
 	model.PrimaryPart = humanoidRootPart
 	model:PivotTo(CFrame.new(spawnPosition))
@@ -117,11 +152,36 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 
 	humanoid.Died:Connect(function()
 		lastAttackTimes[model] = nil
+		attackingMonsters[model] = nil
+
 		local index = table.find(activeMonsters, model)
 		if index then
 			table.remove(activeMonsters, index)
 		end
-		task.delay(2, function()
+
+		local head = model:FindFirstChild("Head")
+		local healthBar = head and head:FindFirstChild("HealthBar")
+		if healthBar then
+			healthBar:Destroy()
+		end
+
+		humanoid.PlatformStand = true
+
+		for _, descendant in model:GetDescendants() do
+			if descendant:IsA("WeldConstraint") or descendant:IsA("Motor6D") then
+				descendant:Destroy()
+			elseif descendant:IsA("BasePart") then
+				descendant.Anchored = false
+				descendant.CanCollide = true
+			end
+		end
+
+		local root = model.PrimaryPart
+		if root then
+			root:ApplyImpulse(Vector3.new(math.random(-20, 20), 30, math.random(-20, 20)))
+		end
+
+		task.delay(8, function()
 			if model.Parent then
 				model:Destroy()
 			end
@@ -165,6 +225,68 @@ local function getNearestPlayerCharacter(monster: Model): Model?
 	return nearestCharacter
 end
 
+local function playAttackAnimation(monster: Model, target: Model)
+	if attackingMonsters[monster] then
+		return
+	end
+
+	local root = monster.PrimaryPart
+	local targetRoot = target:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root or not targetRoot then
+		return
+	end
+
+	local leftArmMotor = root:FindFirstChild(monster:GetAttribute("LeftArmMotorName") :: string) :: Motor6D?
+	local rightArmMotor = root:FindFirstChild(monster:GetAttribute("RightArmMotorName") :: string) :: Motor6D?
+	if not leftArmMotor or not rightArmMotor then
+		return
+	end
+
+	attackingMonsters[monster] = true
+
+	local startCFrame = root.CFrame
+	local direction = (targetRoot.Position - root.Position).Unit
+	local lungeTarget = CFrame.lookAt(
+		startCFrame.Position + direction * 1.8 + Vector3.new(0, 0.35, 0),
+		Vector3.new(targetRoot.Position.X, root.Position.Y, targetRoot.Position.Z)
+	)
+
+	local leftRest = CFrame.new(-2, 0.2, 0)
+	local rightRest = CFrame.new(2, 0.2, 0)
+	local leftStrike = CFrame.new(-1.3, 0.5, -1.4) * CFrame.Angles(math.rad(-75), math.rad(20), 0)
+	local rightStrike = CFrame.new(1.3, 0.5, -1.4) * CFrame.Angles(math.rad(-75), math.rad(-20), 0)
+
+	task.spawn(function()
+		for step = 1, 4 do
+			if not monster.Parent then
+				break
+			end
+			local alpha = step / 4
+			root.CFrame = startCFrame:Lerp(lungeTarget, alpha)
+			leftArmMotor.C0 = leftRest:Lerp(leftStrike, alpha)
+			rightArmMotor.C0 = rightRest:Lerp(rightStrike, alpha)
+			task.wait(0.03)
+		end
+
+		task.wait(0.05)
+
+		for step = 1, 5 do
+			if not monster.Parent then
+				break
+			end
+			local alpha = step / 5
+			root.CFrame = lungeTarget:Lerp(startCFrame, alpha)
+			leftArmMotor.C0 = leftStrike:Lerp(leftRest, alpha)
+			rightArmMotor.C0 = rightStrike:Lerp(rightRest, alpha)
+			task.wait(0.03)
+		end
+
+		leftArmMotor.C0 = leftRest
+		rightArmMotor.C0 = rightRest
+		attackingMonsters[monster] = nil
+	end)
+end
+
 local function tryAttack(monster: Model, target: Model)
 	local now = os.clock()
 	local lastAttack = lastAttackTimes[monster] or 0
@@ -185,6 +307,7 @@ local function tryAttack(monster: Model, target: Model)
 	end
 
 	lastAttackTimes[monster] = now
+	playAttackAnimation(monster, target)
 	targetHumanoid:TakeDamage(WaveConfig.MONSTER_DAMAGE)
 end
 
@@ -208,10 +331,22 @@ local function updateMonster(monster: Model)
 		return
 	end
 
+	local monsterRoot = monster.PrimaryPart
+	if not monsterRoot then
+		return
+	end
+
 	tryAttack(monster, target)
 
-	local monsterRoot = monster.PrimaryPart
-	if monsterRoot and (monsterRoot.Position - targetRoot.Position).Magnitude > WaveConfig.ATTACK_RANGE then
+	local head = monster:FindFirstChild("Head")
+	local billboard = head and head:FindFirstChild("HealthBar") :: BillboardGui?
+	if billboard then
+		local distance = getNearestPlayerDistance(monsterRoot.Position)
+		local hasTakenDamage = humanoid.Health < humanoid.MaxHealth
+		billboard.Enabled = hasTakenDamage and distance <= WaveConfig.MONSTER_HEALTHBAR_DISTANCE
+	end
+
+	if (monsterRoot.Position - targetRoot.Position).Magnitude > WaveConfig.ATTACK_RANGE and not attackingMonsters[monster] then
 		humanoid:MoveTo(targetRoot.Position)
 	end
 end

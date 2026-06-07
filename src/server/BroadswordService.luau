@@ -1,17 +1,16 @@
+local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
+local BroadswordConfig = require(ReplicatedStorage.Shared.BroadswordConfig)
 local WaveConfig = require(ReplicatedStorage.Shared.WaveConfig)
 
 local BroadswordService = {}
 
 local TOOL_NAME = "Broadsword"
 local swordTemplate: Tool
-
-local SHOULDER_GRIP = CFrame.new(1.15, 0.15, 0.55) * CFrame.Angles(math.rad(118), math.rad(12), math.rad(108))
-local WINDUP_GRIP = CFrame.new(0.85, 0.35, 0.15) * CFrame.Angles(math.rad(95), math.rad(-25), math.rad(130))
-local SWING_GRIP = CFrame.new(-0.15, -0.35, -1.85) * CFrame.Angles(math.rad(-15), math.rad(92), math.rad(8))
+local slashTracks: { [Humanoid]: AnimationTrack } = {}
 
 local function weld(part0: BasePart, part1: BasePart)
 	local weld = Instance.new("WeldConstraint")
@@ -70,7 +69,7 @@ local function createBroadswordTemplate(): Tool
 	weld(handle, blade)
 	weld(blade, bladeTip)
 
-	tool.Grip = SHOULDER_GRIP
+	tool.Grip = BroadswordConfig.SHOULDER_GRIP
 
 	return tool
 end
@@ -95,15 +94,82 @@ local function getMonstersFolder(): Folder?
 	return workspace:FindFirstChild("WaveMonsters") :: Folder?
 end
 
-local function getHitParts(tool: Tool): { BasePart }
+local function getBladeHitParts(tool: Tool): { BasePart }
 	local parts: { BasePart } = {}
-	for _, name in { "Blade", "BladeTip", "Guard", "Handle" } do
+	for _, name in { "Blade", "BladeTip" } do
 		local part = tool:FindFirstChild(name) :: BasePart?
 		if part then
 			table.insert(parts, part)
 		end
 	end
 	return parts
+end
+
+local function getSlashAnimationIds(character: Model): { string }
+	if character:FindFirstChild("UpperTorso") then
+		return BroadswordConfig.R15_SLASH_ANIMATIONS
+	end
+	return BroadswordConfig.R6_SLASH_ANIMATIONS
+end
+
+local function getAnimator(humanoid: Humanoid): Animator
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
+	return animator
+end
+
+local function tryLoadSlashTrack(humanoid: Humanoid, character: Model): AnimationTrack?
+	local animator = getAnimator(humanoid)
+
+	for _, animationId in getSlashAnimationIds(character) do
+		local animation = Instance.new("Animation")
+		animation.AnimationId = animationId
+
+		local preloadOk = pcall(function()
+			ContentProvider:PreloadAsync({ animation })
+		end)
+
+		if not preloadOk then
+			continue
+		end
+
+		local loadOk, track = pcall(function()
+			return animator:LoadAnimation(animation)
+		end)
+
+		if loadOk and track and track.Length > 0 then
+			track.Priority = Enum.AnimationPriority.Action4
+			track.Looped = false
+			return track
+		end
+	end
+
+	return nil
+end
+
+local function getSlashTrack(humanoid: Humanoid, character: Model): AnimationTrack?
+	local existingTrack = slashTracks[humanoid]
+	if existingTrack then
+		return existingTrack
+	end
+
+	local track = tryLoadSlashTrack(humanoid, character)
+	if track then
+		slashTracks[humanoid] = track
+	end
+	return track
+end
+
+local function applyMonsterDamage(monster: Model, humanoid: Humanoid, alreadyHit: { [Model]: boolean })
+	if alreadyHit[monster] or humanoid.Health <= 0 then
+		return
+	end
+
+	alreadyHit[monster] = true
+	humanoid:TakeDamage(math.random(WaveConfig.SWORD_DAMAGE_MIN, WaveConfig.SWORD_DAMAGE_MAX))
 end
 
 local function damageMonstersInSwing(tool: Tool, alreadyHit: { [Model]: boolean })
@@ -116,36 +182,80 @@ local function damageMonstersInSwing(tool: Tool, alreadyHit: { [Model]: boolean 
 	overlapParams.FilterType = Enum.RaycastFilterType.Include
 	overlapParams.FilterDescendantsInstances = { monstersFolder }
 
-	for _, part in getHitParts(tool) do
-		local hitParts = workspace:GetPartBoundsInBox(part.CFrame, part.Size * Vector3.new(1.35, 1.35, 1.35), overlapParams)
+	local reach = WaveConfig.SWORD_HITBOX_REACH
+	local hitScale = Vector3.new(
+		reach.X * WaveConfig.SWORD_HITBOX_SCALE,
+		reach.Y * WaveConfig.SWORD_HITBOX_SCALE,
+		reach.Z * WaveConfig.SWORD_HITBOX_SCALE
+	)
+
+	for _, part in getBladeHitParts(tool) do
+		local hitParts = workspace:GetPartBoundsInBox(part.CFrame, part.Size * hitScale, overlapParams)
 		for _, hitPart in hitParts do
 			local monster = hitPart:FindFirstAncestorOfClass("Model")
-			if monster and monster.Name == "WaveMonster" and not alreadyHit[monster] then
+			if monster and monster.Name == "WaveMonster" then
 				local humanoid = monster:FindFirstChildOfClass("Humanoid")
-				if humanoid and humanoid.Health > 0 then
-					alreadyHit[monster] = true
-					humanoid:TakeDamage(math.random(WaveConfig.SWORD_DAMAGE_MIN, WaveConfig.SWORD_DAMAGE_MAX))
+				if humanoid then
+					applyMonsterDamage(monster, humanoid, alreadyHit)
 				end
 			end
 		end
 	end
 end
 
-local function tweenGrip(tool: Tool, fromGrip: CFrame, toGrip: CFrame, duration: number, steps: number, onStep: ((number) -> ())?)
-	for step = 1, steps do
-		if not tool.Parent then
-			return
-		end
+local function runSwingHitChecks(tool: Tool, character: Model, humanoid: Humanoid)
+	local hitMonsters: { [Model]: boolean } = {}
+	local slashTrack = getSlashTrack(humanoid, character)
+	local usesAnimation = slashTrack ~= nil
+	local swingDuration = BroadswordConfig.getSwingDuration(usesAnimation, slashTrack and slashTrack.Length)
 
-		local alpha = step / steps
-		tool.Grip = fromGrip:Lerp(toGrip, alpha)
-
-		if onStep then
-			onStep(alpha)
-		end
-
-		task.wait(duration / steps)
+	if usesAnimation then
+		tool.Grip = BroadswordConfig.COMBAT_GRIP
+		slashTrack:Stop(0.05)
+		slashTrack:Play(0.08, 1, 1)
+	else
+		tool.Grip = BroadswordConfig.SHOULDER_GRIP
 	end
+
+	local startTime = os.clock()
+
+	while os.clock() - startTime < swingDuration do
+		if not tool.Parent or tool.Parent ~= character then
+			break
+		end
+
+		local elapsed = os.clock() - startTime
+
+		if usesAnimation then
+			tool.Grip = BroadswordConfig.COMBAT_GRIP
+		else
+			tool.Grip = BroadswordConfig.sample(elapsed)
+		end
+
+		if BroadswordConfig.isStrikePhase(elapsed, swingDuration) then
+			damageMonstersInSwing(tool, hitMonsters)
+		end
+
+		task.wait(1 / 60)
+	end
+
+	if slashTrack then
+		slashTrack:Stop(0.1)
+	end
+
+	local recoverySteps = 6
+	for step = 1, recoverySteps do
+		if not tool.Parent then
+			break
+		end
+		tool.Grip = BroadswordConfig.COMBAT_GRIP:Lerp(
+			BroadswordConfig.SHOULDER_GRIP,
+			step / recoverySteps
+		)
+		task.wait(0.02)
+	end
+
+	tool.Grip = BroadswordConfig.SHOULDER_GRIP
 end
 
 local function bindCombat(tool: Tool)
@@ -153,7 +263,7 @@ local function bindCombat(tool: Tool)
 	local lastSwing = 0
 
 	tool.Equipped:Connect(function()
-		tool.Grip = SHOULDER_GRIP
+		tool.Grip = BroadswordConfig.SHOULDER_GRIP
 	end)
 
 	tool.Activated:Connect(function()
@@ -179,17 +289,10 @@ local function bindCombat(tool: Tool)
 		swinging = true
 		lastSwing = now
 
-		local hitMonsters: { [Model]: boolean } = {}
-
-		tweenGrip(tool, SHOULDER_GRIP, WINDUP_GRIP, 0.08, 4)
-		tweenGrip(tool, WINDUP_GRIP, SWING_GRIP, 0.14, 7, function()
-			damageMonstersInSwing(tool, hitMonsters)
+		task.spawn(function()
+			runSwingHitChecks(tool, character, humanoid)
+			swinging = false
 		end)
-		damageMonstersInSwing(tool, hitMonsters)
-
-		tweenGrip(tool, SWING_GRIP, SHOULDER_GRIP, 0.18, 8)
-
-		swinging = false
 	end)
 end
 
@@ -222,11 +325,16 @@ local function giveBroadsword(player: Player, character: Model)
 	sword.Parent = backpack
 	bindPermanentEquip(player, sword)
 	bindCombat(sword)
-	sword.Grip = SHOULDER_GRIP
+	sword.Grip = BroadswordConfig.SHOULDER_GRIP
 	equipBroadsword(character, sword)
 end
 
 local function onCharacterAdded(player: Player, character: Model)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		slashTracks[humanoid] = nil
+	end
+
 	task.defer(function()
 		giveBroadsword(player, character)
 	end)
