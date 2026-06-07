@@ -291,11 +291,17 @@ end
 
 local function runSwingHitChecks(tool: Tool, character: Model)
 	local combatConfig = WeaponCombatConfig.getConfigForTool(tool)
+	local weaponId = tool:GetAttribute(WeaponConfig.WEAPON_ATTRIBUTE) or tool.Name
 	local hitMonsters: { [Model]: boolean } = {}
 	local swingDuration = combatConfig.getSwingDuration()
 	local motors = BroadswordPose.getMotors(character)
+	local usesAnimation = WeaponCombatConfig.usesAnimationSwing(weaponId :: string)
 
-	BroadswordPose.apply(motors, combatConfig.SHOULDER_POSE, tool)
+	if usesAnimation then
+		BroadswordPose.reset(motors, tool, BroadswordConfig.SHOULDER_GRIP)
+	else
+		BroadswordPose.apply(motors, combatConfig.SHOULDER_POSE, tool)
+	end
 
 	local startTime = os.clock()
 
@@ -305,8 +311,14 @@ local function runSwingHitChecks(tool: Tool, character: Model)
 		end
 
 		local elapsed = os.clock() - startTime
-		local pose = combatConfig.getPoseForSwing(elapsed)
-		BroadswordPose.apply(motors, pose, tool)
+		local progress = (elapsed / swingDuration) * BroadswordConfig.ANIMATION_END_RATIO
+
+		if usesAnimation then
+			tool.Grip = BroadswordConfig.getGripForAnimationSwing(progress)
+		else
+			local pose = combatConfig.getPoseForSwing(elapsed)
+			BroadswordPose.apply(motors, pose, tool)
+		end
 
 		if combatConfig.isStrikePhase(elapsed) then
 			damageMonstersInSwing(tool, character, hitMonsters)

@@ -16,4 +16,13 @@ function WeaponCombatConfig.getConfigForTool(tool: Tool)
 	return WeaponCombatConfig.getConfig(weaponId :: string)
 end
 
+function WeaponCombatConfig.usesAnimationSwing(weaponId: string): boolean
+	return weaponId == "Broadsword" and BroadswordConfig.USES_ANIMATION
+end
+
+function WeaponCombatConfig.usesAnimationSwingForTool(tool: Tool): boolean
+	local weaponId = tool:GetAttribute(WeaponConfig.WEAPON_ATTRIBUTE) or tool.Name
+	return WeaponCombatConfig.usesAnimationSwing(weaponId :: string)
+end
+
 return WeaponCombatConfig

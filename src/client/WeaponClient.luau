@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 
+local BroadswordConfig = require(ReplicatedStorage.Shared.BroadswordConfig)
 local BroadswordPose = require(ReplicatedStorage.Shared.BroadswordPose)
 local WeaponCombatConfig = require(ReplicatedStorage.Shared.WeaponCombatConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
@@ -14,15 +15,38 @@ local player = Players.LocalPlayer
 local swinging = false
 local lastSwing = 0
 local swingConnection: RBXScriptConnection? = nil
+local activeTrack: AnimationTrack? = nil
 local activeCharacter: Model? = nil
 local activeTool: Tool? = nil
 local activeMotors: BroadswordPose.ArmMotors = {}
 local activeCombatConfig = WeaponCombatConfig.getConfig(WeaponConfig.DEFAULT_WEAPON)
 
 local POSE_BIND = "FlipSimWeaponPose"
+local SWING_BIND = "FlipSimWeaponSwingGrip"
+
+local function applyShoulderIdle(character: Model, tool: Tool, combatConfig)
+	local motors = BroadswordPose.getMotors(character)
+	BroadswordPose.apply(motors, combatConfig.SHOULDER_POSE, tool)
+end
 
 local function isWaveWeapon(tool: Tool): boolean
 	return WeaponConfig.getWeapon(tool:GetAttribute(WeaponConfig.WEAPON_ATTRIBUTE) :: string) ~= nil
+end
+
+local function getAnimator(humanoid: Humanoid): Animator
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
+	return animator
+end
+
+local function stopActiveTrack()
+	if activeTrack then
+		activeTrack:Stop(0.1)
+		activeTrack = nil
+	end
 end
 
 local function stopIdlePose()
@@ -40,6 +64,7 @@ local function startIdlePose(character: Model, tool: Tool)
 	activeTool = tool
 	activeMotors = BroadswordPose.getMotors(character)
 	activeCombatConfig = WeaponCombatConfig.getConfigForTool(tool)
+	applyShoulderIdle(character, tool, activeCombatConfig)
 
 	RunService:BindToRenderStep(POSE_BIND, Enum.RenderPriority.Last.Value, function()
 		if not character.Parent or tool.Parent ~= character then
@@ -61,14 +86,75 @@ local function stopSwing(tool: Tool, character: Model?)
 		swingConnection = nil
 	end
 
+	RunService:UnbindFromRenderStep(SWING_BIND)
+	stopActiveTrack()
 	swinging = false
 
 	if character and tool.Parent == character then
+		local combatConfig = WeaponCombatConfig.getConfigForTool(tool)
+		local motors = BroadswordPose.getMotors(character)
+		BroadswordPose.reset(motors, tool, combatConfig.SHOULDER_GRIP)
 		startIdlePose(character, tool)
 	end
 end
 
-local function playSwing(character: Model, tool: Tool)
+local function holdAnimationSwingGrip(tool: Tool, character: Model, progress: number)
+	local motors = BroadswordPose.getMotors(character)
+	BroadswordPose.reset(motors, tool, BroadswordConfig.getGripForAnimationSwing(progress))
+end
+
+local function playAnimationSwing(character: Model, tool: Tool)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		swinging = false
+		return
+	end
+
+	stopIdlePose()
+	holdAnimationSwingGrip(tool, character, 0)
+
+	local animator = getAnimator(humanoid)
+	local animation = Instance.new("Animation")
+	animation.AnimationId = BroadswordConfig.SWING_ANIMATION_ID
+
+	local track = animator:LoadAnimation(animation)
+	track.Priority = Enum.AnimationPriority.Action
+	activeTrack = track
+	track:Play(0.08)
+
+	local swingDuration = if track.Length > 0.05
+		then track.Length * BroadswordConfig.ANIMATION_END_RATIO
+		else BroadswordConfig.getSwingDuration()
+
+	if swingConnection then
+		swingConnection:Disconnect()
+		swingConnection = nil
+	end
+
+	RunService:UnbindFromRenderStep(SWING_BIND)
+
+	RunService:BindToRenderStep(SWING_BIND, Enum.RenderPriority.Last.Value, function()
+		if not character.Parent or tool.Parent ~= character then
+			stopSwing(tool, character)
+			return
+		end
+
+		if not track.IsPlaying and track.TimePosition <= 0.01 then
+			return
+		end
+
+		local progress = if track.Length > 0.05 then track.TimePosition / track.Length else 0
+		tool.Grip = BroadswordConfig.getGripForAnimationSwing(progress)
+	end)
+
+	task.delay(swingDuration, function()
+		if swinging and activeTrack == track then
+			stopSwing(tool, character)
+		end
+	end)
+end
+
+local function playProceduralSwing(character: Model, tool: Tool)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
 		swinging = false
@@ -102,6 +188,14 @@ local function playSwing(character: Model, tool: Tool)
 			stopSwing(tool, character)
 		end
 	end)
+end
+
+local function playSwing(character: Model, tool: Tool)
+	if WeaponCombatConfig.usesAnimationSwingForTool(tool) then
+		playAnimationSwing(character, tool)
+	else
+		playProceduralSwing(character, tool)
+	end
 end
 
 local function onToolActivated(tool: Tool)
@@ -145,6 +239,7 @@ local function bindTool(tool: Tool)
 
 	tool.Unequipped:Connect(function()
 		if activeTool == tool then
+			stopSwing(tool, activeCharacter)
 			stopIdlePose()
 			activeCharacter = nil
 			activeTool = nil
@@ -176,10 +271,8 @@ local function bindCharacter(character: Model)
 
 	character.AncestryChanged:Connect(function(_, parent)
 		if not parent then
+			stopSwing(activeTool :: Tool, character)
 			stopIdlePose()
-			if activeTool then
-				stopSwing(activeTool, character)
-			end
 		end
 	end)
 end
