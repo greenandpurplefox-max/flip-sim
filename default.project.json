@@ -18,6 +18,7 @@
     "StarterPlayer": {
       "$className": "StarterPlayer",
       "$properties": {
+        "EnableMouseLockOption": true,
         "UserEmotesEnabled": false
       },
       "StarterPlayerScripts": {

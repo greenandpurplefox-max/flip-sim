@@ -10,6 +10,8 @@ BroadswordConfig.COMBAT_GRIP = CFrame.new(0, -0.42, 0.48)
 
 BroadswordConfig.SWING_COOLDOWN = 0.65
 BroadswordConfig.DEFAULT_SWING_DURATION = 0.72
+-- Stop the slash animation before the downward follow-through at the end.
+BroadswordConfig.ANIMATION_END_RATIO = 0.55
 BroadswordConfig.STRIKE_START_RATIO = 0.14
 BroadswordConfig.STRIKE_END_RATIO = 0.58
 
@@ -55,7 +57,7 @@ end
 
 function BroadswordConfig.getSwingDuration(useAnimation: boolean, animationLength: number?): number
 	if useAnimation and animationLength and animationLength > 0 then
-		return animationLength
+		return animationLength * BroadswordConfig.ANIMATION_END_RATIO
 	end
 	return BroadswordConfig.DEFAULT_SWING_DURATION
 end
