@@ -1,47 +1,64 @@
+local BroadswordPose = require(script.Parent.BroadswordPose)
+
 local BroadswordConfig = {}
 
--- Resting: broadsword on the shoulder.
-BroadswordConfig.SHOULDER_GRIP = CFrame.new(0, -0.55, 0.35)
-	* CFrame.Angles(math.rad(108), math.rad(180), math.rad(92))
+local IDENTITY = CFrame.new()
 
--- Both hands grab the hilt in front of the body.
-BroadswordConfig.TWO_HAND_HILT = CFrame.new(0.04, -0.34, 0.46)
-	* CFrame.Angles(math.rad(72), math.rad(178), math.rad(94))
+-- Hilt in the right hand; blade rests on top of the right shoulder.
+BroadswordConfig.SHOULDER_POSE = {
+	rightShoulder = CFrame.Angles(math.rad(-8), math.rad(18), math.rad(132)),
+	rightElbow = CFrame.Angles(math.rad(-72), math.rad(12), math.rad(8)),
+	rightWrist = CFrame.Angles(math.rad(18), math.rad(-42), math.rad(36)),
+	leftShoulder = IDENTITY,
+	leftElbow = IDENTITY,
+	leftWrist = IDENTITY,
+	grip = CFrame.new(0.06, -0.1, 0.04) * CFrame.Angles(math.rad(92), math.rad(178), math.rad(86)),
+}
 
--- Windup: bottom-right of the body.
-BroadswordConfig.BOTTOM_RIGHT = CFrame.new(0.62, -0.94, 0.24)
-	* CFrame.Angles(math.rad(-38), math.rad(164), math.rad(106))
+BroadswordConfig.SHOULDER_GRIP = BroadswordConfig.SHOULDER_POSE.grip
 
--- Strike: top-left of the body.
-BroadswordConfig.TOP_LEFT = CFrame.new(-0.68, 0.4, 0.1)
-	* CFrame.Angles(math.rad(114), math.rad(-20), math.rad(34))
+local TWO_HAND_HILT: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(18), math.rad(-8), math.rad(92)),
+	rightElbow = CFrame.Angles(math.rad(-58), math.rad(6), math.rad(10)),
+	rightWrist = CFrame.Angles(math.rad(8), math.rad(-18), math.rad(12)),
+	leftShoulder = CFrame.Angles(math.rad(12), math.rad(18), math.rad(-72)),
+	leftElbow = CFrame.Angles(math.rad(-48), math.rad(-8), math.rad(6)),
+	leftWrist = CFrame.Angles(math.rad(10), math.rad(22), math.rad(-8)),
+	grip = CFrame.new(0.08, -0.34, 0.38) * CFrame.Angles(math.rad(72), math.rad(176), math.rad(94)),
+}
+
+local BOTTOM_RIGHT: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(42), math.rad(-24), math.rad(118)),
+	rightElbow = CFrame.Angles(math.rad(-28), math.rad(18), math.rad(14)),
+	rightWrist = CFrame.Angles(math.rad(-12), math.rad(-8), math.rad(18)),
+	leftShoulder = CFrame.Angles(math.rad(36), math.rad(8), math.rad(-96)),
+	leftElbow = CFrame.Angles(math.rad(-22), math.rad(-12), math.rad(4)),
+	leftWrist = CFrame.Angles(math.rad(-6), math.rad(16), math.rad(-6)),
+	grip = CFrame.new(0.72, -0.92, 0.28) * CFrame.Angles(math.rad(-52), math.rad(138), math.rad(118)),
+}
+
+local TOP_RIGHT: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(-34), math.rad(-18), math.rad(108)),
+	rightElbow = CFrame.Angles(math.rad(-18), math.rad(12), math.rad(8)),
+	rightWrist = CFrame.Angles(math.rad(14), math.rad(-6), math.rad(10)),
+	leftShoulder = CFrame.Angles(math.rad(-28), math.rad(12), math.rad(-88)),
+	leftElbow = CFrame.Angles(math.rad(-12), math.rad(-8), math.rad(2)),
+	leftWrist = CFrame.Angles(math.rad(8), math.rad(10), math.rad(-4)),
+	grip = CFrame.new(0.66, 0.58, 0.22) * CFrame.Angles(math.rad(88), math.rad(164), math.rad(78)),
+}
 
 BroadswordConfig.SWING_COOLDOWN = 0.65
-BroadswordConfig.SWING_DURATION = 0.5
-BroadswordConfig.STRIKE_START_RATIO = 0.22
-BroadswordConfig.STRIKE_END_RATIO = 0.58
-BroadswordConfig.TWO_HAND_START = 0.05
-BroadswordConfig.TWO_HAND_END = 0.42
+BroadswordConfig.SWING_DURATION = 0.52
+BroadswordConfig.STRIKE_START_RATIO = 0.24
+BroadswordConfig.STRIKE_END_RATIO = 0.56
 
--- Shoulder -> grab hilt -> bottom-right -> top-left -> shoulder.
-BroadswordConfig.Keyframes = {
-	{ time = 0, grip = BroadswordConfig.SHOULDER_GRIP },
-	{ time = 0.08, grip = BroadswordConfig.TWO_HAND_HILT },
-	{ time = 0.18, grip = BroadswordConfig.BOTTOM_RIGHT },
-	{ time = 0.32, grip = BroadswordConfig.TOP_LEFT },
-	{ time = 0.5, grip = BroadswordConfig.SHOULDER_GRIP },
+BroadswordConfig.PoseKeyframes = {
+	{ time = 0, pose = BroadswordConfig.SHOULDER_POSE },
+	{ time = 0.08, pose = TWO_HAND_HILT },
+	{ time = 0.2, pose = BOTTOM_RIGHT },
+	{ time = 0.34, pose = TOP_RIGHT },
+	{ time = 0.52, pose = BroadswordConfig.SHOULDER_POSE },
 }
-
-BroadswordConfig.BodyKeyframes = {
-	{ time = 0, offset = CFrame.new() },
-	{ time = 0.08, offset = CFrame.Angles(math.rad(-4), math.rad(-8), math.rad(-4)) },
-	{ time = 0.18, offset = CFrame.Angles(math.rad(-10), math.rad(-36), math.rad(-14)) },
-	{ time = 0.32, offset = CFrame.Angles(math.rad(12), math.rad(44), math.rad(18)) },
-	{ time = 0.5, offset = CFrame.new() },
-}
-
-BroadswordConfig.LEFT_HAND_GRIP_OFFSET = CFrame.new(-0.22, -0.28, 0.06)
-	* CFrame.Angles(math.rad(8), math.rad(90), math.rad(-12))
 
 function BroadswordConfig.smoothstep(alpha: number): number
 	alpha = math.clamp(alpha, 0, 1)
@@ -52,8 +69,9 @@ function BroadswordConfig.getSwingDuration(): number
 	return BroadswordConfig.SWING_DURATION
 end
 
-local function sampleKeyframes(keyframes: { { time: number, grip: CFrame? , offset: CFrame? } }, elapsed: number, duration: number): CFrame
-	local time = math.clamp(elapsed, 0, duration)
+function BroadswordConfig.getPoseForSwing(elapsed: number): BroadswordPose.Pose
+	local keyframes = BroadswordConfig.PoseKeyframes
+	local time = math.clamp(elapsed, 0, BroadswordConfig.SWING_DURATION)
 
 	for index = 1, #keyframes - 1 do
 		local current = keyframes[index]
@@ -61,31 +79,20 @@ local function sampleKeyframes(keyframes: { { time: number, grip: CFrame? , offs
 		if time >= current.time and time <= nextKeyframe.time then
 			local span = nextKeyframe.time - current.time
 			local alpha = if span > 0 then (time - current.time) / span else 1
-			local currentValue = current.grip or current.offset :: CFrame
-			local nextValue = nextKeyframe.grip or nextKeyframe.offset :: CFrame
-			return currentValue:Lerp(nextValue, BroadswordConfig.smoothstep(alpha))
+			return BroadswordPose.lerp(current.pose, nextKeyframe.pose, BroadswordConfig.smoothstep(alpha))
 		end
 	end
 
-	local last = keyframes[#keyframes]
-	return last.grip or last.offset :: CFrame
+	return keyframes[#keyframes].pose
 end
 
 function BroadswordConfig.getGripForSwing(elapsed: number): CFrame
-	return sampleKeyframes(BroadswordConfig.Keyframes, elapsed, BroadswordConfig.SWING_DURATION)
-end
-
-function BroadswordConfig.getBodyOffset(elapsed: number): CFrame
-	return sampleKeyframes(BroadswordConfig.BodyKeyframes, elapsed, BroadswordConfig.SWING_DURATION)
+	return BroadswordConfig.getPoseForSwing(elapsed).grip
 end
 
 function BroadswordConfig.isStrikePhase(elapsed: number): boolean
 	local progress = elapsed / BroadswordConfig.SWING_DURATION
 	return progress >= BroadswordConfig.STRIKE_START_RATIO and progress <= BroadswordConfig.STRIKE_END_RATIO
-end
-
-function BroadswordConfig.isTwoHandPhase(elapsed: number): boolean
-	return elapsed >= BroadswordConfig.TWO_HAND_START and elapsed <= BroadswordConfig.TWO_HAND_END
 end
 
 return BroadswordConfig

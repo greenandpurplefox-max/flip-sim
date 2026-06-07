@@ -1,9 +1,11 @@
-local BroadswordClient = require(script.BroadswordClient)
+local WeaponClient = require(script.WeaponClient)
+local WeaponMenuClient = require(script.WeaponMenuClient)
 local HealthBarUI = require(script.HealthBarUI)
 local MovementClient = require(script.MovementClient)
 local WaveUI = require(script.WaveUI)
 
-BroadswordClient.init()
+WeaponClient.init()
+WeaponMenuClient.init()
 HealthBarUI.init()
 MovementClient.init()
 WaveUI.init()
