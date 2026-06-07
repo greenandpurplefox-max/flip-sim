@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local WaveConfig = require(ReplicatedStorage.Shared.WaveConfig)
 
@@ -8,8 +9,15 @@ local WaveService = {}
 local activeMonsters: { Model } = {}
 local lastAttackTimes: { [Model]: number } = {}
 local attackingMonsters: { [Model]: boolean } = {}
+local walkPhases: { [Model]: number } = {}
 local monstersFolder: Folder
 local aiRunning = false
+local walkAnimRunning = false
+
+local LEFT_LEG_REST = CFrame.new(-0.6, -2.5, 0)
+local RIGHT_LEG_REST = CFrame.new(0.6, -2.5, 0)
+local LEFT_ARM_REST = CFrame.new(-2, 0.2, 0)
+local RIGHT_ARM_REST = CFrame.new(2, 0.2, 0)
 
 local MONSTER_COLORS = {
 	Color3.fromRGB(85, 170, 85),
@@ -22,6 +30,17 @@ local function weld(part0: BasePart, part1: BasePart)
 	weld.Part0 = part0
 	weld.Part1 = part1
 	weld.Parent = part0
+end
+
+local function attachLegMotor(root: BasePart, leg: BasePart, restOffset: CFrame): Motor6D
+	local motor = Instance.new("Motor6D")
+	motor.Name = `{leg.Name}Motor`
+	motor.Part0 = root
+	motor.Part1 = leg
+	motor.C0 = restOffset
+	motor.C1 = CFrame.new()
+	motor.Parent = root
+	return motor
 end
 
 local function attachArmMotor(root: BasePart, arm: BasePart, restOffset: CFrame): Motor6D
@@ -68,7 +87,7 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 
 	local humanoidRootPart = createPart("HumanoidRootPart", Vector3.new(2, 2, 1), color, model)
 	humanoidRootPart.Transparency = 1
-	humanoidRootPart.CanCollide = true
+	humanoidRootPart.CanCollide = false
 
 	local torso = createPart("Torso", Vector3.new(2.5, 2.5, 1.5), color, model)
 	local head = createPart("Head", Vector3.new(1.8, 1.8, 1.8), color:lerp(Color3.new(1, 1, 1), 0.2), model)
@@ -76,6 +95,9 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	local rightArm = createPart("RightArm", Vector3.new(1, 2.5, 1), color, model)
 	local leftLeg = createPart("LeftLeg", Vector3.new(1, 2.5, 1), color, model)
 	local rightLeg = createPart("RightLeg", Vector3.new(1, 2.5, 1), color, model)
+
+	leftLeg.CanCollide = true
+	rightLeg.CanCollide = true
 
 	head.Shape = Enum.PartType.Ball
 
@@ -88,14 +110,15 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 
 	weld(humanoidRootPart, torso)
 	weld(humanoidRootPart, head)
-	weld(humanoidRootPart, leftLeg)
-	weld(humanoidRootPart, rightLeg)
 
 	local leftArmMotor = attachArmMotor(humanoidRootPart, leftArm, CFrame.new(-2, 0.2, 0))
 	local rightArmMotor = attachArmMotor(humanoidRootPart, rightArm, CFrame.new(2, 0.2, 0))
+	local leftLegMotor = attachLegMotor(humanoidRootPart, leftLeg, LEFT_LEG_REST)
+	local rightLegMotor = attachLegMotor(humanoidRootPart, rightLeg, RIGHT_LEG_REST)
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.WalkSpeed = WaveConfig.MONSTER_WALK_SPEED
+	humanoid.HipHeight = WaveConfig.MONSTER_HIP_HEIGHT
 	humanoid.MaxHealth = WaveConfig.MONSTER_HEALTH
 	humanoid.Health = WaveConfig.MONSTER_HEALTH
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
@@ -142,6 +165,8 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 
 	model:SetAttribute("LeftArmMotorName", leftArmMotor.Name)
 	model:SetAttribute("RightArmMotorName", rightArmMotor.Name)
+	model:SetAttribute("LeftLegMotorName", leftLegMotor.Name)
+	model:SetAttribute("RightLegMotorName", rightLegMotor.Name)
 
 	model.PrimaryPart = humanoidRootPart
 	model:PivotTo(CFrame.new(spawnPosition))
@@ -149,10 +174,12 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 
 	table.insert(activeMonsters, model)
 	lastAttackTimes[model] = 0
+	walkPhases[model] = 0
 
 	humanoid.Died:Connect(function()
 		lastAttackTimes[model] = nil
 		attackingMonsters[model] = nil
+		walkPhases[model] = nil
 
 		local index = table.find(activeMonsters, model)
 		if index then
@@ -351,6 +378,63 @@ local function updateMonster(monster: Model)
 	end
 end
 
+local function updateMonsterWalkAnimation(monster: Model, deltaTime: number)
+	local humanoid = monster:FindFirstChildOfClass("Humanoid")
+	local root = monster.PrimaryPart
+	if not humanoid or not root or humanoid.Health <= 0 then
+		return
+	end
+
+	local leftLegMotor = root:FindFirstChild(monster:GetAttribute("LeftLegMotorName") :: string) :: Motor6D?
+	local rightLegMotor = root:FindFirstChild(monster:GetAttribute("RightLegMotorName") :: string) :: Motor6D?
+	local leftArmMotor = root:FindFirstChild(monster:GetAttribute("LeftArmMotorName") :: string) :: Motor6D?
+	local rightArmMotor = root:FindFirstChild(monster:GetAttribute("RightArmMotorName") :: string) :: Motor6D?
+	if not leftLegMotor or not rightLegMotor or not leftArmMotor or not rightArmMotor then
+		return
+	end
+
+	local moving = humanoid.MoveDirection.Magnitude > 0.05 and not attackingMonsters[monster]
+	local phase = walkPhases[monster] or 0
+
+	if moving then
+		phase += deltaTime * WaveConfig.MONSTER_WALK_ANIM_SPEED
+		walkPhases[monster] = phase
+
+		local legSwing = math.sin(phase) * WaveConfig.MONSTER_LEG_SWING
+		local armSwing = math.sin(phase) * WaveConfig.MONSTER_ARM_SWING
+		local bodyBob = math.abs(math.sin(phase)) * WaveConfig.MONSTER_BODY_BOB
+
+		leftLegMotor.C0 = LEFT_LEG_REST * CFrame.new(0, bodyBob * 0.15, 0) * CFrame.Angles(legSwing, 0, legSwing * 0.25)
+		rightLegMotor.C0 = RIGHT_LEG_REST
+			* CFrame.new(0, bodyBob * 0.15, 0)
+			* CFrame.Angles(-legSwing, 0, -legSwing * 0.25)
+		leftArmMotor.C0 = LEFT_ARM_REST * CFrame.Angles(-armSwing, 0, 0)
+		rightArmMotor.C0 = RIGHT_ARM_REST * CFrame.Angles(armSwing, 0, 0)
+	else
+		walkPhases[monster] = phase
+		leftLegMotor.C0 = LEFT_LEG_REST
+		rightLegMotor.C0 = RIGHT_LEG_REST
+		leftArmMotor.C0 = LEFT_ARM_REST
+		rightArmMotor.C0 = RIGHT_ARM_REST
+	end
+end
+
+local function runWalkAnimation()
+	if walkAnimRunning then
+		return
+	end
+
+	walkAnimRunning = true
+
+	RunService.Heartbeat:Connect(function(deltaTime)
+		for _, monster in activeMonsters do
+			if monster.Parent then
+				updateMonsterWalkAnimation(monster, deltaTime)
+			end
+		end
+	end)
+end
+
 local function runAI()
 	if aiRunning then
 		return
@@ -366,6 +450,7 @@ local function runAI()
 					updateMonster(monster)
 				else
 					lastAttackTimes[monster] = nil
+					walkPhases[monster] = nil
 					table.remove(activeMonsters, index)
 				end
 			end
@@ -401,6 +486,7 @@ function WaveService.init()
 	end)
 
 	runAI()
+	runWalkAnimation()
 end
 
 return WaveService

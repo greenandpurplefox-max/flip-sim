@@ -1,4 +1,3 @@
-local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -10,7 +9,6 @@ local BroadswordService = {}
 
 local TOOL_NAME = "Broadsword"
 local swordTemplate: Tool
-local slashTracks: { [Humanoid]: AnimationTrack } = {}
 
 local function weld(part0: BasePart, part1: BasePart)
 	local weld = Instance.new("WeldConstraint")
@@ -69,6 +67,17 @@ local function createBroadswordTemplate(): Tool
 	weld(handle, blade)
 	weld(blade, bladeTip)
 
+	local leftHandGrip = Instance.new("Part")
+	leftHandGrip.Name = "LeftHandGrip"
+	leftHandGrip.Size = Vector3.new(0.2, 0.2, 0.2)
+	leftHandGrip.Transparency = 1
+	leftHandGrip.CanCollide = false
+	leftHandGrip.Massless = true
+	leftHandGrip.CFrame = handle.CFrame * BroadswordConfig.LEFT_HAND_GRIP_OFFSET
+	leftHandGrip.Parent = tool
+
+	weld(handle, leftHandGrip)
+
 	tool.Grip = BroadswordConfig.SHOULDER_GRIP
 
 	return tool
@@ -103,64 +112,6 @@ local function getBladeHitParts(tool: Tool): { BasePart }
 		end
 	end
 	return parts
-end
-
-local function getSlashAnimationIds(character: Model): { string }
-	if character:FindFirstChild("UpperTorso") then
-		return BroadswordConfig.R15_SLASH_ANIMATIONS
-	end
-	return BroadswordConfig.R6_SLASH_ANIMATIONS
-end
-
-local function getAnimator(humanoid: Humanoid): Animator
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-	if not animator then
-		animator = Instance.new("Animator")
-		animator.Parent = humanoid
-	end
-	return animator
-end
-
-local function tryLoadSlashTrack(humanoid: Humanoid, character: Model): AnimationTrack?
-	local animator = getAnimator(humanoid)
-
-	for _, animationId in getSlashAnimationIds(character) do
-		local animation = Instance.new("Animation")
-		animation.AnimationId = animationId
-
-		local preloadOk = pcall(function()
-			ContentProvider:PreloadAsync({ animation })
-		end)
-
-		if not preloadOk then
-			continue
-		end
-
-		local loadOk, track = pcall(function()
-			return animator:LoadAnimation(animation)
-		end)
-
-		if loadOk and track and track.Length > 0 then
-			track.Priority = Enum.AnimationPriority.Action4
-			track.Looped = false
-			return track
-		end
-	end
-
-	return nil
-end
-
-local function getSlashTrack(humanoid: Humanoid, character: Model): AnimationTrack?
-	local existingTrack = slashTracks[humanoid]
-	if existingTrack then
-		return existingTrack
-	end
-
-	local track = tryLoadSlashTrack(humanoid, character)
-	if track then
-		slashTracks[humanoid] = track
-	end
-	return track
 end
 
 local function applyMonsterDamage(monster: Model, humanoid: Humanoid, alreadyHit: { [Model]: boolean })
@@ -203,23 +154,26 @@ local function damageMonstersInSwing(tool: Tool, alreadyHit: { [Model]: boolean 
 	end
 end
 
-local function runSwingHitChecks(tool: Tool, character: Model, humanoid: Humanoid)
+local function applyBodyRotation(root: BasePart, startCFrame: CFrame, elapsed: number)
+	local lookVector = startCFrame.LookVector
+	local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z)
+	if flatLook.Magnitude < 0.001 then
+		return
+	end
+
+	local baseCFrame = CFrame.new(startCFrame.Position, startCFrame.Position + flatLook.Unit)
+	root.CFrame = baseCFrame * BroadswordConfig.getBodyOffset(elapsed)
+end
+
+local function runSwingHitChecks(tool: Tool, character: Model)
 	local hitMonsters: { [Model]: boolean } = {}
-	local slashTrack = getSlashTrack(humanoid, character)
-	local usesAnimation = slashTrack ~= nil
-	local swingDuration = BroadswordConfig.getSwingDuration(usesAnimation, slashTrack and slashTrack.Length)
+	local swingDuration = BroadswordConfig.getSwingDuration()
+	local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local startRootCFrame = if root then root.CFrame else CFrame.new()
 
 	tool.Grip = BroadswordConfig.SHOULDER_GRIP
 
-	if usesAnimation then
-		slashTrack:Stop(BroadswordConfig.ANIMATION_FADE_OUT)
-		slashTrack:Play(BroadswordConfig.ANIMATION_FADE_IN, 1, 1)
-	else
-		tool.Grip = BroadswordConfig.SHOULDER_GRIP
-	end
-
 	local startTime = os.clock()
-	local recoveryStart = 0
 
 	while os.clock() - startTime < swingDuration do
 		if not tool.Parent or tool.Parent ~= character then
@@ -227,26 +181,25 @@ local function runSwingHitChecks(tool: Tool, character: Model, humanoid: Humanoi
 		end
 
 		local elapsed = os.clock() - startTime
-		tool.Grip = BroadswordConfig.getGripForSwing(elapsed, swingDuration, usesAnimation)
+		tool.Grip = BroadswordConfig.getGripForSwing(elapsed)
 
-		if BroadswordConfig.isStrikePhase(elapsed, swingDuration) then
+		if root then
+			applyBodyRotation(root, startRootCFrame, elapsed)
+		end
+
+		if BroadswordConfig.isStrikePhase(elapsed) then
 			damageMonstersInSwing(tool, hitMonsters)
 		end
 
 		task.wait(1 / 60)
 	end
 
-	if slashTrack then
-		slashTrack:Stop(BroadswordConfig.ANIMATION_FADE_OUT)
-	end
-
-	recoveryStart = os.clock()
-	while os.clock() - recoveryStart < BroadswordConfig.RECOVERY_DURATION do
-		if not tool.Parent then
-			break
+	if root then
+		local lookVector = startRootCFrame.LookVector
+		local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z)
+		if flatLook.Magnitude > 0.001 then
+			root.CFrame = CFrame.new(root.Position, root.Position + flatLook.Unit)
 		end
-		tool.Grip = BroadswordConfig.getRecoveryGrip(os.clock() - recoveryStart)
-		task.wait(1 / 60)
 	end
 
 	tool.Grip = BroadswordConfig.SHOULDER_GRIP
@@ -284,7 +237,7 @@ local function bindCombat(tool: Tool)
 		lastSwing = now
 
 		task.spawn(function()
-			runSwingHitChecks(tool, character, humanoid)
+			runSwingHitChecks(tool, character)
 			swinging = false
 		end)
 	end)
@@ -324,11 +277,6 @@ local function giveBroadsword(player: Player, character: Model)
 end
 
 local function onCharacterAdded(player: Player, character: Model)
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		slashTracks[humanoid] = nil
-	end
-
 	task.defer(function()
 		giveBroadsword(player, character)
 	end)

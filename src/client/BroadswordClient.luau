@@ -1,8 +1,8 @@
-local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 
 local BroadswordConfig = require(ReplicatedStorage.Shared.BroadswordConfig)
 
@@ -12,82 +12,75 @@ local player = Players.LocalPlayer
 local swinging = false
 local lastSwing = 0
 local swingConnection: RBXScriptConnection? = nil
-local slashTracks: { [Humanoid]: AnimationTrack } = {}
 
-local function getSlashAnimationIds(character: Model): { string }
-	if character:FindFirstChild("UpperTorso") then
-		return BroadswordConfig.R15_SLASH_ANIMATIONS
-	end
-	return BroadswordConfig.R6_SLASH_ANIMATIONS
+local function getLeftHand(character: Model): BasePart?
+	return (character:FindFirstChild("LeftHand") or character:FindFirstChild("Left Arm")) :: BasePart?
 end
 
-local function getAnimator(humanoid: Humanoid): Animator
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-	if not animator then
-		animator = Instance.new("Animator")
-		animator.Parent = humanoid
+local function attachLeftHand(character: Model, tool: Tool): Weld?
+	local leftHand = getLeftHand(character)
+	local leftGrip = tool:FindFirstChild("LeftHandGrip") :: BasePart?
+	if not leftHand or not leftGrip then
+		return nil
 	end
-	return animator
+
+	local existing = leftHand:FindFirstChild("TwoHandWeld")
+	if existing then
+		existing:Destroy()
+	end
+
+	local weld = Instance.new("Weld")
+	weld.Name = "TwoHandWeld"
+	weld.Part0 = leftHand
+	weld.Part1 = leftGrip
+	weld.C0 = CFrame.new(0, -0.05, 0) * CFrame.Angles(math.rad(-90), 0, math.rad(90))
+	weld.C1 = CFrame.new()
+	weld.Parent = leftHand
+	return weld
 end
 
-local function tryLoadSlashTrack(humanoid: Humanoid, character: Model): AnimationTrack?
-	local animator = getAnimator(humanoid)
-
-	for _, animationId in getSlashAnimationIds(character) do
-		local animation = Instance.new("Animation")
-		animation.AnimationId = animationId
-
-		local preloadOk = pcall(function()
-			ContentProvider:PreloadAsync({ animation })
-		end)
-
-		if not preloadOk then
-			continue
-		end
-
-		local loadOk, track = pcall(function()
-			return animator:LoadAnimation(animation)
-		end)
-
-		if loadOk and track and track.Length > 0 then
-			track.Priority = Enum.AnimationPriority.Action4
-			track.Looped = false
-			return track
-		end
+local function detachLeftHand(character: Model)
+	local leftHand = getLeftHand(character)
+	if not leftHand then
+		return
 	end
 
-	return nil
-end
-
-local function getSlashTrack(humanoid: Humanoid, character: Model): AnimationTrack?
-	local existingTrack = slashTracks[humanoid]
-	if existingTrack then
-		return existingTrack
-	end
-
-	local track = tryLoadSlashTrack(humanoid, character)
-	if track then
-		slashTracks[humanoid] = track
-	end
-	return track
-end
-
-local function clearSlashTrack(humanoid: Humanoid)
-	local track = slashTracks[humanoid]
-	if track then
-		track:Stop(0)
-		slashTracks[humanoid] = nil
+	local weld = leftHand:FindFirstChild("TwoHandWeld")
+	if weld then
+		weld:Destroy()
 	end
 end
 
-local function stopSwing(tool: Tool, slashTrack: AnimationTrack?)
+local function applyBodyRotation(root: BasePart, startCFrame: CFrame, elapsed: number)
+	local lookVector = startCFrame.LookVector
+	local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z)
+	if flatLook.Magnitude < 0.001 then
+		return
+	end
+
+	local baseCFrame = CFrame.new(startCFrame.Position, startCFrame.Position + flatLook.Unit)
+	root.CFrame = baseCFrame * BroadswordConfig.getBodyOffset(elapsed)
+end
+
+local function stopSwing(tool: Tool, character: Model?, startRootCFrame: CFrame?)
 	if swingConnection then
 		swingConnection:Disconnect()
 		swingConnection = nil
 	end
 
-	if slashTrack and slashTrack.IsPlaying then
-		slashTrack:Stop(BroadswordConfig.ANIMATION_FADE_OUT)
+	if character then
+		detachLeftHand(character)
+	end
+
+	if character and startRootCFrame then
+		local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root then
+			local lookVector = startRootCFrame.LookVector
+			local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z)
+			if flatLook.Magnitude > 0.001 then
+				root.CFrame = CFrame.new(root.Position, root.Position + flatLook.Unit)
+			end
+		end
 	end
 
 	tool.Grip = BroadswordConfig.SHOULDER_GRIP
@@ -96,25 +89,19 @@ end
 
 local function playSwing(character: Model, tool: Tool)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
+	local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not humanoid or not root then
 		swinging = false
 		return
 	end
 
-	local slashTrack = getSlashTrack(humanoid, character)
-	local usesAnimation = slashTrack ~= nil
-	local swingDuration = BroadswordConfig.getSwingDuration(usesAnimation, slashTrack and slashTrack.Length)
+	local swingDuration = BroadswordConfig.getSwingDuration()
+	local startRootCFrame = root.CFrame
+	local leftHandWeld: Weld? = nil
 
 	tool.Grip = BroadswordConfig.SHOULDER_GRIP
 
-	if usesAnimation then
-		slashTrack:Stop(BroadswordConfig.ANIMATION_FADE_OUT)
-		slashTrack:Play(BroadswordConfig.ANIMATION_FADE_IN, 1, 1)
-	end
-
 	local startTime = os.clock()
-	local recovering = false
-	local recoveryStart = 0
 
 	if swingConnection then
 		swingConnection:Disconnect()
@@ -122,29 +109,26 @@ local function playSwing(character: Model, tool: Tool)
 
 	swingConnection = RunService.RenderStepped:Connect(function()
 		if not character.Parent or tool.Parent ~= character then
-			stopSwing(tool, slashTrack)
+			stopSwing(tool, character, startRootCFrame)
 			return
 		end
 
 		local elapsed = os.clock() - startTime
 
-		if recovering then
-			local recoveryElapsed = os.clock() - recoveryStart
-			tool.Grip = BroadswordConfig.getRecoveryGrip(recoveryElapsed)
-			if recoveryElapsed >= BroadswordConfig.RECOVERY_DURATION then
-				stopSwing(tool, slashTrack)
+		tool.Grip = BroadswordConfig.getGripForSwing(elapsed)
+		applyBodyRotation(root, startRootCFrame, elapsed)
+
+		if BroadswordConfig.isTwoHandPhase(elapsed) then
+			if not leftHandWeld or not leftHandWeld.Parent then
+				leftHandWeld = attachLeftHand(character, tool)
 			end
-			return
+		elseif leftHandWeld then
+			detachLeftHand(character)
+			leftHandWeld = nil
 		end
 
-		tool.Grip = BroadswordConfig.getGripForSwing(elapsed, swingDuration, usesAnimation)
-
 		if elapsed >= swingDuration then
-			if slashTrack then
-				slashTrack:Stop(BroadswordConfig.ANIMATION_FADE_OUT)
-			end
-			recovering = true
-			recoveryStart = os.clock()
+			stopSwing(tool, character, startRootCFrame)
 		end
 	end)
 end
@@ -186,13 +170,6 @@ local function bindTool(tool: Tool)
 end
 
 local function bindCharacter(character: Model)
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid.Died:Connect(function()
-			clearSlashTrack(humanoid)
-		end)
-	end
-
 	for _, child in character:GetChildren() do
 		if child:IsA("Tool") and child.Name == "Broadsword" then
 			bindTool(child)
@@ -202,12 +179,6 @@ local function bindCharacter(character: Model)
 	character.ChildAdded:Connect(function(child)
 		if child:IsA("Tool") and child.Name == "Broadsword" then
 			bindTool(child)
-		end
-	end)
-
-	character.AncestryChanged:Connect(function(_, parent)
-		if parent == nil and humanoid then
-			clearSlashTrack(humanoid)
 		end
 	end)
 end
@@ -221,7 +192,6 @@ function BroadswordClient.init()
 	end
 
 	player.CharacterAdded:Connect(function(character)
-		slashTracks = {}
 		bindCharacter(character)
 	end)
 end
