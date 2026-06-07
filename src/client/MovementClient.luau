@@ -1,3 +1,4 @@
+local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -10,6 +11,12 @@ local player = Players.LocalPlayer
 local dashEvent: RemoteEvent
 local lastDash = 0
 local dashing = false
+local mouseLockController: any = nil
+
+local DASH_ACTION = "FlipSimDash"
+local SHIFT_LOCK_ACTION = "FlipSimShiftLock"
+
+local SHIFT_LOCK_KEYS = { Enum.KeyCode.LeftControl, Enum.KeyCode.RightControl }
 
 local function getDashDirection(humanoid: Humanoid, root: BasePart): Vector3
 	local moveDirection = humanoid.MoveDirection
@@ -51,54 +58,99 @@ local function requestDash()
 	dashing = true
 	dashEvent:FireServer(getDashDirection(humanoid, root))
 
-	task.delay(MovementConfig.DASH_DURATION, function()
+	task.delay(MovementConfig.DASH_DURATION + 0.05, function()
 		dashing = false
 	end)
 end
 
-local function bindShiftLockToCtrl()
+local function toggleShiftLock()
+	if mouseLockController then
+		mouseLockController:OnMouseLockButtonPressed()
+	end
+end
+
+local function onDashAction(_actionName: string, inputState: Enum.UserInputState, _inputObject: InputObject)
+	if inputState == Enum.UserInputState.Begin then
+		requestDash()
+	end
+	return Enum.ContextActionResult.Sink
+end
+
+local function onShiftLockAction(_actionName: string, inputState: Enum.UserInputState, _inputObject: InputObject)
+	if inputState == Enum.UserInputState.Begin then
+		toggleShiftLock()
+	end
+	return Enum.ContextActionResult.Sink
+end
+
+local function remapShiftLockOffShift()
 	local playerScripts = player:WaitForChild("PlayerScripts")
 
-	task.defer(function()
+	for _ = 1, 12 do
 		local ok, playerModule = pcall(function()
 			return require(playerScripts:WaitForChild("PlayerModule"))
 		end)
 
-		if not ok or not playerModule then
-			return
+		if ok and playerModule then
+			local controller = playerModule:GetMouseLockController()
+			if controller then
+				mouseLockController = controller
+				controller.BoundKeys = SHIFT_LOCK_KEYS
+				return true
+			end
 		end
 
-		local mouseLockController = playerModule:GetMouseLockController()
-		if mouseLockController then
-			mouseLockController.BoundKeys = { Enum.KeyCode.LeftControl, Enum.KeyCode.RightControl }
-		end
-	end)
+		task.wait(0.2)
+	end
+
+	return false
 end
 
-local function bindCharacter(_character: Model)
-	bindShiftLockToCtrl()
+local function bindInputActions()
+	ContextActionService:UnbindAction(DASH_ACTION)
+	ContextActionService:UnbindAction(SHIFT_LOCK_ACTION)
+
+	ContextActionService:BindActionAtPriority(
+		DASH_ACTION,
+		onDashAction,
+		false,
+		Enum.ContextActionPriority.High.Value,
+		Enum.KeyCode.LeftShift,
+		Enum.KeyCode.RightShift
+	)
+
+	ContextActionService:BindActionAtPriority(
+		SHIFT_LOCK_ACTION,
+		onShiftLockAction,
+		false,
+		Enum.ContextActionPriority.High.Value,
+		Enum.KeyCode.LeftControl,
+		Enum.KeyCode.RightControl
+	)
+end
+
+local function setupShiftLockRemap()
+	task.spawn(remapShiftLockOffShift)
 end
 
 function MovementClient.init()
 	dashEvent = ReplicatedStorage:WaitForChild("Dash") :: RemoteEvent
 
-	UserInputService.InputBegan:Connect(function(input, gameProcessed)
-		if gameProcessed then
-			return
-		end
+	bindInputActions()
+	setupShiftLockRemap()
 
-		if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
-			requestDash()
-		end
+	player.CharacterAdded:Connect(function()
+		setupShiftLockRemap()
 	end)
 
-	bindShiftLockToCtrl()
-
-	if player.Character then
-		bindCharacter(player.Character)
-	end
-
-	player.CharacterAdded:Connect(bindCharacter)
+	-- Block the default Shift shift-lock binding if PlayerModule re-applies it.
+	UserInputService.InputBegan:Connect(function(input, _gameProcessed)
+		if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
+			if mouseLockController and mouseLockController.BoundKeys then
+				mouseLockController.BoundKeys = SHIFT_LOCK_KEYS
+			end
+		end
+	end)
 end
 
 return MovementClient

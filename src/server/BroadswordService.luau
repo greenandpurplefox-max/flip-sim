@@ -209,15 +209,17 @@ local function runSwingHitChecks(tool: Tool, character: Model, humanoid: Humanoi
 	local usesAnimation = slashTrack ~= nil
 	local swingDuration = BroadswordConfig.getSwingDuration(usesAnimation, slashTrack and slashTrack.Length)
 
+	tool.Grip = BroadswordConfig.SHOULDER_GRIP
+
 	if usesAnimation then
-		tool.Grip = BroadswordConfig.COMBAT_GRIP
-		slashTrack:Stop(0.05)
-		slashTrack:Play(0.08, 1, 1)
+		slashTrack:Stop(BroadswordConfig.ANIMATION_FADE_OUT)
+		slashTrack:Play(BroadswordConfig.ANIMATION_FADE_IN, 1, 1)
 	else
 		tool.Grip = BroadswordConfig.SHOULDER_GRIP
 	end
 
 	local startTime = os.clock()
+	local recoveryStart = 0
 
 	while os.clock() - startTime < swingDuration do
 		if not tool.Parent or tool.Parent ~= character then
@@ -225,12 +227,7 @@ local function runSwingHitChecks(tool: Tool, character: Model, humanoid: Humanoi
 		end
 
 		local elapsed = os.clock() - startTime
-
-		if usesAnimation then
-			tool.Grip = BroadswordConfig.COMBAT_GRIP
-		else
-			tool.Grip = BroadswordConfig.sample(elapsed)
-		end
+		tool.Grip = BroadswordConfig.getGripForSwing(elapsed, swingDuration, usesAnimation)
 
 		if BroadswordConfig.isStrikePhase(elapsed, swingDuration) then
 			damageMonstersInSwing(tool, hitMonsters)
@@ -240,19 +237,16 @@ local function runSwingHitChecks(tool: Tool, character: Model, humanoid: Humanoi
 	end
 
 	if slashTrack then
-		slashTrack:Stop(0.1)
+		slashTrack:Stop(BroadswordConfig.ANIMATION_FADE_OUT)
 	end
 
-	local recoverySteps = 6
-	for step = 1, recoverySteps do
+	recoveryStart = os.clock()
+	while os.clock() - recoveryStart < BroadswordConfig.RECOVERY_DURATION do
 		if not tool.Parent then
 			break
 		end
-		tool.Grip = BroadswordConfig.COMBAT_GRIP:Lerp(
-			BroadswordConfig.SHOULDER_GRIP,
-			step / recoverySteps
-		)
-		task.wait(0.02)
+		tool.Grip = BroadswordConfig.getRecoveryGrip(os.clock() - recoveryStart)
+		task.wait(1 / 60)
 	end
 
 	tool.Grip = BroadswordConfig.SHOULDER_GRIP

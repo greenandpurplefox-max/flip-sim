@@ -1,55 +1,57 @@
 local BroadswordConfig = {}
 
--- Idle: broadsword resting on the shoulder, still gripped in hand.
+-- Idle: broadsword resting on the shoulder.
 BroadswordConfig.SHOULDER_GRIP = CFrame.new(0, -0.55, 0.35)
 	* CFrame.Angles(math.rad(108), math.rad(180), math.rad(92))
 
--- Forward combat grip used while a full-body slash animation plays.
-BroadswordConfig.COMBAT_GRIP = CFrame.new(0, -0.42, 0.48)
-	* CFrame.Angles(math.rad(82), math.rad(175), math.rad(96))
+-- Diagonal slash grips: bottom-right (screen space) to top-left.
+BroadswordConfig.WINDUP_BOTTOM_RIGHT = CFrame.new(0.58, -0.88, 0.28)
+	* CFrame.Angles(math.rad(-42), math.rad(168), math.rad(108))
+
+BroadswordConfig.MID_DIAGONAL = CFrame.new(0.12, -0.22, 0.46)
+	* CFrame.Angles(math.rad(38), math.rad(178), math.rad(86))
+
+BroadswordConfig.STRIKE_TOP_LEFT = CFrame.new(-0.64, 0.38, 0.1)
+	* CFrame.Angles(math.rad(118), math.rad(-18), math.rad(36))
+
+BroadswordConfig.FOLLOW_THROUGH = CFrame.new(-0.38, 0.08, -0.18)
+	* CFrame.Angles(math.rad(92), math.rad(8), math.rad(24))
 
 BroadswordConfig.SWING_COOLDOWN = 0.65
-BroadswordConfig.DEFAULT_SWING_DURATION = 0.72
--- Stop the slash animation before the downward follow-through at the end.
-BroadswordConfig.ANIMATION_END_RATIO = 0.55
-BroadswordConfig.STRIKE_START_RATIO = 0.14
-BroadswordConfig.STRIKE_END_RATIO = 0.58
+BroadswordConfig.DEFAULT_SWING_DURATION = 0.62
+BroadswordConfig.ANIMATION_END_RATIO = 0.58
+BroadswordConfig.ANIMATION_FADE_IN = 0.16
+BroadswordConfig.ANIMATION_FADE_OUT = 0.22
+BroadswordConfig.RECOVERY_DURATION = 0.2
+BroadswordConfig.STRIKE_START_RATIO = 0.16
+BroadswordConfig.STRIKE_END_RATIO = 0.52
 
--- Full-body slash animations, tried in order until one loads.
--- R15: community sword swings first, then official Roblox tool slash.
+-- Body animation only; the sword arc comes from grip keyframes below.
 BroadswordConfig.R15_SLASH_ANIMATIONS = {
 	"rbxassetid://846754447",
 	"rbxassetid://1029253339",
 	"rbxassetid://522635514",
 }
 
--- R6: classic two-handed swing, then Roblox tool slash fallback.
 BroadswordConfig.R6_SLASH_ANIMATIONS = {
 	"rbxassetid://32659706",
 	"rbxassetid://129967390",
 }
 
--- Fallback grip-only swing when no animation asset loads.
+-- Bottom-right to top-left diagonal slash path.
 BroadswordConfig.Keyframes = {
 	{ time = 0, grip = BroadswordConfig.SHOULDER_GRIP },
-	{
-		time = 0.1,
-		grip = CFrame.new(0, -0.35, 0.55) * CFrame.Angles(math.rad(25), math.rad(178), math.rad(98)),
-	},
-	{
-		time = 0.2,
-		grip = CFrame.new(0.3, -0.1, 0.42) * CFrame.Angles(math.rad(150), math.rad(-15), math.rad(168)),
-	},
-	{
-		time = 0.32,
-		grip = CFrame.new(-0.05, -0.72, -0.42) * CFrame.Angles(math.rad(-28), math.rad(92), math.rad(-8)),
-	},
-	{
-		time = 0.42,
-		grip = CFrame.new(-0.42, -0.92, 0.08) * CFrame.Angles(math.rad(22), math.rad(138), math.rad(32)),
-	},
-	{ time = 0.58, grip = BroadswordConfig.SHOULDER_GRIP },
+	{ time = 0.08, grip = BroadswordConfig.WINDUP_BOTTOM_RIGHT },
+	{ time = 0.18, grip = BroadswordConfig.MID_DIAGONAL },
+	{ time = 0.3, grip = BroadswordConfig.STRIKE_TOP_LEFT },
+	{ time = 0.4, grip = BroadswordConfig.FOLLOW_THROUGH },
+	{ time = 0.55, grip = BroadswordConfig.SHOULDER_GRIP },
 }
+
+function BroadswordConfig.smoothstep(alpha: number): number
+	alpha = math.clamp(alpha, 0, 1)
+	return alpha * alpha * (3 - 2 * alpha)
+end
 
 function BroadswordConfig.getKeyframeDuration(): number
 	return BroadswordConfig.Keyframes[#BroadswordConfig.Keyframes].time
@@ -72,11 +74,24 @@ function BroadswordConfig.sample(elapsed: number): CFrame
 		if time >= current.time and time <= nextKeyframe.time then
 			local span = nextKeyframe.time - current.time
 			local alpha = if span > 0 then (time - current.time) / span else 1
-			return current.grip:Lerp(nextKeyframe.grip, alpha)
+			return current.grip:Lerp(nextKeyframe.grip, BroadswordConfig.smoothstep(alpha))
 		end
 	end
 
 	return keyframes[#keyframes].grip
+end
+
+function BroadswordConfig.getGripForSwing(elapsed: number, swingDuration: number, _usesAnimation: boolean): CFrame
+	local duration = if swingDuration > 0 then swingDuration else BroadswordConfig.DEFAULT_SWING_DURATION
+	local progress = math.clamp(elapsed / duration, 0, 1)
+	local sampleTime = progress * BroadswordConfig.getKeyframeDuration()
+	return BroadswordConfig.sample(sampleTime)
+end
+
+function BroadswordConfig.getRecoveryGrip(recoveryElapsed: number): CFrame
+	local alpha = BroadswordConfig.smoothstep(recoveryElapsed / BroadswordConfig.RECOVERY_DURATION)
+	local endGrip = BroadswordConfig.FOLLOW_THROUGH
+	return endGrip:Lerp(BroadswordConfig.SHOULDER_GRIP, alpha)
 end
 
 function BroadswordConfig.isStrikePhase(elapsed: number, swingDuration: number): boolean

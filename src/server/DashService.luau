@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local MovementConfig = require(ReplicatedStorage.Shared.MovementConfig)
 
@@ -8,6 +9,11 @@ local DashService = {}
 local dashEvent: RemoteEvent
 local lastDashTimes: { [Player]: number } = {}
 local activeDashes: { [Player]: boolean } = {}
+
+local function smoothstep(alpha: number): number
+	alpha = math.clamp(alpha, 0, 1)
+	return alpha * alpha * (3 - 2 * alpha)
+end
 
 local function flattenDirection(direction: Vector3): Vector3
 	local flat = Vector3.new(direction.X, 0, direction.Z)
@@ -39,16 +45,44 @@ local function applyDash(player: Player, direction: Vector3)
 
 	activeDashes[player] = true
 
-	local velocity = dashDirection * MovementConfig.DASH_SPEED
-	local currentVelocity = root.AssemblyLinearVelocity
-	root.AssemblyLinearVelocity = Vector3.new(velocity.X, currentVelocity.Y, velocity.Z)
+	local attachment = root:FindFirstChild("RootRigAttachment") or root:FindFirstChild("RootAttachment") :: Attachment?
+	if not attachment then
+		attachment = Instance.new("Attachment")
+		attachment.Name = "DashAttachment"
+		attachment.Parent = root
+	end
 
-	task.delay(MovementConfig.DASH_DURATION, function()
-		if root.Parent then
-			local settledVelocity = root.AssemblyLinearVelocity
-			root.AssemblyLinearVelocity = Vector3.new(0, settledVelocity.Y, 0)
+	local linearVelocity = Instance.new("LinearVelocity")
+	linearVelocity.Name = "DashVelocity"
+	linearVelocity.Attachment0 = attachment
+	linearVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+	linearVelocity.MaxForce = MovementConfig.DASH_MAX_FORCE
+	linearVelocity.VectorVelocity = dashDirection * MovementConfig.DASH_SPEED
+	linearVelocity.Parent = root
+
+	local startTime = os.clock()
+	local dashConnection: RBXScriptConnection
+
+	dashConnection = RunService.Heartbeat:Connect(function()
+		if not root.Parent or not linearVelocity.Parent then
+			if dashConnection then
+				dashConnection:Disconnect()
+			end
+			activeDashes[player] = nil
+			return
 		end
-		activeDashes[player] = nil
+
+		local elapsed = os.clock() - startTime
+		if elapsed >= MovementConfig.DASH_DURATION then
+			dashConnection:Disconnect()
+			linearVelocity:Destroy()
+			activeDashes[player] = nil
+			return
+		end
+
+		local progress = elapsed / MovementConfig.DASH_DURATION
+		local ease = 1 - smoothstep(progress)
+		linearVelocity.VectorVelocity = dashDirection * MovementConfig.DASH_SPEED * ease
 	end)
 end
 

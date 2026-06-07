@@ -80,10 +80,14 @@ local function clearSlashTrack(humanoid: Humanoid)
 	end
 end
 
-local function stopSwing(tool: Tool)
+local function stopSwing(tool: Tool, slashTrack: AnimationTrack?)
 	if swingConnection then
 		swingConnection:Disconnect()
 		swingConnection = nil
+	end
+
+	if slashTrack and slashTrack.IsPlaying then
+		slashTrack:Stop(BroadswordConfig.ANIMATION_FADE_OUT)
 	end
 
 	tool.Grip = BroadswordConfig.SHOULDER_GRIP
@@ -101,18 +105,16 @@ local function playSwing(character: Model, tool: Tool)
 	local usesAnimation = slashTrack ~= nil
 	local swingDuration = BroadswordConfig.getSwingDuration(usesAnimation, slashTrack and slashTrack.Length)
 
+	tool.Grip = BroadswordConfig.SHOULDER_GRIP
+
 	if usesAnimation then
-		tool.Grip = BroadswordConfig.COMBAT_GRIP
-		slashTrack:Stop(0.05)
-		slashTrack:Play(0.08, 1, 1)
-	else
-		tool.Grip = BroadswordConfig.SHOULDER_GRIP
+		slashTrack:Stop(BroadswordConfig.ANIMATION_FADE_OUT)
+		slashTrack:Play(BroadswordConfig.ANIMATION_FADE_IN, 1, 1)
 	end
 
 	local startTime = os.clock()
 	local recovering = false
 	local recoveryStart = 0
-	local recoveryDuration = 0.12
 
 	if swingConnection then
 		swingConnection:Disconnect()
@@ -120,10 +122,7 @@ local function playSwing(character: Model, tool: Tool)
 
 	swingConnection = RunService.RenderStepped:Connect(function()
 		if not character.Parent or tool.Parent ~= character then
-			if slashTrack then
-				slashTrack:Stop(0.05)
-			end
-			stopSwing(tool)
+			stopSwing(tool, slashTrack)
 			return
 		end
 
@@ -131,23 +130,18 @@ local function playSwing(character: Model, tool: Tool)
 
 		if recovering then
 			local recoveryElapsed = os.clock() - recoveryStart
-			local alpha = math.clamp(recoveryElapsed / recoveryDuration, 0, 1)
-			tool.Grip = BroadswordConfig.COMBAT_GRIP:Lerp(BroadswordConfig.SHOULDER_GRIP, alpha)
-			if recoveryElapsed >= recoveryDuration then
-				stopSwing(tool)
+			tool.Grip = BroadswordConfig.getRecoveryGrip(recoveryElapsed)
+			if recoveryElapsed >= BroadswordConfig.RECOVERY_DURATION then
+				stopSwing(tool, slashTrack)
 			end
 			return
 		end
 
-		if usesAnimation then
-			tool.Grip = BroadswordConfig.COMBAT_GRIP
-		else
-			tool.Grip = BroadswordConfig.sample(elapsed)
-		end
+		tool.Grip = BroadswordConfig.getGripForSwing(elapsed, swingDuration, usesAnimation)
 
 		if elapsed >= swingDuration then
 			if slashTrack then
-				slashTrack:Stop(0.1)
+				slashTrack:Stop(BroadswordConfig.ANIMATION_FADE_OUT)
 			end
 			recovering = true
 			recoveryStart = os.clock()
