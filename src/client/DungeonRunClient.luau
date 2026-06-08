@@ -178,6 +178,8 @@ local function renderRunState(state: any)
 			`Depth {state.room}{bossText}  |  Beasts left: {state.monstersRemaining}  |  Gold: {state.gold}  |  Relics: {cardCount}`
 	elseif state.status == "card_draft" then
 		statusLabel.Text = `Depth {state.room} cleared  |  Gold: {state.gold}  |  Choose a relic...`
+	elseif state.status == "treasure_chest" then
+		statusLabel.Text = `Depth {state.room} cleared  |  Gold: {state.gold}  |  Treasure chest nearby! Hold E to open.`
 	elseif state.status == "intermission" then
 		statusLabel.Text = `Depth {state.room} cleared  |  Gold: {state.gold}  |  Deeper...`
 	else

@@ -4,11 +4,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CardService = require(script.Parent.CardService)
 local DungeonConfig = require(ReplicatedStorage.Shared.DungeonConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local TreasureChestService = require(script.Parent.TreasureChestService)
+local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 local WaveService = require(script.Parent.WaveService)
 
 local DungeonRunService = {}
 
-export type RunStatus = "starting" | "fighting" | "card_draft" | "intermission" | "ended"
+export type RunStatus = "starting" | "fighting" | "card_draft" | "treasure_chest" | "intermission" | "ended"
 
 export type RunState = {
 	room: number,
@@ -22,6 +24,7 @@ export type RunState = {
 local CardServiceModule = CardService
 local cardDraftPickEvent: RemoteEvent
 local dungeonRunStateEvent: RemoteEvent
+local treasureChestOpenedEvent: RemoteEvent
 
 local playerRuns: { [Player]: RunState } = {}
 local pendingDraftOptions: { [Player]: { string } } = {}
@@ -56,6 +59,21 @@ local function getDungeonRunStateEvent(): RemoteEvent
 	end
 
 	return dungeonRunStateEvent
+end
+
+local function getTreasureChestOpenedEvent(): RemoteEvent
+	if treasureChestOpenedEvent then
+		return treasureChestOpenedEvent
+	end
+
+	treasureChestOpenedEvent = ReplicatedStorage:FindFirstChild("TreasureChestOpened") :: RemoteEvent?
+	if not treasureChestOpenedEvent then
+		treasureChestOpenedEvent = Instance.new("RemoteEvent")
+		treasureChestOpenedEvent.Name = "TreasureChestOpened"
+		treasureChestOpenedEvent.Parent = ReplicatedStorage
+	end
+
+	return treasureChestOpenedEvent
 end
 
 local function getRun(player: Player): RunState?
@@ -121,18 +139,7 @@ local function beginRoom(player: Player)
 	sendRunState(player)
 end
 
-local function continueAfterRoomClear(player: Player)
-	local run = getRun(player)
-	if not run then
-		return
-	end
-
-	CardServiceModule.healOnRoomClear(player)
-
-	run.gold += if run.isBossRoom then DungeonConfig.GOLD_PER_BOSS else DungeonConfig.GOLD_PER_ROOM
-	run.status = "intermission"
-	sendRunState(player)
-
+local function proceedAfterRoomClear(player: Player, clearedRoom: number)
 	local token = bumpToken(player)
 	task.delay(DungeonConfig.ROOM_CLEAR_DELAY, function()
 		if not isTokenValid(player, token) then
@@ -143,8 +150,6 @@ local function continueAfterRoomClear(player: Player)
 		if not activeRun or activeRun.status ~= "intermission" then
 			return
 		end
-
-		local clearedRoom = activeRun.room
 
 		if shouldOfferCards(clearedRoom) then
 			activeRun.status = "card_draft"
@@ -175,6 +180,46 @@ local function continueAfterRoomClear(player: Player)
 		activeRun.room += 1
 		beginRoom(player)
 	end)
+end
+
+local function onTreasureOpened(player: Player, clearedRoom: number, loot: TreasureChestService.ChestLoot)
+	local run = getRun(player)
+	if not run or run.status ~= "treasure_chest" then
+		return
+	end
+
+	run.gold += loot.gold
+	run.status = "intermission"
+	sendRunState(player)
+	getTreasureChestOpenedEvent():FireClient(player, loot, run.gold)
+	proceedAfterRoomClear(player, clearedRoom)
+end
+
+local function continueAfterRoomClear(player: Player)
+	local run = getRun(player)
+	if not run then
+		return
+	end
+
+	CardServiceModule.healOnRoomClear(player)
+
+	run.gold += if run.isBossRoom then DungeonConfig.GOLD_PER_BOSS else DungeonConfig.GOLD_PER_ROOM
+	local clearedRoom = run.room
+
+	if TreasureConfig.shouldSpawnChest(run.isBossRoom) then
+		run.status = "treasure_chest"
+		sendRunState(player)
+
+		local tierId = TreasureConfig.rollTier(run.isBossRoom, clearedRoom)
+		TreasureChestService.spawnChest(player, tierId, clearedRoom, function(loot)
+			onTreasureOpened(player, clearedRoom, loot)
+		end)
+		return
+	end
+
+	run.status = "intermission"
+	sendRunState(player)
+	proceedAfterRoomClear(player, clearedRoom)
 end
 
 local function onRoomCleared(player: Player)
@@ -248,6 +293,7 @@ end
 
 function DungeonRunService.endRun(player: Player)
 	WaveService.clearMonstersForOwner(player.UserId)
+	TreasureChestService.destroyChest(player)
 	playerRuns[player] = nil
 	pendingDraftOptions[player] = nil
 	bumpToken(player)
@@ -276,6 +322,7 @@ function DungeonRunService.init()
 
 	getDungeonRunStateEvent()
 	getCardDraftPickEvent()
+	getTreasureChestOpenedEvent()
 
 	getCardDraftPickEvent().OnServerEvent:Connect(function(player, cardId: string)
 		if typeof(cardId) ~= "string" then
