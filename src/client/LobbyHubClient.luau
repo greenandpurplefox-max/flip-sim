@@ -75,7 +75,7 @@ function LobbyHubClient.init()
 	hintLabel.BackgroundTransparency = 1
 	hintLabel.Size = UDim2.fromScale(1, 1)
 	hintLabel.Font = Enum.Font.Gotham
-	hintLabel.Text = "Blacksmith: open Weapons to equip and upgrade.\nStand on the green gate for a moment, or hold E there, to enter the dungeon."
+	hintLabel.Text = "Talk to Harold at the forge for dungeon tips.\nOpen Weapons to equip and upgrade. Stand on the green gate to enter."
 	hintLabel.TextColor3 = TEXT
 	hintLabel.TextSize = 16
 	hintLabel.TextWrapped = true

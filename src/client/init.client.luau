@@ -1,4 +1,5 @@
 local DungeonRunClient = require(script.DungeonRunClient)
+local BlacksmithDialogueClient = require(script.BlacksmithDialogueClient)
 local LobbyHubClient = require(script.LobbyHubClient)
 local WeaponClient = require(script.WeaponClient)
 local WeaponMenuClient = require(script.WeaponMenuClient)
@@ -7,6 +8,7 @@ local MovementClient = require(script.MovementClient)
 
 WeaponClient.init()
 LobbyHubClient.init()
+BlacksmithDialogueClient.init()
 WeaponMenuClient.init()
 HealthBarUI.init()
 MovementClient.init()

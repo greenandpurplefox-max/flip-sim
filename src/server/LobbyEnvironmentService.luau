@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local BlacksmithConfig = require(ReplicatedStorage.Shared.BlacksmithConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 
 local LobbyEnvironmentService = {}
@@ -55,6 +56,116 @@ local function createSign(parent: Instance, position: Vector3, text: string, col
 	label.Parent = billboard
 end
 
+local function weld(part0: BasePart, part1: BasePart, c0: CFrame?, c1: CFrame?)
+	local weldInstance = Instance.new("Weld")
+	weldInstance.Part0 = part0
+	weldInstance.Part1 = part1
+	weldInstance.C0 = c0 or CFrame.new()
+	weldInstance.C1 = c1 or CFrame.new()
+	weldInstance.Parent = part0
+end
+
+local function createBlacksmith(parent: Instance)
+	local model = Instance.new("Model")
+	model.Name = "Blacksmith"
+
+	local skin = Color3.fromRGB(204, 168, 132)
+	local shirt = Color3.fromRGB(92, 88, 96)
+	local pants = Color3.fromRGB(58, 46, 38)
+	local apron = Color3.fromRGB(118, 72, 38)
+	local leather = Color3.fromRGB(74, 48, 28)
+	local metal = Color3.fromRGB(88, 88, 94)
+	local metalBright = Color3.fromRGB(148, 148, 156)
+
+	local rootPosition = BlacksmithConfig.POSITION + Vector3.new(0, 3.1, 0)
+	local rootCFrame = CFrame.lookAt(
+		rootPosition,
+		Vector3.new(BlacksmithConfig.LOOK_AT.X, rootPosition.Y, BlacksmithConfig.LOOK_AT.Z)
+	)
+
+	local root = createPart("HumanoidRootPart", Vector3.new(2, 2.2, 1), rootCFrame, shirt, model, {
+		material = Enum.Material.Fabric,
+	})
+	model.PrimaryPart = root
+
+	local head = createPart("Head", Vector3.new(1.35, 1.35, 1.35), rootCFrame * CFrame.new(0, 1.75, 0), skin, model, {
+		shape = Enum.PartType.Ball,
+		canCollide = false,
+	})
+	weld(root, head, CFrame.new(0, 1.75, 0), CFrame.new())
+
+	local face = Instance.new("Decal")
+	face.Name = "face"
+	face.Texture = "rbxasset://textures/face.png"
+	face.Face = Enum.NormalId.Front
+	face.Parent = head
+
+	local beard = createPart("Beard", Vector3.new(0.9, 0.55, 0.45), rootCFrame * CFrame.new(0, 1.35, -0.45), leather, model, {
+		canCollide = false,
+	})
+	weld(head, beard, CFrame.new(0, -0.25, -0.45), CFrame.new())
+
+	local leftArm = createPart("LeftArm", Vector3.new(1, 2.2, 1), rootCFrame * CFrame.new(-1.55, 0.1, 0), shirt, model, {
+		material = Enum.Material.Fabric,
+		canCollide = false,
+	})
+	weld(root, leftArm, CFrame.new(-1.55, 0.1, 0), CFrame.new())
+
+	local rightArm = createPart("RightArm", Vector3.new(1, 2.2, 1), rootCFrame * CFrame.new(1.55, 0.35, -0.15), shirt, model, {
+		material = Enum.Material.Fabric,
+		canCollide = false,
+	})
+	weld(root, rightArm, CFrame.new(1.55, 0.35, -0.15), CFrame.new())
+
+	local leftLeg = createPart("LeftLeg", Vector3.new(1, 2, 1), rootCFrame * CFrame.new(-0.55, -2.1, 0), pants, model, {
+		canCollide = false,
+	})
+	weld(root, leftLeg, CFrame.new(-0.55, -2.1, 0), CFrame.new())
+
+	local rightLeg = createPart("RightLeg", Vector3.new(1, 2, 1), rootCFrame * CFrame.new(0.55, -2.1, 0), pants, model, {
+		canCollide = false,
+	})
+	weld(root, rightLeg, CFrame.new(0.55, -2.1, 0), CFrame.new())
+
+	local apronPart = createPart("Apron", Vector3.new(1.7, 2.2, 0.18), rootCFrame * CFrame.new(0, -0.1, -0.55), apron, model, {
+		material = Enum.Material.Fabric,
+		canCollide = false,
+	})
+	weld(root, apronPart, CFrame.new(0, -0.1, -0.55), CFrame.new())
+
+	local hammerHandle = createPart("HammerHandle", Vector3.new(0.28, 1.2, 0.28), rootCFrame * CFrame.new(1.95, 0.55, -0.55), leather, model, {
+		canCollide = false,
+	})
+	weld(rightArm, hammerHandle, CFrame.new(0.45, 0.15, -0.35) * CFrame.Angles(math.rad(28), 0, math.rad(18)), CFrame.new())
+
+	local hammerHead = createPart("HammerHead", Vector3.new(0.85, 0.55, 0.55), rootCFrame * CFrame.new(2.15, 1.05, -0.75), metal, model, {
+		material = Enum.Material.Metal,
+		canCollide = false,
+	})
+	weld(hammerHandle, hammerHead, CFrame.new(0, 0.65, 0), CFrame.new())
+
+	local beltBuckle = createPart("BeltBuckle", Vector3.new(0.45, 0.45, 0.12), rootCFrame * CFrame.new(0, -0.55, -0.52), metalBright, model, {
+		material = Enum.Material.Metal,
+		canCollide = false,
+	})
+	weld(root, beltBuckle, CFrame.new(0, -0.55, -0.52), CFrame.new())
+
+	local humanoid = Instance.new("Humanoid")
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	humanoid.Parent = model
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = BlacksmithConfig.PROMPT_ACTION_TEXT
+	prompt.ObjectText = BlacksmithConfig.PROMPT_OBJECT_TEXT
+	prompt.MaxActivationDistance = BlacksmithConfig.PROMPT_DISTANCE
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = root
+
+	model:SetAttribute("BlacksmithNpc", true)
+	model.Parent = parent
+end
+
 function LobbyEnvironmentService.init()
 	if not LobbyConfig.USE_LOBBY then
 		return
@@ -88,7 +199,7 @@ function LobbyEnvironmentService.init()
 		{ material = Enum.Material.Slate }
 	)
 
-	createSign(folder, LobbyConfig.FORGE_POSITION + Vector3.new(0, 0, -8), "Blacksmith", Color3.fromRGB(255, 196, 96))
+	createSign(folder, BlacksmithConfig.POSITION + Vector3.new(0, 6.5, 0), "Blacksmith", Color3.fromRGB(255, 196, 96))
 	createSign(folder, LobbyConfig.PORTAL_POSITION + Vector3.new(0, 0, 8), "Dungeon Gate", Color3.fromRGB(120, 255, 160))
 
 	local forge = createPart(
@@ -107,6 +218,8 @@ function LobbyEnvironmentService.init()
 		folder,
 		{ material = Enum.Material.Neon, canCollide = false, canTouch = false }
 	)
+
+	createBlacksmith(folder)
 
 	local portalBase = createPart(
 		"DungeonPortal",
