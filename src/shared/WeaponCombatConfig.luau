@@ -1,14 +1,22 @@
 local BroadswordConfig = require(script.Parent.BroadswordConfig)
+local HalberdConfig = require(script.Parent.HalberdConfig)
 local RapierConfig = require(script.Parent.RapierConfig)
+local WarAxeConfig = require(script.Parent.WarAxeConfig)
+local WarHammerConfig = require(script.Parent.WarHammerConfig)
 local WeaponConfig = require(script.Parent.WeaponConfig)
 
 local WeaponCombatConfig = {}
 
+local CONFIG_BY_WEAPON = {
+	Broadsword = BroadswordConfig,
+	Rapier = RapierConfig,
+	WarAxe = WarAxeConfig,
+	Halberd = HalberdConfig,
+	WarHammer = WarHammerConfig,
+}
+
 function WeaponCombatConfig.getConfig(weaponId: string)
-	if weaponId == "Rapier" then
-		return RapierConfig
-	end
-	return BroadswordConfig
+	return CONFIG_BY_WEAPON[weaponId] or BroadswordConfig
 end
 
 function WeaponCombatConfig.getConfigForTool(tool: Tool)

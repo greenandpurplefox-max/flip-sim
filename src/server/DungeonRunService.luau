@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CardService = require(script.Parent.CardService)
 local DungeonConfig = require(ReplicatedStorage.Shared.DungeonConfig)
+local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local WaveService = require(script.Parent.WaveService)
 
 local DungeonRunService = {}
@@ -25,6 +26,7 @@ local dungeonRunStateEvent: RemoteEvent
 local playerRuns: { [Player]: RunState } = {}
 local pendingDraftOptions: { [Player]: { string } } = {}
 local runTokens: { [Player]: number } = {}
+local runEndedHandler: ((Player, number) -> ())? = nil
 
 local function getCardDraftPickEvent(): RemoteEvent
 	if cardDraftPickEvent then
@@ -92,15 +94,6 @@ local function isTokenValid(player: Player, token: number): boolean
 	return runTokens[player] == token
 end
 
-local function getMonsterCountForRoom(room: number, isBossRoom: boolean): number
-	local count = math.floor(DungeonConfig.BASE_MONSTERS_PER_ROOM + room * DungeonConfig.MONSTERS_PER_ROOM_GROWTH)
-	count = math.clamp(count, DungeonConfig.BASE_MONSTERS_PER_ROOM, DungeonConfig.MAX_MONSTERS_PER_ROOM)
-	if isBossRoom then
-		count += DungeonConfig.BOSS_MONSTER_BONUS
-	end
-	return count
-end
-
 local function shouldOfferCards(room: number): boolean
 	if room < DungeonConfig.FIRST_CARD_ROOM then
 		return false
@@ -116,10 +109,9 @@ local function beginRoom(player: Player)
 
 	run.status = "fighting"
 	run.isBossRoom = run.room > 0 and run.room % DungeonConfig.BOSS_EVERY_N_ROOMS == 0
-	run.monstersRemaining = getMonsterCountForRoom(run.room, run.isBossRoom)
 
-	WaveService.spawnDungeonMonsters(
-		run.monstersRemaining,
+	run.monstersRemaining = WaveService.spawnDungeonMonsters(
+		run.room,
 		player.UserId,
 		run.isBossRoom,
 		DungeonConfig.SPAWN_RADIUS_MIN,
@@ -250,10 +242,27 @@ function DungeonRunService.startRun(player: Player)
 end
 
 function DungeonRunService.endRun(player: Player)
+	WaveService.clearMonstersForOwner(player.UserId)
 	playerRuns[player] = nil
 	pendingDraftOptions[player] = nil
 	bumpToken(player)
 	getDungeonRunStateEvent():FireClient(player, nil, nil)
+end
+
+function DungeonRunService.setRunEndedHandler(handler: (Player, number) -> ())
+	runEndedHandler = handler
+end
+
+function DungeonRunService.handlePlayerDeath(player: Player)
+	local run = getRun(player)
+	local runGold = if run then run.gold else 0
+
+	if LobbyConfig.USE_LOBBY and runEndedHandler then
+		runEndedHandler(player, runGold)
+		return
+	end
+
+	DungeonRunService.endRun(player)
 end
 
 function DungeonRunService.init()
@@ -298,21 +307,21 @@ function DungeonRunService.init()
 
 			local humanoid = character:WaitForChild("Humanoid") :: Humanoid
 			humanoid.Died:Connect(function()
-				DungeonRunService.endRun(player)
-			end)
-
-			task.defer(function()
-				if player.Character == character then
-					DungeonRunService.startRun(player)
-				end
+				DungeonRunService.handlePlayerDeath(player)
 			end)
 		end)
 
 		player.CharacterRemoving:Connect(function()
+			if LobbyConfig.USE_LOBBY then
+				if getRun(player) then
+					DungeonRunService.handlePlayerDeath(player)
+				end
+				return
+			end
 			DungeonRunService.endRun(player)
 		end)
 
-		if player.Character then
+		if not LobbyConfig.USE_LOBBY and player.Character then
 			DungeonRunService.startRun(player)
 		end
 	end

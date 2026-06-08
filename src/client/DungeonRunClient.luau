@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CardConfig = require(ReplicatedStorage.Shared.CardConfig)
 local DungeonConfig = require(ReplicatedStorage.Shared.DungeonConfig)
+local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 
 local DungeonRunClient = {}
 
@@ -23,7 +24,7 @@ local function createUI()
 	screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "DungeonRunUI"
 	screenGui.ResetOnSpawn = false
-	screenGui.Enabled = DungeonConfig.USE_DUNGEON_MODE
+	screenGui.Enabled = false
 	screenGui.Parent = playerGui
 
 	statusLabel = Instance.new("TextLabel")
@@ -207,6 +208,16 @@ function DungeonRunClient.init()
 			hideCardDraft()
 		end
 	end)
+
+	if LobbyConfig.USE_LOBBY then
+		local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
+		phaseStateEvent.OnClientEvent:Connect(function(phase: string)
+			screenGui.Enabled = phase == "Dungeon"
+			if phase ~= "Dungeon" then
+				hideCardDraft()
+			end
+		end)
+	end
 end
 
 return DungeonRunClient

@@ -29,6 +29,33 @@ WeaponConfig.Weapons = {
 		cooldown = 0.2,
 		hitboxScale = 1.85,
 	},
+	WarAxe = {
+		id = "WarAxe",
+		displayName = "War Axe",
+		description = "Quick overhead chops with a wide edge.",
+		damageMin = 6,
+		damageMax = 11,
+		cooldown = 0.48,
+		hitboxScale = 2.1,
+	},
+	Halberd = {
+		id = "Halberd",
+		displayName = "Halberd",
+		description = "Long reach polearm sweeps.",
+		damageMin = 7,
+		damageMax = 12,
+		cooldown = 0.72,
+		hitboxScale = 2.55,
+	},
+	WarHammer = {
+		id = "WarHammer",
+		displayName = "War Hammer",
+		description = "Slow crushing blows that hit hard.",
+		damageMin = 9,
+		damageMax = 16,
+		cooldown = 0.95,
+		hitboxScale = 1.95,
+	},
 }
 
 WeaponConfig.DEFAULT_WEAPON = "Broadsword"
@@ -40,8 +67,9 @@ end
 
 function WeaponConfig.getWeaponList(): { WeaponStats }
 	local list: { WeaponStats } = {}
-	table.insert(list, WeaponConfig.Weapons.Broadsword)
-	table.insert(list, WeaponConfig.Weapons.Rapier)
+	for _, weapon in WeaponConfig.Weapons do
+		table.insert(list, weapon)
+	end
 	return list
 end
 

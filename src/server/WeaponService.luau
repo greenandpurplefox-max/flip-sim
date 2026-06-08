@@ -4,13 +4,18 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local BroadswordConfig = require(ReplicatedStorage.Shared.BroadswordConfig)
 local BroadswordPose = require(ReplicatedStorage.Shared.BroadswordPose)
+local HalberdConfig = require(ReplicatedStorage.Shared.HalberdConfig)
 local RapierConfig = require(ReplicatedStorage.Shared.RapierConfig)
+local WarAxeConfig = require(ReplicatedStorage.Shared.WarAxeConfig)
+local WarHammerConfig = require(ReplicatedStorage.Shared.WarHammerConfig)
 local WaveConfig = require(ReplicatedStorage.Shared.WaveConfig)
 local WeaponCombatConfig = require(ReplicatedStorage.Shared.WeaponCombatConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
+local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig)
 
-local WaveService = require(script.Parent.WaveService)
 local CardService = require(script.Parent.CardService)
+local GamePhaseService = require(script.Parent.GamePhaseService)
+local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local WeaponService = {}
 
@@ -19,6 +24,8 @@ local playerWeapons: { [Player]: string } = {}
 local swordHitEvent: RemoteEvent
 local equipWeaponEvent: RemoteEvent
 local loadoutUpdatedEvent: RemoteEvent
+local upgradeWeaponEvent: RemoteEvent
+local unlockWeaponEvent: RemoteEvent
 
 local function getSwordHitEvent(): RemoteEvent
 	if swordHitEvent then
@@ -63,6 +70,45 @@ local function getLoadoutUpdatedEvent(): RemoteEvent
 	end
 
 	return loadoutUpdatedEvent
+end
+
+local function getUpgradeWeaponEvent(): RemoteEvent
+	if upgradeWeaponEvent then
+		return upgradeWeaponEvent
+	end
+
+	upgradeWeaponEvent = ReplicatedStorage:FindFirstChild("UpgradeWeapon") :: RemoteEvent?
+	if not upgradeWeaponEvent then
+		upgradeWeaponEvent = Instance.new("RemoteEvent")
+		upgradeWeaponEvent.Name = "UpgradeWeapon"
+		upgradeWeaponEvent.Parent = ReplicatedStorage
+	end
+
+	return upgradeWeaponEvent
+end
+
+local function getUnlockWeaponEvent(): RemoteEvent
+	if unlockWeaponEvent then
+		return unlockWeaponEvent
+	end
+
+	unlockWeaponEvent = ReplicatedStorage:FindFirstChild("UnlockWeapon") :: RemoteEvent?
+	if not unlockWeaponEvent then
+		unlockWeaponEvent = Instance.new("RemoteEvent")
+		unlockWeaponEvent.Name = "UnlockWeapon"
+		unlockWeaponEvent.Parent = ReplicatedStorage
+	end
+
+	return unlockWeaponEvent
+end
+
+local function getEffectiveStats(player: Player?, weaponId: string): WeaponConfig.WeaponStats
+	if player then
+		local level = PlayerDataService.getWeaponLevel(player, weaponId)
+		return WeaponUpgradeConfig.getEffectiveStats(weaponId, level)
+	end
+
+	return WeaponConfig.getWeapon(weaponId) or WeaponConfig.Weapons.Broadsword
 end
 
 local function weld(part0: BasePart, part1: BasePart)
@@ -182,6 +228,173 @@ local function createRapierTemplate(): Tool
 	return tool
 end
 
+local function createWarAxeTemplate(): Tool
+	local tool = Instance.new("Tool")
+	tool.Name = "WarAxe"
+	tool.CanBeDropped = false
+	tool.RequiresHandle = true
+	tool.ToolTip = "Quick overhead chops with a wide edge"
+	tool:SetAttribute(WeaponConfig.WEAPON_ATTRIBUTE, "WarAxe")
+
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.32, 1.05, 0.32)
+	handle.Color = Color3.fromRGB(88, 54, 32)
+	handle.Material = Enum.Material.Fabric
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = tool
+
+	local guard = Instance.new("Part")
+	guard.Name = "Guard"
+	guard.Size = Vector3.new(0.75, 0.18, 0.75)
+	guard.Color = Color3.fromRGB(108, 88, 48)
+	guard.Material = Enum.Material.Metal
+	guard.CanCollide = false
+	guard.Massless = true
+	guard.CFrame = handle.CFrame * CFrame.new(0, -0.52, 0)
+	guard.Parent = tool
+
+	local blade = Instance.new("Part")
+	blade.Name = "Blade"
+	blade.Size = Vector3.new(1.35, 0.42, 1.85)
+	blade.Color = Color3.fromRGB(176, 182, 192)
+	blade.Material = Enum.Material.Metal
+	blade.CanCollide = false
+	blade.Massless = true
+	blade.CFrame = handle.CFrame * CFrame.new(0, -0.72, -0.42) * CFrame.Angles(math.rad(18), 0, 0)
+	blade.Parent = tool
+
+	local bladeTip = Instance.new("Part")
+	bladeTip.Name = "BladeTip"
+	bladeTip.Size = Vector3.new(1.15, 0.28, 0.55)
+	bladeTip.Color = Color3.fromRGB(198, 204, 214)
+	bladeTip.Material = Enum.Material.Metal
+	bladeTip.CanCollide = false
+	bladeTip.Massless = true
+	bladeTip.CFrame = blade.CFrame * CFrame.new(0, 0, -1.05)
+	bladeTip.Parent = tool
+
+	weld(handle, guard)
+	weld(handle, blade)
+	weld(blade, bladeTip)
+
+	tool.Grip = WarAxeConfig.SHOULDER_GRIP
+	return tool
+end
+
+local function createHalberdTemplate(): Tool
+	local tool = Instance.new("Tool")
+	tool.Name = "Halberd"
+	tool.CanBeDropped = false
+	tool.RequiresHandle = true
+	tool.ToolTip = "Long reach polearm sweeps"
+	tool:SetAttribute(WeaponConfig.WEAPON_ATTRIBUTE, "Halberd")
+
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.22, 5.2, 0.22)
+	handle.Color = Color3.fromRGB(96, 68, 38)
+	handle.Material = Enum.Material.Wood
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = tool
+
+	local guard = Instance.new("Part")
+	guard.Name = "Guard"
+	guard.Size = Vector3.new(0.55, 0.12, 0.55)
+	guard.Color = Color3.fromRGB(128, 108, 58)
+	guard.Material = Enum.Material.Metal
+	guard.CanCollide = false
+	guard.Massless = true
+	guard.CFrame = handle.CFrame * CFrame.new(0, -2.35, 0)
+	guard.Parent = tool
+
+	local blade = Instance.new("Part")
+	blade.Name = "Blade"
+	blade.Size = Vector3.new(0.18, 2.4, 1.45)
+	blade.Color = Color3.fromRGB(184, 190, 200)
+	blade.Material = Enum.Material.Metal
+	blade.CanCollide = false
+	blade.Massless = true
+	blade.CFrame = handle.CFrame * CFrame.new(0, -3.55, -0.35) * CFrame.Angles(math.rad(12), 0, 0)
+	blade.Parent = tool
+
+	local bladeTip = Instance.new("Part")
+	bladeTip.Name = "BladeTip"
+	bladeTip.Size = Vector3.new(0.14, 0.65, 0.95)
+	bladeTip.Color = Color3.fromRGB(204, 210, 220)
+	bladeTip.Material = Enum.Material.Metal
+	bladeTip.CanCollide = false
+	bladeTip.Massless = true
+	bladeTip.CFrame = blade.CFrame * CFrame.new(0, -1.35, -0.18)
+	bladeTip.Parent = tool
+
+	weld(handle, guard)
+	weld(handle, blade)
+	weld(blade, bladeTip)
+
+	tool.Grip = HalberdConfig.SHOULDER_GRIP
+	return tool
+end
+
+local function createWarHammerTemplate(): Tool
+	local tool = Instance.new("Tool")
+	tool.Name = "WarHammer"
+	tool.CanBeDropped = false
+	tool.RequiresHandle = true
+	tool.ToolTip = "Slow crushing blows that hit hard"
+	tool:SetAttribute(WeaponConfig.WEAPON_ATTRIBUTE, "WarHammer")
+
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.28, 1.15, 0.28)
+	handle.Color = Color3.fromRGB(82, 52, 30)
+	handle.Material = Enum.Material.Fabric
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = tool
+
+	local guard = Instance.new("Part")
+	guard.Name = "Guard"
+	guard.Size = Vector3.new(0.95, 0.16, 0.95)
+	guard.Color = Color3.fromRGB(118, 98, 52)
+	guard.Material = Enum.Material.Metal
+	guard.CanCollide = false
+	guard.Massless = true
+	guard.CFrame = handle.CFrame * CFrame.new(0, -0.58, 0)
+	guard.Parent = tool
+
+	local blade = Instance.new("Part")
+	blade.Name = "Blade"
+	blade.Size = Vector3.new(1.05, 1.05, 1.05)
+	blade.Color = Color3.fromRGB(148, 152, 162)
+	blade.Material = Enum.Material.Metal
+	blade.CanCollide = false
+	blade.Massless = true
+	blade.Shape = Enum.PartType.Ball
+	blade.CFrame = handle.CFrame * CFrame.new(0, -1.25, 0)
+	blade.Parent = tool
+
+	local bladeTip = Instance.new("Part")
+	bladeTip.Name = "BladeTip"
+	bladeTip.Size = Vector3.new(0.85, 0.85, 0.85)
+	bladeTip.Color = Color3.fromRGB(168, 172, 182)
+	bladeTip.Material = Enum.Material.Metal
+	bladeTip.CanCollide = false
+	bladeTip.Massless = true
+	bladeTip.Shape = Enum.PartType.Ball
+	bladeTip.CFrame = blade.CFrame
+	bladeTip.Parent = tool
+
+	weld(handle, guard)
+	weld(handle, blade)
+	weld(blade, bladeTip)
+
+	tool.Grip = WarHammerConfig.SHOULDER_GRIP
+	return tool
+end
+
 local function findWaveWeapon(container: Instance): Tool?
 	for _, child in container:GetChildren() do
 		if child:IsA("Tool") then
@@ -269,7 +482,8 @@ local function damageMonstersInSwing(tool: Tool, character: Model, alreadyHit: {
 	end
 
 	local attacker = Players:GetPlayerFromCharacter(character)
-	local stats = WeaponConfig.getStatsForTool(tool)
+	local weaponId = tool:GetAttribute(WeaponConfig.WEAPON_ATTRIBUTE) or tool.Name
+	local stats = getEffectiveStats(attacker, weaponId :: string)
 
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Include
@@ -360,9 +574,10 @@ local function bindCombat(tool: Tool)
 			return
 		end
 
-		local stats = WeaponConfig.getStatsForTool(tool)
-		local now = os.clock()
 		local attacker = Players:GetPlayerFromCharacter(character)
+		local weaponId = tool:GetAttribute(WeaponConfig.WEAPON_ATTRIBUTE) or tool.Name
+		local stats = getEffectiveStats(attacker, weaponId :: string)
+		local now = os.clock()
 		local swingCooldown = stats.cooldown
 		if attacker then
 			swingCooldown *= CardService.getModifiers(attacker).cooldownMult
@@ -402,8 +617,16 @@ local function bindPermanentEquip(player: Player, tool: Tool)
 end
 
 local function notifyLoadout(player: Player)
-	local weaponId = playerWeapons[player] or WeaponConfig.DEFAULT_WEAPON
-	getLoadoutUpdatedEvent():FireClient(player, weaponId, WaveService.isLoadoutLocked())
+	local weaponId = PlayerDataService.getEquippedWeapon(player)
+	playerWeapons[player] = weaponId
+	getLoadoutUpdatedEvent():FireClient(player, weaponId, GamePhaseService.isLoadoutLocked(player))
+end
+
+function WeaponService.refreshPlayerLoadout(player: Player)
+	local weaponId = PlayerDataService.getEquippedWeapon(player)
+	playerWeapons[player] = weaponId
+	giveWeapon(player, player.Character, weaponId)
+	notifyLoadout(player)
 end
 
 local function giveWeapon(player: Player, character: Model?, weaponId: string)
@@ -429,11 +652,19 @@ local function giveWeapon(player: Player, character: Model?, weaponId: string)
 end
 
 function WeaponService.equipPlayerWeapon(player: Player, weaponId: string): boolean
-	if WaveService.isLoadoutLocked() then
+	if GamePhaseService.isLoadoutLocked(player) then
 		return false
 	end
 
 	if not WeaponConfig.isValid(weaponId) then
+		return false
+	end
+
+	if not PlayerDataService.isWeaponUnlocked(player, weaponId) then
+		return false
+	end
+
+	if not PlayerDataService.setEquippedWeapon(player, weaponId) then
 		return false
 	end
 
@@ -443,9 +674,27 @@ function WeaponService.equipPlayerWeapon(player: Player, weaponId: string): bool
 	return true
 end
 
+function WeaponService.upgradePlayerWeapon(player: Player, weaponId: string): boolean
+	if not GamePhaseService.isInLobby(player) then
+		return false
+	end
+
+	local ok = PlayerDataService.tryUpgradeWeapon(player, weaponId)
+	return ok
+end
+
+function WeaponService.unlockPlayerWeapon(player: Player, weaponId: string): boolean
+	if not GamePhaseService.isInLobby(player) then
+		return false
+	end
+
+	local ok = PlayerDataService.tryUnlockWeapon(player, weaponId)
+	return ok
+end
+
 local function onCharacterAdded(player: Player, character: Model)
 	task.defer(function()
-		local weaponId = playerWeapons[player] or WeaponConfig.DEFAULT_WEAPON
+		local weaponId = PlayerDataService.getEquippedWeapon(player)
 		playerWeapons[player] = weaponId
 		giveWeapon(player, character, weaponId)
 		notifyLoadout(player)
@@ -455,6 +704,9 @@ end
 function WeaponService.init()
 	weaponTemplates.Broadsword = createBroadswordTemplate()
 	weaponTemplates.Rapier = createRapierTemplate()
+	weaponTemplates.WarAxe = createWarAxeTemplate()
+	weaponTemplates.Halberd = createHalberdTemplate()
+	weaponTemplates.WarHammer = createWarHammerTemplate()
 
 	for _, template in weaponTemplates do
 		template.Parent = ServerStorage
@@ -463,6 +715,8 @@ function WeaponService.init()
 	getSwordHitEvent()
 	getEquipWeaponEvent()
 	getLoadoutUpdatedEvent()
+	getUpgradeWeaponEvent()
+	getUnlockWeaponEvent()
 
 	getEquipWeaponEvent().OnServerEvent:Connect(function(player, weaponId: string)
 		if typeof(weaponId) ~= "string" then
@@ -472,8 +726,24 @@ function WeaponService.init()
 		WeaponService.equipPlayerWeapon(player, weaponId)
 	end)
 
+	getUpgradeWeaponEvent().OnServerEvent:Connect(function(player, weaponId: string)
+		if typeof(weaponId) ~= "string" then
+			return
+		end
+
+		WeaponService.upgradePlayerWeapon(player, weaponId)
+	end)
+
+	getUnlockWeaponEvent().OnServerEvent:Connect(function(player, weaponId: string)
+		if typeof(weaponId) ~= "string" then
+			return
+		end
+
+		WeaponService.unlockPlayerWeapon(player, weaponId)
+	end)
+
 	for _, player in Players:GetPlayers() do
-		playerWeapons[player] = WeaponConfig.DEFAULT_WEAPON
+		playerWeapons[player] = PlayerDataService.getEquippedWeapon(player)
 		if player.Character then
 			onCharacterAdded(player, player.Character)
 		end
@@ -483,7 +753,7 @@ function WeaponService.init()
 	end
 
 	Players.PlayerAdded:Connect(function(player)
-		playerWeapons[player] = WeaponConfig.DEFAULT_WEAPON
+		playerWeapons[player] = PlayerDataService.getEquippedWeapon(player)
 		player.CharacterAdded:Connect(function(character)
 			onCharacterAdded(player, character)
 		end)

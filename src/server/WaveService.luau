@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local BossService = require(script.Parent.BossService)
+local MonsterConfig = require(ReplicatedStorage.Shared.MonsterConfig)
 local WaveConfig = require(ReplicatedStorage.Shared.WaveConfig)
 
 local WaveService = {}
@@ -215,6 +217,56 @@ local function checkWaveComplete()
 	end
 end
 
+local function onMonsterDiedInternal(model: Model)
+	lastAttackTimes[model] = nil
+	attackingMonsters[model] = nil
+	walkPhases[model] = nil
+	BossService.cleanup(model)
+
+	local index = table.find(activeMonsters, model)
+	if index then
+		table.remove(activeMonsters, index)
+	end
+
+	for _, callback in monsterDiedCallbacks do
+		callback(model)
+	end
+
+	checkWaveComplete()
+
+	local headPart = model:FindFirstChild("Head")
+	local healthBar = headPart and headPart:FindFirstChild("HealthBar")
+	if healthBar then
+		healthBar:Destroy()
+	end
+
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.Anchored = true
+			descendant.CanCollide = false
+		end
+	end
+
+	task.delay(1.2, function()
+		if model.Parent then
+			model:Destroy()
+		end
+	end)
+end
+
+local function registerMonster(model: Model)
+	table.insert(activeMonsters, model)
+	lastAttackTimes[model] = 0
+	walkPhases[model] = 0
+
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.Died:Connect(function()
+			onMonsterDiedInternal(model)
+		end)
+	end
+end
+
 local function keepMonsterUpright(root: BasePart)
 	local lookVector = root.CFrame.LookVector
 	local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z)
@@ -243,8 +295,39 @@ local function configureStableHumanoid(humanoid: Humanoid)
 	end
 end
 
-function WaveService.createMonster(spawnPosition: Vector3): Model
-	local palette = WOLF_PALETTES[math.random(1, #WOLF_PALETTES)]
+function WaveService.createMonster(spawnPosition: Vector3, monsterTypeId: string?, roomDepth: number?): Model
+	local depth = roomDepth or 1
+	local typeId = monsterTypeId or "Wolf"
+	local baseType = MonsterConfig.getType(typeId)
+	local stats = MonsterConfig.getScaledStats(baseType, depth)
+	local monsterScale = WaveConfig.WOLF_SCALE * stats.scaleMult
+
+	local function scaleVector(vector: Vector3): Vector3
+		return vector * monsterScale
+	end
+
+	local function scaleOffset(offset: CFrame): CFrame
+		return CFrame.new(scaleVector(offset.Position)) * (offset - offset.Position)
+	end
+
+	local function scaledSize(size: Vector3): Vector3
+		return scaleVector(size)
+	end
+
+	local function offset(position: Vector3): CFrame
+		return CFrame.new(scaleVector(position))
+	end
+
+	local FRONT_LEFT_LEG_REST = scaleOffset(CFrame.new(-0.38, -0.42, -0.68))
+	local FRONT_RIGHT_LEG_REST = scaleOffset(CFrame.new(0.38, -0.42, -0.68))
+	local BACK_LEFT_LEG_REST = scaleOffset(CFrame.new(-0.34, -0.42, 0.72))
+	local BACK_RIGHT_LEG_REST = scaleOffset(CFrame.new(0.34, -0.42, 0.72))
+	local NECK_REST = scaleOffset(CFrame.new(0, 0.28, -0.92) * CFrame.Angles(math.rad(-12), 0, 0))
+	local TAIL_REST = scaleOffset(CFrame.new(0, 0.08, 1.02) * CFrame.Angles(math.rad(28), 0, 0))
+
+	local palette = if stats.paletteIndex
+		then WOLF_PALETTES[stats.paletteIndex]
+		else WOLF_PALETTES[math.random(1, #WOLF_PALETTES)]
 	local model = Instance.new("Model")
 	model.Name = "WaveMonster"
 
@@ -258,6 +341,18 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	local chest = createPart("Chest", scaledSize(Vector3.new(0.95, 0.72, 0.82)), palette.fur, model)
 	local belly = createPart("Belly", scaledSize(Vector3.new(0.88, 0.18, 1.45)), palette.belly, model, { massless = true })
 	local haunch = createPart("Haunch", scaledSize(Vector3.new(1.02, 0.68, 0.72)), palette.darkFur, model)
+	local leftPlate: Part? = nil
+	local rightPlate: Part? = nil
+	if stats.isArmored then
+		leftPlate = createPart("LeftPlate", scaledSize(Vector3.new(0.22, 0.42, 0.62)), Color3.fromRGB(88, 92, 98), model, {
+			material = Enum.Material.Metal,
+			massless = true,
+		})
+		rightPlate = createPart("RightPlate", scaledSize(Vector3.new(0.22, 0.42, 0.62)), Color3.fromRGB(88, 92, 98), model, {
+			material = Enum.Material.Metal,
+			massless = true,
+		})
+	end
 
 	local head = createPart("Head", scaledSize(Vector3.new(0.68, 0.62, 0.78)), palette.fur, model)
 	local snout = createPart("Snout", scaledSize(Vector3.new(0.42, 0.36, 0.72)), palette.fur, model, { massless = true })
@@ -310,6 +405,12 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	humanoidRootPart.CFrame = rootCFrame
 
 	body.CFrame = rootCFrame
+	if leftPlate and rightPlate then
+		leftPlate.CFrame = body.CFrame * offset(Vector3.new(-0.58, 0.12, -0.08))
+		rightPlate.CFrame = body.CFrame * offset(Vector3.new(0.58, 0.12, -0.08))
+		weld(body, leftPlate)
+		weld(body, rightPlate)
+	end
 	chest.CFrame = rootCFrame * offset(Vector3.new(0, 0.08, -0.72))
 	belly.CFrame = rootCFrame * offset(Vector3.new(0, -0.28, 0.02))
 	haunch.CFrame = rootCFrame * offset(Vector3.new(0, 0.04, 0.78))
@@ -357,10 +458,10 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	local backRightLegMotor = attachMotor(humanoidRootPart, backRightLeg, "BackRightLegMotor", BACK_RIGHT_LEG_REST)
 
 	local humanoid = Instance.new("Humanoid")
-	humanoid.WalkSpeed = WaveConfig.MONSTER_WALK_SPEED
-	humanoid.HipHeight = WaveConfig.MONSTER_HIP_HEIGHT
-	humanoid.MaxHealth = WaveConfig.MONSTER_HEALTH
-	humanoid.Health = WaveConfig.MONSTER_HEALTH
+	humanoid.WalkSpeed = stats.walkSpeed
+	humanoid.HipHeight = WaveConfig.MONSTER_HIP_HEIGHT * stats.scaleMult
+	humanoid.MaxHealth = stats.health
+	humanoid.Health = stats.health
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.Parent = model
 	configureStableHumanoid(humanoid)
@@ -368,7 +469,7 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "HealthBar"
 	billboard.Size = UDim2.fromOffset(72, 10)
-	billboard.StudsOffset = Vector3.new(0, 1.35 * WOLF_SCALE, 0)
+	billboard.StudsOffset = Vector3.new(0, 1.35 * monsterScale, 0)
 	billboard.AlwaysOnTop = true
 	billboard.Enabled = false
 	billboard.Parent = head
@@ -404,6 +505,17 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	humanoid.HealthChanged:Connect(updateHealthBar)
 	updateHealthBar()
 
+	model:SetAttribute("MonsterType", stats.id)
+	model:SetAttribute("MonsterDamage", stats.damage)
+	model:SetAttribute("AttackRange", stats.attackRange)
+	model:SetAttribute("AttackCooldown", stats.attackCooldown)
+	model:SetAttribute("MonsterScale", monsterScale)
+	model:SetAttribute("NeckRest", NECK_REST)
+	model:SetAttribute("TailRest", TAIL_REST)
+	model:SetAttribute("FrontLeftLegRest", FRONT_LEFT_LEG_REST)
+	model:SetAttribute("FrontRightLegRest", FRONT_RIGHT_LEG_REST)
+	model:SetAttribute("BackLeftLegRest", BACK_LEFT_LEG_REST)
+	model:SetAttribute("BackRightLegRest", BACK_RIGHT_LEG_REST)
 	model:SetAttribute("NeckMotorName", neckMotor.Name)
 	model:SetAttribute("TailMotorName", tailMotor.Name)
 	model:SetAttribute("FrontLeftLegMotorName", frontLeftLegMotor.Name)
@@ -414,46 +526,7 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	model.PrimaryPart = humanoidRootPart
 	model:PivotTo(rootCFrame)
 	model.Parent = monstersFolder
-
-	table.insert(activeMonsters, model)
-	lastAttackTimes[model] = 0
-	walkPhases[model] = 0
-
-	humanoid.Died:Connect(function()
-		lastAttackTimes[model] = nil
-		attackingMonsters[model] = nil
-		walkPhases[model] = nil
-
-		local index = table.find(activeMonsters, model)
-		if index then
-			table.remove(activeMonsters, index)
-		end
-
-		for _, callback in monsterDiedCallbacks do
-			callback(model)
-		end
-
-		checkWaveComplete()
-
-		local headPart = model:FindFirstChild("Head")
-		local healthBar = headPart and headPart:FindFirstChild("HealthBar")
-		if healthBar then
-			healthBar:Destroy()
-		end
-
-		for _, descendant in model:GetDescendants() do
-			if descendant:IsA("BasePart") then
-				descendant.Anchored = true
-				descendant.CanCollide = false
-			end
-		end
-
-		task.delay(1.2, function()
-			if model.Parent then
-				model:Destroy()
-			end
-		end)
-	end)
+	registerMonster(model)
 
 	return model
 end
@@ -471,6 +544,18 @@ end
 local function getNearestPlayerCharacter(monster: Model): Model?
 	local root = monster.PrimaryPart
 	if not root then
+		return nil
+	end
+
+	local ownerUserId = monster:GetAttribute("DungeonOwner")
+	if typeof(ownerUserId) == "number" then
+		local owner = Players:GetPlayerByUserId(ownerUserId)
+		local character = owner and owner.Character
+		local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoidRootPart and humanoid and humanoid.Health > 0 then
+			return character
+		end
 		return nil
 	end
 
@@ -520,15 +605,37 @@ local function tryDamagePlayerFromAttack(monster: Model, target: Model): boolean
 	overlapParams.FilterDescendantsInstances = { target }
 
 	local hitScale = WaveConfig.MONSTER_ATTACK_HITBOX_SCALE
+	local damage = monster:GetAttribute("MonsterDamage") or WaveConfig.MONSTER_DAMAGE
 	for _, hitPart in getMonsterAttackParts(monster) do
 		local hits = workspace:GetPartBoundsInBox(hitPart.CFrame, hitPart.Size * hitScale, overlapParams)
 		if #hits > 0 then
-			targetHumanoid:TakeDamage(WaveConfig.MONSTER_DAMAGE)
+			targetHumanoid:TakeDamage(damage)
 			return true
 		end
 	end
 
 	return false
+end
+
+local function getMonsterRestCFrames(monster: Model): {
+	neck: CFrame,
+	tail: CFrame,
+	frontLeftLeg: CFrame,
+	frontRightLeg: CFrame,
+	backLeftLeg: CFrame,
+	backRightLeg: CFrame,
+	scale: number,
+}
+	local scale = monster:GetAttribute("MonsterScale") or WOLF_SCALE
+	return {
+		neck = monster:GetAttribute("NeckRest") or NECK_REST,
+		tail = monster:GetAttribute("TailRest") or TAIL_REST,
+		frontLeftLeg = monster:GetAttribute("FrontLeftLegRest") or FRONT_LEFT_LEG_REST,
+		frontRightLeg = monster:GetAttribute("FrontRightLegRest") or FRONT_RIGHT_LEG_REST,
+		backLeftLeg = monster:GetAttribute("BackLeftLegRest") or BACK_LEFT_LEG_REST,
+		backRightLeg = monster:GetAttribute("BackRightLegRest") or BACK_RIGHT_LEG_REST,
+		scale = scale,
+	}
 end
 
 local function playAttackAnimation(monster: Model, target: Model): boolean
@@ -556,18 +663,19 @@ local function playAttackAnimation(monster: Model, target: Model): boolean
 
 	attackingMonsters[monster] = true
 
+	local rests = getMonsterRestCFrames(monster)
 	local startCFrame = root.CFrame
 	local direction = (targetRoot.Position - root.Position).Unit
 	local lungeTarget = CFrame.lookAt(
-		startCFrame.Position + direction * (1.35 * WOLF_SCALE) + Vector3.new(0, 0.08, 0),
+		startCFrame.Position + direction * (1.35 * rests.scale) + Vector3.new(0, 0.08, 0),
 		Vector3.new(targetRoot.Position.X, root.Position.Y, targetRoot.Position.Z)
 	)
 
-	local neckCrouch = NECK_REST * CFrame.Angles(math.rad(18), 0, 0)
-	local neckBite = NECK_REST * CFrame.new(0, -0.08 * WOLF_SCALE, -0.22 * WOLF_SCALE) * CFrame.Angles(math.rad(42), 0, 0)
-	local tailRaise = TAIL_REST * CFrame.Angles(math.rad(-24), 0, 0)
-	local haunchCompress = CFrame.new(0, 0.08 * WOLF_SCALE, 0.06 * WOLF_SCALE) * CFrame.Angles(math.rad(28), 0, 0)
-	local frontExtend = CFrame.new(0, -0.06 * WOLF_SCALE, -0.12 * WOLF_SCALE) * CFrame.Angles(math.rad(-24), 0, 0)
+	local neckCrouch = rests.neck * CFrame.Angles(math.rad(18), 0, 0)
+	local neckBite = rests.neck * CFrame.new(0, -0.08 * rests.scale, -0.22 * rests.scale) * CFrame.Angles(math.rad(42), 0, 0)
+	local tailRaise = rests.tail * CFrame.Angles(math.rad(-24), 0, 0)
+	local haunchCompress = CFrame.new(0, 0.08 * rests.scale, 0.06 * rests.scale) * CFrame.Angles(math.rad(28), 0, 0)
+	local frontExtend = CFrame.new(0, -0.06 * rests.scale, -0.12 * rests.scale) * CFrame.Angles(math.rad(-24), 0, 0)
 	local didDamage = false
 
 	task.spawn(function()
@@ -577,10 +685,10 @@ local function playAttackAnimation(monster: Model, target: Model): boolean
 			end
 			local alpha = step / 3
 			root.CFrame = startCFrame:Lerp(lungeTarget, alpha * 0.35)
-			neckMotor.C0 = NECK_REST:Lerp(neckCrouch, alpha)
-			tailMotor.C0 = TAIL_REST:Lerp(tailRaise, alpha)
-			backLeftLegMotor.C0 = BACK_LEFT_LEG_REST:Lerp(BACK_LEFT_LEG_REST * haunchCompress, alpha)
-			backRightLegMotor.C0 = BACK_RIGHT_LEG_REST:Lerp(BACK_RIGHT_LEG_REST * haunchCompress, alpha)
+			neckMotor.C0 = rests.neck:Lerp(neckCrouch, alpha)
+			tailMotor.C0 = rests.tail:Lerp(tailRaise, alpha)
+			backLeftLegMotor.C0 = rests.backLeftLeg:Lerp(rests.backLeftLeg * haunchCompress, alpha)
+			backRightLegMotor.C0 = rests.backRightLeg:Lerp(rests.backRightLeg * haunchCompress, alpha)
 			task.wait(0.035)
 		end
 
@@ -591,10 +699,10 @@ local function playAttackAnimation(monster: Model, target: Model): boolean
 			local alpha = step / 4
 			root.CFrame = startCFrame:Lerp(lungeTarget, 0.35 + alpha * 0.65)
 			neckMotor.C0 = neckCrouch:Lerp(neckBite, alpha)
-			frontLeftLegMotor.C0 = FRONT_LEFT_LEG_REST:Lerp(FRONT_LEFT_LEG_REST * frontExtend, alpha)
-			frontRightLegMotor.C0 = FRONT_RIGHT_LEG_REST:Lerp(FRONT_RIGHT_LEG_REST * frontExtend, alpha)
-			backLeftLegMotor.C0 = BACK_LEFT_LEG_REST * haunchCompress:Lerp(BACK_LEFT_LEG_REST, alpha)
-			backRightLegMotor.C0 = BACK_RIGHT_LEG_REST * haunchCompress:Lerp(BACK_RIGHT_LEG_REST, alpha)
+			frontLeftLegMotor.C0 = rests.frontLeftLeg:Lerp(rests.frontLeftLeg * frontExtend, alpha)
+			frontRightLegMotor.C0 = rests.frontRightLeg:Lerp(rests.frontRightLeg * frontExtend, alpha)
+			backLeftLegMotor.C0 = rests.backLeftLeg * haunchCompress:Lerp(rests.backLeftLeg, alpha)
+			backRightLegMotor.C0 = rests.backRightLeg * haunchCompress:Lerp(rests.backRightLeg, alpha)
 
 			if step >= 3 and not didDamage then
 				didDamage = tryDamagePlayerFromAttack(monster, target)
@@ -615,21 +723,21 @@ local function playAttackAnimation(monster: Model, target: Model): boolean
 			end
 			local alpha = step / 5
 			root.CFrame = lungeTarget:Lerp(startCFrame, alpha)
-			neckMotor.C0 = neckBite:Lerp(NECK_REST, alpha)
-			tailMotor.C0 = tailRaise:Lerp(TAIL_REST, alpha)
-			frontLeftLegMotor.C0 = (FRONT_LEFT_LEG_REST * frontExtend):Lerp(FRONT_LEFT_LEG_REST, alpha)
-			frontRightLegMotor.C0 = (FRONT_RIGHT_LEG_REST * frontExtend):Lerp(FRONT_RIGHT_LEG_REST, alpha)
-			backLeftLegMotor.C0 = BACK_LEFT_LEG_REST
-			backRightLegMotor.C0 = BACK_RIGHT_LEG_REST
+			neckMotor.C0 = neckBite:Lerp(rests.neck, alpha)
+			tailMotor.C0 = tailRaise:Lerp(rests.tail, alpha)
+			frontLeftLegMotor.C0 = (rests.frontLeftLeg * frontExtend):Lerp(rests.frontLeftLeg, alpha)
+			frontRightLegMotor.C0 = (rests.frontRightLeg * frontExtend):Lerp(rests.frontRightLeg, alpha)
+			backLeftLegMotor.C0 = rests.backLeftLeg
+			backRightLegMotor.C0 = rests.backRightLeg
 			task.wait(0.03)
 		end
 
-		neckMotor.C0 = NECK_REST
-		tailMotor.C0 = TAIL_REST
-		frontLeftLegMotor.C0 = FRONT_LEFT_LEG_REST
-		frontRightLegMotor.C0 = FRONT_RIGHT_LEG_REST
-		backLeftLegMotor.C0 = BACK_LEFT_LEG_REST
-		backRightLegMotor.C0 = BACK_RIGHT_LEG_REST
+		neckMotor.C0 = rests.neck
+		tailMotor.C0 = rests.tail
+		frontLeftLegMotor.C0 = rests.frontLeftLeg
+		frontRightLegMotor.C0 = rests.frontRightLeg
+		backLeftLegMotor.C0 = rests.backLeftLeg
+		backRightLegMotor.C0 = rests.backRightLeg
 		attackingMonsters[monster] = nil
 	end)
 
@@ -637,9 +745,14 @@ local function playAttackAnimation(monster: Model, target: Model): boolean
 end
 
 local function tryAttack(monster: Model, target: Model)
+	if BossService.isBoss(monster) then
+		return
+	end
+
 	local now = os.clock()
 	local lastAttack = lastAttackTimes[monster] or 0
-	if now - lastAttack < WaveConfig.ATTACK_COOLDOWN then
+	local attackCooldown = monster:GetAttribute("AttackCooldown") or WaveConfig.ATTACK_COOLDOWN
+	if now - lastAttack < attackCooldown then
 		return
 	end
 
@@ -651,7 +764,8 @@ local function tryAttack(monster: Model, target: Model)
 		return
 	end
 
-	if (monsterRoot.Position - targetRoot.Position).Magnitude > WaveConfig.ATTACK_RANGE then
+	local attackRange = monster:GetAttribute("AttackRange") or WaveConfig.ATTACK_RANGE
+	if (monsterRoot.Position - targetRoot.Position).Magnitude > attackRange then
 		return
 	end
 
@@ -694,7 +808,20 @@ local function updateMonster(monster: Model)
 		billboard.Enabled = hasTakenDamage and distance <= WaveConfig.MONSTER_HEALTHBAR_DISTANCE
 	end
 
-	if (monsterRoot.Position - targetRoot.Position).Magnitude > WaveConfig.ATTACK_RANGE and not attackingMonsters[monster] then
+	if BossService.isBoss(monster) then
+		BossService.updateBoss(monster, target)
+		if not BossService.isBusy(monster) then
+			local attackRange = monster:GetAttribute("AttackRange") or WaveConfig.ATTACK_RANGE
+			if (monsterRoot.Position - targetRoot.Position).Magnitude > attackRange then
+				humanoid:MoveTo(targetRoot.Position)
+			end
+		end
+		return
+	end
+
+	if (monsterRoot.Position - targetRoot.Position).Magnitude > (monster:GetAttribute("AttackRange") or WaveConfig.ATTACK_RANGE)
+		and not attackingMonsters[monster]
+	then
 		humanoid:MoveTo(targetRoot.Position)
 	end
 end
@@ -718,10 +845,11 @@ local function updateMonsterWalkAnimation(monster: Model, deltaTime: number)
 		return
 	end
 
-	if attackingMonsters[monster] then
+	if attackingMonsters[monster] or BossService.isBusy(monster) then
 		return
 	end
 
+	local rests = getMonsterRestCFrames(monster)
 	local velocity = root.AssemblyLinearVelocity
 	local horizontalSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
 	local moving = horizontalSpeed > 1 or humanoid.MoveDirection.Magnitude > 0.05
@@ -737,29 +865,29 @@ local function updateMonsterWalkAnimation(monster: Model, deltaTime: number)
 		local headBob = math.sin(phase * 2) * WaveConfig.MONSTER_HEAD_BOB
 		local tailSway = math.sin(phase) * WaveConfig.MONSTER_TAIL_SWING
 
-		frontLeftLegMotor.C0 = FRONT_LEFT_LEG_REST
+		frontLeftLegMotor.C0 = rests.frontLeftLeg
 			* CFrame.new(0, bodyBob * 0.12, stride * 0.14)
 			* CFrame.Angles(stride, 0, stride * 0.18)
-		backRightLegMotor.C0 = BACK_RIGHT_LEG_REST
+		backRightLegMotor.C0 = rests.backRightLeg
 			* CFrame.new(0, bodyBob * 0.12, stride * 0.12)
 			* CFrame.Angles(stride, 0, -stride * 0.12)
-		frontRightLegMotor.C0 = FRONT_RIGHT_LEG_REST
+		frontRightLegMotor.C0 = rests.frontRightLeg
 			* CFrame.new(0, bodyBob * 0.12, oppositeStride * 0.14)
 			* CFrame.Angles(oppositeStride, 0, -oppositeStride * 0.18)
-		backLeftLegMotor.C0 = BACK_LEFT_LEG_REST
+		backLeftLegMotor.C0 = rests.backLeftLeg
 			* CFrame.new(0, bodyBob * 0.12, oppositeStride * 0.12)
 			* CFrame.Angles(oppositeStride, 0, oppositeStride * 0.12)
 
-		neckMotor.C0 = NECK_REST * CFrame.Angles(headBob, 0, 0)
-		tailMotor.C0 = TAIL_REST * CFrame.Angles(math.rad(-tailSway * 28), math.rad(tailSway * 18), 0)
+		neckMotor.C0 = rests.neck * CFrame.Angles(headBob, 0, 0)
+		tailMotor.C0 = rests.tail * CFrame.Angles(math.rad(-tailSway * 28), math.rad(tailSway * 18), 0)
 	else
 		walkPhases[monster] = phase
-		frontLeftLegMotor.C0 = FRONT_LEFT_LEG_REST
-		frontRightLegMotor.C0 = FRONT_RIGHT_LEG_REST
-		backLeftLegMotor.C0 = BACK_LEFT_LEG_REST
-		backRightLegMotor.C0 = BACK_RIGHT_LEG_REST
-		neckMotor.C0 = NECK_REST
-		tailMotor.C0 = TAIL_REST * CFrame.Angles(0, 0, math.rad(math.sin(phase) * 4))
+		frontLeftLegMotor.C0 = rests.frontLeftLeg
+		frontRightLegMotor.C0 = rests.frontRightLeg
+		backLeftLegMotor.C0 = rests.backLeftLeg
+		backRightLegMotor.C0 = rests.backRightLeg
+		neckMotor.C0 = rests.neck
+		tailMotor.C0 = rests.tail * CFrame.Angles(0, 0, math.rad(math.sin(phase) * 4))
 	end
 end
 
@@ -809,6 +937,18 @@ local function runAI()
 	end)
 end
 
+function WaveService.clearMonstersForOwner(ownerUserId: number)
+	for index = #activeMonsters, 1, -1 do
+		local monster = activeMonsters[index]
+		if monster:GetAttribute("DungeonOwner") == ownerUserId then
+			if monster.Parent then
+				monster:Destroy()
+			end
+			table.remove(activeMonsters, index)
+		end
+	end
+end
+
 function WaveService.setDungeonMode(enabled: boolean)
 	dungeonMode = enabled
 end
@@ -818,23 +958,35 @@ function WaveService.onMonsterDied(callback: (Model) -> ())
 end
 
 function WaveService.spawnDungeonMonsters(
-	count: number,
+	roomDepth: number,
 	ownerUserId: number,
 	isBossRoom: boolean,
 	radiusMin: number,
 	radiusMax: number
-)
-	for index = 1, count do
-		local monster = WaveService.createMonster(getSpawnPosition(radiusMin, radiusMax))
-		monster:SetAttribute("DungeonOwner", ownerUserId)
-		if isBossRoom and index <= 2 then
-			local humanoid = monster:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				humanoid.MaxHealth = math.floor(humanoid.MaxHealth * 1.8)
-				humanoid.Health = humanoid.MaxHealth
-			end
-		end
+): number
+	local spawnCount = 0
+
+	if isBossRoom then
+		local boss = BossService.createBoss(
+			getSpawnPosition(radiusMin, radiusMax),
+			roomDepth,
+			ownerUserId,
+			monstersFolder,
+			configureStableHumanoid
+		)
+		registerMonster(boss)
+		spawnCount += 1
 	end
+
+	local minionCount = MonsterConfig.getMinionCountForRoom(roomDepth, isBossRoom)
+	for _ = 1, minionCount do
+		local monsterTypeId = MonsterConfig.rollTypeForDepth(roomDepth)
+		local monster = WaveService.createMonster(getSpawnPosition(radiusMin, radiusMax), monsterTypeId, roomDepth)
+		monster:SetAttribute("DungeonOwner", ownerUserId)
+		spawnCount += 1
+	end
+
+	return spawnCount
 end
 
 function WaveService.startWave(): boolean
