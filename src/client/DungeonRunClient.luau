@@ -195,11 +195,6 @@ function DungeonRunClient.init()
 	local dungeonRunStateEvent = ReplicatedStorage:WaitForChild("DungeonRunState") :: RemoteEvent
 	local cardDraftPickEvent = ReplicatedStorage:WaitForChild("CardDraftPick") :: RemoteEvent
 
-	local waveUi = playerGui:FindFirstChild("WaveUI")
-	if waveUi and waveUi:IsA("ScreenGui") then
-		waveUi.Enabled = false
-	end
-
 	dungeonRunStateEvent.OnClientEvent:Connect(function(state, draftOptions: { string }?)
 		renderRunState(state)
 		if draftOptions and #draftOptions > 0 then
@@ -213,7 +208,9 @@ function DungeonRunClient.init()
 		local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
 		phaseStateEvent.OnClientEvent:Connect(function(phase: string)
 			screenGui.Enabled = phase == "Dungeon"
-			if phase ~= "Dungeon" then
+			if phase == "Dungeon" then
+				statusLabel.Text = "Entering the dungeon..."
+			elseif phase ~= "Dungeon" then
 				hideCardDraft()
 			end
 		end)

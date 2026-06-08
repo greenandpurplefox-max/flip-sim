@@ -32,3 +32,4 @@ DungeonRunService.setRunEndedHandler(function(player, runGold)
 end)
 
 LobbyEnvironmentService.init()
+GamePhaseService.wireDungeonPortal()

@@ -1,7 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
-local GamePhaseService = require(script.Parent.GamePhaseService)
 
 local LobbyEnvironmentService = {}
 
@@ -9,6 +8,8 @@ local function createPart(name: string, size: Vector3, cframe: CFrame, color: Co
 	material: Enum.Material?,
 	anchored: boolean?,
 	canCollide: boolean?,
+	canTouch: boolean?,
+	canQuery: boolean?,
 	shape: Enum.PartType?,
 	transparency: number?,
 }?): Part
@@ -20,6 +21,8 @@ local function createPart(name: string, size: Vector3, cframe: CFrame, color: Co
 	part.Material = if options and options.material then options.material else Enum.Material.SmoothPlastic
 	part.Anchored = if options and options.anchored ~= nil then options.anchored else true
 	part.CanCollide = if options and options.canCollide ~= nil then options.canCollide else true
+	part.CanTouch = if options and options.canTouch ~= nil then options.canTouch else true
+	part.CanQuery = if options and options.canQuery ~= nil then options.canQuery else true
 	part.Transparency = if options and options.transparency then options.transparency else 0
 	if options and options.shape then
 		part.Shape = options.shape
@@ -32,6 +35,7 @@ local function createSign(parent: Instance, position: Vector3, text: string, col
 	local anchor = createPart("SignAnchor", Vector3.new(0.2, 0.2, 0.2), CFrame.new(position), Color3.new(1, 1, 1), parent, {
 		transparency = 1,
 		canCollide = false,
+		canTouch = false,
 	})
 
 	local billboard = Instance.new("BillboardGui")
@@ -57,7 +61,9 @@ function LobbyEnvironmentService.init()
 	end
 
 	local folder = workspace:FindFirstChild("Lobby")
-	if not folder then
+	if folder then
+		folder:ClearAllChildren()
+	else
 		folder = Instance.new("Folder")
 		folder.Name = "Lobby"
 		folder.Parent = workspace
@@ -99,49 +105,53 @@ function LobbyEnvironmentService.init()
 		CFrame.new(LobbyConfig.FORGE_POSITION + Vector3.new(0, 1.1, -2.2)),
 		Color3.fromRGB(255, 118, 48),
 		folder,
-		{ material = Enum.Material.Neon, canCollide = false }
+		{ material = Enum.Material.Neon, canCollide = false, canTouch = false }
 	)
 
 	local portalBase = createPart(
 		"DungeonPortal",
-		Vector3.new(10, 0.4, 3),
+		Vector3.new(12, 0.4, 12),
 		CFrame.new(LobbyConfig.PORTAL_POSITION),
 		Color3.fromRGB(48, 48, 52),
 		folder,
-		{ material = Enum.Material.Slate }
+		{ material = Enum.Material.Slate, canCollide = false, canTouch = false }
 	)
 
-	local portalGlow = createPart(
-		"PortalGlow",
-		Vector3.new(8, 8, 0.6),
-		CFrame.new(LobbyConfig.PORTAL_POSITION + Vector3.new(0, 4.2, 0)),
+	local portalTrigger = createPart(
+		"PortalTrigger",
+		Vector3.new(14, 8, 14),
+		CFrame.new(LobbyConfig.PORTAL_POSITION + Vector3.new(0, 1, 0)),
 		Color3.fromRGB(72, 220, 128),
 		folder,
-		{ material = Enum.Material.Neon, canCollide = false, transparency = 0.25 }
+		{
+			material = Enum.Material.Neon,
+			canCollide = false,
+			canTouch = true,
+			canQuery = true,
+			transparency = 0.88,
+		}
 	)
 
 	local portalRing = createPart(
 		"PortalRing",
-		Vector3.new(9.5, 0.35, 9.5),
+		Vector3.new(0.35, 11, 11),
 		CFrame.new(LobbyConfig.PORTAL_POSITION + Vector3.new(0, 0.35, 0)),
 		Color3.fromRGB(48, 180, 96),
 		folder,
-		{ material = Enum.Material.Neon, canCollide = false, shape = Enum.PartType.Cylinder }
+		{ material = Enum.Material.Neon, canCollide = false, canTouch = false, shape = Enum.PartType.Cylinder }
 	)
 	portalRing.Orientation = Vector3.new(0, 0, 90)
 
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "EnterDungeonPrompt"
-	prompt.ActionText = "Enter Dungeon"
-	prompt.ObjectText = "Dungeon Gate"
-	prompt.HoldDuration = LobbyConfig.PORTAL_HOLD_SECONDS
-	prompt.MaxActivationDistance = 14
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = portalGlow
+	local portalGlow = createPart(
+		"PortalGlow",
+		Vector3.new(8, 8, 1),
+		CFrame.new(LobbyConfig.PORTAL_POSITION + Vector3.new(0, 4.5, 0)),
+		Color3.fromRGB(72, 220, 128),
+		folder,
+		{ material = Enum.Material.Neon, canCollide = false, canTouch = false, transparency = 0.35 }
+	)
 
-	prompt.Triggered:Connect(function(player)
-		GamePhaseService.enterDungeon(player)
-	end)
+	portalTrigger:SetAttribute("PortalTrigger", true)
 
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "LobbySpawn"
@@ -164,6 +174,7 @@ function LobbyEnvironmentService.init()
 		)
 	end
 
+	folder:SetAttribute("LobbyBuilt", true)
 	platform:SetAttribute("LobbyBuilt", true)
 	forge:SetAttribute("LobbyProp", true)
 	portalBase:SetAttribute("LobbyProp", true)

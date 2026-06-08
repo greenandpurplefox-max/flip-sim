@@ -622,13 +622,6 @@ local function notifyLoadout(player: Player)
 	getLoadoutUpdatedEvent():FireClient(player, weaponId, GamePhaseService.isLoadoutLocked(player))
 end
 
-function WeaponService.refreshPlayerLoadout(player: Player)
-	local weaponId = PlayerDataService.getEquippedWeapon(player)
-	playerWeapons[player] = weaponId
-	giveWeapon(player, player.Character, weaponId)
-	notifyLoadout(player)
-end
-
 local function giveWeapon(player: Player, character: Model?, weaponId: string)
 	if not character then
 		return
@@ -649,6 +642,13 @@ local function giveWeapon(player: Player, character: Model?, weaponId: string)
 	local combatConfig = WeaponCombatConfig.getConfig(weaponId)
 	tool.Grip = combatConfig.SHOULDER_GRIP
 	equipWeaponTool(character, tool)
+end
+
+function WeaponService.refreshPlayerLoadout(player: Player)
+	local weaponId = PlayerDataService.getEquippedWeapon(player)
+	playerWeapons[player] = weaponId
+	giveWeapon(player, player.Character, weaponId)
+	notifyLoadout(player)
 end
 
 function WeaponService.equipPlayerWeapon(player: Player, weaponId: string): boolean

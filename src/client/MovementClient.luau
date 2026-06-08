@@ -246,9 +246,14 @@ local function disableDefaultShiftLock()
 	end)
 
 	if ok and playerModule then
-		local mouseLockController = playerModule:GetMouseLockController()
-		if mouseLockController then
-			mouseLockController.BoundKeys = {}
+		local getMouseLockController = (playerModule :: any).GetMouseLockController
+		if typeof(getMouseLockController) == "function" then
+			local controllerOk, mouseLockController = pcall(function()
+				return getMouseLockController(playerModule)
+			end)
+			if controllerOk and mouseLockController then
+				mouseLockController.BoundKeys = {}
+			end
 		end
 	end
 end

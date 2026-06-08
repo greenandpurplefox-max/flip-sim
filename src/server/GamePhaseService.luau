@@ -14,6 +14,8 @@ local enterDungeonEvent: RemoteEvent
 local DungeonRunServiceModule = nil
 local PlayerDataServiceModule = nil
 local WeaponServiceModule = nil
+local portalPromptConnection: RBXScriptConnection? = nil
+local lastPortalEnterAt: { [Player]: number } = {}
 
 local function getPhaseStateEvent(): RemoteEvent
 	if phaseStateEvent then
@@ -75,10 +77,34 @@ local function teleportCharacter(player: Player, position: Vector3)
 	end
 
 	local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if root then
-		root.CFrame = CFrame.new(position)
-		root.AssemblyLinearVelocity = Vector3.zero
-		root.AssemblyAngularVelocity = Vector3.zero
+	if not root then
+		return
+	end
+
+	local lookVector = root.CFrame.LookVector
+	local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z)
+	if flatLook.Magnitude < 0.05 then
+		flatLook = Vector3.new(0, 0, 1)
+	else
+		flatLook = flatLook.Unit
+	end
+
+	character:PivotTo(CFrame.new(position, position + flatLook))
+	root.AssemblyLinearVelocity = Vector3.zero
+	root.AssemblyAngularVelocity = Vector3.zero
+end
+
+local function rescueFallenLobbyPlayer(player: Player)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or humanoid.Health <= 0 then
+		return
+	end
+
+	if root.Position.Y < LobbyConfig.LOBBY_FALL_Y then
+		GamePhaseService.teleportToLobby(player)
+		humanoid.Health = humanoid.MaxHealth
 	end
 end
 
@@ -94,6 +120,8 @@ function GamePhaseService.returnToLobby(player: Player, runGold: number?)
 	if not player.Parent then
 		return
 	end
+
+	lastPortalEnterAt[player] = nil
 
 	playerPhases[player] = "Lobby"
 	player:SetAttribute("GamePhase", "Lobby")
@@ -119,7 +147,12 @@ function GamePhaseService.enterDungeon(player: Player): boolean
 		return false
 	end
 
-	if GamePhaseService.isInDungeon(player) then
+	if DungeonRunServiceModule and DungeonRunServiceModule.hasActiveRun(player) then
+		return false
+	end
+
+	local now = os.clock()
+	if lastPortalEnterAt[player] and now - lastPortalEnterAt[player] < 1.5 then
 		return false
 	end
 
@@ -129,8 +162,11 @@ function GamePhaseService.enterDungeon(player: Player): boolean
 		return false
 	end
 
+	lastPortalEnterAt[player] = now
+
 	playerPhases[player] = "Dungeon"
 	player:SetAttribute("GamePhase", "Dungeon")
+
 	GamePhaseService.teleportToDungeon(player)
 	sendPhase(player)
 
@@ -145,15 +181,105 @@ function GamePhaseService.enterDungeon(player: Player): boolean
 	return true
 end
 
+function GamePhaseService.wireDungeonPortal()
+	local folder = workspace:FindFirstChild("Lobby")
+	if not folder then
+		return
+	end
+
+	local trigger = folder:FindFirstChild("PortalTrigger", true) :: BasePart?
+	if not trigger then
+		return
+	end
+
+	for _, child in trigger:GetChildren() do
+		if child:IsA("ProximityPrompt") then
+			child:Destroy()
+		end
+	end
+
+	if portalPromptConnection then
+		portalPromptConnection:Disconnect()
+		portalPromptConnection = nil
+	end
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "EnterDungeonPrompt"
+	prompt.ActionText = "Enter Dungeon"
+	prompt.ObjectText = "Dungeon Gate"
+	prompt.HoldDuration = LobbyConfig.PORTAL_HOLD_SECONDS
+	prompt.MaxActivationDistance = LobbyConfig.PORTAL_PROMPT_DISTANCE
+	prompt.RequiresLineOfSight = false
+	prompt.Enabled = true
+	prompt.Parent = trigger
+
+	portalPromptConnection = prompt.Triggered:Connect(function(player)
+		GamePhaseService.enterDungeon(player)
+	end)
+end
+
 function GamePhaseService.onPlayerReady(player: Player)
 	playerPhases[player] = "Lobby"
 	player:SetAttribute("GamePhase", "Lobby")
+
 	GamePhaseService.teleportToLobby(player)
 	sendPhase(player)
 
-	if WeaponServiceModule and PlayerDataServiceModule then
+	if WeaponServiceModule then
 		WeaponServiceModule.refreshPlayerLoadout(player)
 	end
+end
+
+local function runLobbySafetyLoop()
+	task.spawn(function()
+		while true do
+			for _, player in Players:GetPlayers() do
+				if GamePhaseService.isInLobby(player) then
+					rescueFallenLobbyPlayer(player)
+				end
+			end
+			task.wait(0.15)
+		end
+	end)
+end
+
+local function runPortalZoneLoop()
+	local portalHoldTimes: { [Player]: number } = {}
+
+	task.spawn(function()
+		while true do
+			for _, player in Players:GetPlayers() do
+				if DungeonRunServiceModule and DungeonRunServiceModule.hasActiveRun(player) then
+					portalHoldTimes[player] = nil
+				else
+					local character = player.Character
+					local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+					local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+					if root and humanoid and humanoid.Health > 0 then
+						local portalPos = LobbyConfig.PORTAL_POSITION
+						local flatDistance = (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(portalPos.X, 0, portalPos.Z)).Magnitude
+						local inPortalZone = flatDistance <= LobbyConfig.PORTAL_ZONE_RADIUS
+							and math.abs(root.Position.Y - portalPos.Y) <= 10
+
+						if inPortalZone then
+							local startedAt = portalHoldTimes[player]
+							if not startedAt then
+								portalHoldTimes[player] = os.clock()
+							elseif os.clock() - startedAt >= LobbyConfig.PORTAL_HOLD_SECONDS then
+								portalHoldTimes[player] = nil
+								GamePhaseService.enterDungeon(player)
+							end
+						else
+							portalHoldTimes[player] = nil
+						end
+					else
+						portalHoldTimes[player] = nil
+					end
+				end
+			end
+			task.wait(0.1)
+		end
+	end)
 end
 
 function GamePhaseService.init(deps: {
@@ -211,7 +337,11 @@ function GamePhaseService.init(deps: {
 	Players.PlayerAdded:Connect(bindPlayer)
 	Players.PlayerRemoving:Connect(function(player)
 		playerPhases[player] = nil
+		lastPortalEnterAt[player] = nil
 	end)
+
+	runLobbySafetyLoop()
+	runPortalZoneLoop()
 end
 
 return GamePhaseService

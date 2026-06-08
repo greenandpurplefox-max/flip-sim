@@ -211,7 +211,12 @@ local function onMonsterDeath(monster: Model)
 	end
 end
 
+function DungeonRunService.hasActiveRun(player: Player): boolean
+	return playerRuns[player] ~= nil
+end
+
 function DungeonRunService.startRun(player: Player)
+	WaveService.clearMonstersForOwner(player.UserId)
 	bumpToken(player)
 	CardServiceModule.resetRun(player)
 	pendingDraftOptions[player] = nil
@@ -269,6 +274,9 @@ function DungeonRunService.init()
 	WaveService.setDungeonMode(true)
 	WaveService.onMonsterDied(onMonsterDeath)
 
+	getDungeonRunStateEvent()
+	getCardDraftPickEvent()
+
 	getCardDraftPickEvent().OnServerEvent:Connect(function(player, cardId: string)
 		if typeof(cardId) ~= "string" then
 			return
@@ -309,16 +317,6 @@ function DungeonRunService.init()
 			humanoid.Died:Connect(function()
 				DungeonRunService.handlePlayerDeath(player)
 			end)
-		end)
-
-		player.CharacterRemoving:Connect(function()
-			if LobbyConfig.USE_LOBBY then
-				if getRun(player) then
-					DungeonRunService.handlePlayerDeath(player)
-				end
-				return
-			end
-			DungeonRunService.endRun(player)
 		end)
 
 		if not LobbyConfig.USE_LOBBY and player.Character then
