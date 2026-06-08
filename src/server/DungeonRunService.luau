@@ -1,0 +1,332 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CardService = require(script.Parent.CardService)
+local DungeonConfig = require(ReplicatedStorage.Shared.DungeonConfig)
+local WaveService = require(script.Parent.WaveService)
+
+local DungeonRunService = {}
+
+export type RunStatus = "starting" | "fighting" | "card_draft" | "intermission" | "ended"
+
+export type RunState = {
+	room: number,
+	gold: number,
+	status: RunStatus,
+	monstersRemaining: number,
+	isBossRoom: boolean,
+	activeCards: { string },
+}
+
+local CardServiceModule = CardService
+local cardDraftPickEvent: RemoteEvent
+local dungeonRunStateEvent: RemoteEvent
+
+local playerRuns: { [Player]: RunState } = {}
+local pendingDraftOptions: { [Player]: { string } } = {}
+local runTokens: { [Player]: number } = {}
+
+local function getCardDraftPickEvent(): RemoteEvent
+	if cardDraftPickEvent then
+		return cardDraftPickEvent
+	end
+
+	cardDraftPickEvent = ReplicatedStorage:FindFirstChild("CardDraftPick") :: RemoteEvent?
+	if not cardDraftPickEvent then
+		cardDraftPickEvent = Instance.new("RemoteEvent")
+		cardDraftPickEvent.Name = "CardDraftPick"
+		cardDraftPickEvent.Parent = ReplicatedStorage
+	end
+
+	return cardDraftPickEvent
+end
+
+local function getDungeonRunStateEvent(): RemoteEvent
+	if dungeonRunStateEvent then
+		return dungeonRunStateEvent
+	end
+
+	dungeonRunStateEvent = ReplicatedStorage:FindFirstChild("DungeonRunState") :: RemoteEvent?
+	if not dungeonRunStateEvent then
+		dungeonRunStateEvent = Instance.new("RemoteEvent")
+		dungeonRunStateEvent.Name = "DungeonRunState"
+		dungeonRunStateEvent.Parent = ReplicatedStorage
+	end
+
+	return dungeonRunStateEvent
+end
+
+local function getRun(player: Player): RunState?
+	return playerRuns[player]
+end
+
+local function buildSnapshot(player: Player): RunState?
+	local run = getRun(player)
+	if not run then
+		return nil
+	end
+
+	return {
+		room = run.room,
+		gold = run.gold,
+		status = run.status,
+		monstersRemaining = run.monstersRemaining,
+		isBossRoom = run.isBossRoom,
+		activeCards = CardServiceModule.getActiveCardIds(player),
+	}
+end
+
+local function sendRunState(player: Player, draftOptions: { string }?)
+	local snapshot = buildSnapshot(player)
+	if snapshot then
+		getDungeonRunStateEvent():FireClient(player, snapshot, draftOptions)
+	end
+end
+
+local function bumpToken(player: Player): number
+	runTokens[player] = (runTokens[player] or 0) + 1
+	return runTokens[player]
+end
+
+local function isTokenValid(player: Player, token: number): boolean
+	return runTokens[player] == token
+end
+
+local function getMonsterCountForRoom(room: number, isBossRoom: boolean): number
+	local count = math.floor(DungeonConfig.BASE_MONSTERS_PER_ROOM + room * DungeonConfig.MONSTERS_PER_ROOM_GROWTH)
+	count = math.clamp(count, DungeonConfig.BASE_MONSTERS_PER_ROOM, DungeonConfig.MAX_MONSTERS_PER_ROOM)
+	if isBossRoom then
+		count += DungeonConfig.BOSS_MONSTER_BONUS
+	end
+	return count
+end
+
+local function shouldOfferCards(room: number): boolean
+	if room < DungeonConfig.FIRST_CARD_ROOM then
+		return false
+	end
+	return room % DungeonConfig.CARD_OFFER_EVERY_N_ROOMS == 0
+end
+
+local function beginRoom(player: Player)
+	local run = getRun(player)
+	if not run or run.status == "ended" then
+		return
+	end
+
+	run.status = "fighting"
+	run.isBossRoom = run.room > 0 and run.room % DungeonConfig.BOSS_EVERY_N_ROOMS == 0
+	run.monstersRemaining = getMonsterCountForRoom(run.room, run.isBossRoom)
+
+	WaveService.spawnDungeonMonsters(
+		run.monstersRemaining,
+		player.UserId,
+		run.isBossRoom,
+		DungeonConfig.SPAWN_RADIUS_MIN,
+		DungeonConfig.SPAWN_RADIUS_MAX
+	)
+
+	sendRunState(player)
+end
+
+local function continueAfterRoomClear(player: Player)
+	local run = getRun(player)
+	if not run then
+		return
+	end
+
+	CardServiceModule.healOnRoomClear(player)
+
+	run.gold += if run.isBossRoom then DungeonConfig.GOLD_PER_BOSS else DungeonConfig.GOLD_PER_ROOM
+	run.status = "intermission"
+	sendRunState(player)
+
+	local token = bumpToken(player)
+	task.delay(DungeonConfig.ROOM_CLEAR_DELAY, function()
+		if not isTokenValid(player, token) then
+			return
+		end
+
+		local activeRun = getRun(player)
+		if not activeRun or activeRun.status ~= "intermission" then
+			return
+		end
+
+		local clearedRoom = activeRun.room
+
+		if shouldOfferCards(clearedRoom) then
+			activeRun.status = "card_draft"
+			local options = CardServiceModule.rollDraftOptions(player, 3)
+			pendingDraftOptions[player] = options
+			sendRunState(player, options)
+
+			local draftToken = bumpToken(player)
+			task.delay(DungeonConfig.CARD_DRAFT_TIMEOUT, function()
+				if not isTokenValid(player, draftToken) then
+					return
+				end
+
+				local draftRun = getRun(player)
+				if draftRun and draftRun.status == "card_draft" and pendingDraftOptions[player] then
+					local fallback = pendingDraftOptions[player][1]
+					if fallback then
+						CardServiceModule.applyCard(player, fallback)
+					end
+					pendingDraftOptions[player] = nil
+					draftRun.room += 1
+					beginRoom(player)
+				end
+			end)
+			return
+		end
+
+		activeRun.room += 1
+		beginRoom(player)
+	end)
+end
+
+local function onRoomCleared(player: Player)
+	local run = getRun(player)
+	if not run or run.status ~= "fighting" then
+		return
+	end
+
+	run.monstersRemaining = 0
+	continueAfterRoomClear(player)
+end
+
+local function onMonsterDeath(monster: Model)
+	local ownerUserId = monster:GetAttribute("DungeonOwner")
+	if typeof(ownerUserId) ~= "number" then
+		return
+	end
+
+	local player = Players:GetPlayerByUserId(ownerUserId)
+	if not player then
+		return
+	end
+
+	local run = getRun(player)
+	if not run or run.status ~= "fighting" then
+		return
+	end
+
+	run.monstersRemaining = math.max(0, run.monstersRemaining - 1)
+	sendRunState(player)
+
+	if run.monstersRemaining <= 0 then
+		onRoomCleared(player)
+	end
+end
+
+function DungeonRunService.startRun(player: Player)
+	bumpToken(player)
+	CardServiceModule.resetRun(player)
+	pendingDraftOptions[player] = nil
+
+	playerRuns[player] = {
+		room = 1,
+		gold = 0,
+		status = "starting",
+		monstersRemaining = 0,
+		isBossRoom = false,
+		activeCards = {},
+	}
+
+	sendRunState(player)
+
+	local token = bumpToken(player)
+	task.delay(DungeonConfig.RUN_START_DELAY, function()
+		if not isTokenValid(player, token) then
+			return
+		end
+
+		if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+			CardServiceModule.bindCharacter(player, player.Character)
+		end
+
+		beginRoom(player)
+	end)
+end
+
+function DungeonRunService.endRun(player: Player)
+	playerRuns[player] = nil
+	pendingDraftOptions[player] = nil
+	bumpToken(player)
+	getDungeonRunStateEvent():FireClient(player, nil, nil)
+end
+
+function DungeonRunService.init()
+	WaveService.setDungeonMode(true)
+	WaveService.onMonsterDied(onMonsterDeath)
+
+	getCardDraftPickEvent().OnServerEvent:Connect(function(player, cardId: string)
+		if typeof(cardId) ~= "string" then
+			return
+		end
+
+		local run = getRun(player)
+		local options = pendingDraftOptions[player]
+		if not run or run.status ~= "card_draft" or not options then
+			return
+		end
+
+		local valid = false
+		for _, optionId in options do
+			if optionId == cardId then
+				valid = true
+				break
+			end
+		end
+
+		if not valid then
+			return
+		end
+
+		CardServiceModule.applyCard(player, cardId)
+		pendingDraftOptions[player] = nil
+		bumpToken(player)
+		run.room += 1
+		beginRoom(player)
+	end)
+
+	local function bindPlayer(player: Player)
+		player.CharacterAdded:Connect(function(character)
+			if not DungeonConfig.USE_DUNGEON_MODE then
+				return
+			end
+
+			local humanoid = character:WaitForChild("Humanoid") :: Humanoid
+			humanoid.Died:Connect(function()
+				DungeonRunService.endRun(player)
+			end)
+
+			task.defer(function()
+				if player.Character == character then
+					DungeonRunService.startRun(player)
+				end
+			end)
+		end)
+
+		player.CharacterRemoving:Connect(function()
+			DungeonRunService.endRun(player)
+		end)
+
+		if player.Character then
+			DungeonRunService.startRun(player)
+		end
+	end
+
+	for _, player in Players:GetPlayers() do
+		bindPlayer(player)
+	end
+
+	Players.PlayerAdded:Connect(bindPlayer)
+	Players.PlayerRemoving:Connect(function(player)
+		playerRuns[player] = nil
+		pendingDraftOptions[player] = nil
+		runTokens[player] = nil
+	end)
+end
+
+return DungeonRunService

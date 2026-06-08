@@ -10,6 +10,7 @@ local WeaponCombatConfig = require(ReplicatedStorage.Shared.WeaponCombatConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 
 local WaveService = require(script.Parent.WaveService)
+local CardService = require(script.Parent.CardService)
 
 local WeaponService = {}
 
@@ -248,7 +249,13 @@ local function applyMonsterDamage(
 	end
 
 	alreadyHit[monster] = true
-	humanoid:TakeDamage(math.random(stats.damageMin, stats.damageMax))
+	local damage = math.random(stats.damageMin, stats.damageMax)
+	if attacker then
+		local modifiers = CardService.getModifiers(attacker)
+		damage = math.max(1, math.floor(damage * modifiers.damageMult))
+		CardService.applyLifesteal(attacker, damage)
+	end
+	humanoid:TakeDamage(damage)
 
 	if attacker then
 		getSwordHitEvent():FireClient(attacker)
@@ -355,7 +362,12 @@ local function bindCombat(tool: Tool)
 
 		local stats = WeaponConfig.getStatsForTool(tool)
 		local now = os.clock()
-		if now - lastSwing < stats.cooldown then
+		local attacker = Players:GetPlayerFromCharacter(character)
+		local swingCooldown = stats.cooldown
+		if attacker then
+			swingCooldown *= CardService.getModifiers(attacker).cooldownMult
+		end
+		if now - lastSwing < swingCooldown then
 			return
 		end
 

@@ -20,6 +20,8 @@ local interWaveScheduled = false
 local waveTimeoutToken = 0
 local aiRunning = false
 local walkAnimRunning = false
+local dungeonMode = false
+local monsterDiedCallbacks: { (Model) -> () } = {}
 
 local WOLF_SCALE = WaveConfig.WOLF_SCALE
 
@@ -180,6 +182,10 @@ local function startWaveTimeout()
 end
 
 local function onWaveCleared()
+	if dungeonMode then
+		return
+	end
+
 	if interWaveScheduled then
 		return
 	end
@@ -422,6 +428,11 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 		if index then
 			table.remove(activeMonsters, index)
 		end
+
+		for _, callback in monsterDiedCallbacks do
+			callback(model)
+		end
+
 		checkWaveComplete()
 
 		local headPart = model:FindFirstChild("Head")
@@ -447,9 +458,11 @@ function WaveService.createMonster(spawnPosition: Vector3): Model
 	return model
 end
 
-local function getSpawnPosition(): Vector3
+local function getSpawnPosition(radiusMin: number?, radiusMax: number?): Vector3
 	local angle = math.random() * math.pi * 2
-	local radius = math.random(WaveConfig.SPAWN_RADIUS_MIN, WaveConfig.SPAWN_RADIUS_MAX)
+	local minRadius = radiusMin or WaveConfig.SPAWN_RADIUS_MIN
+	local maxRadius = radiusMax or WaveConfig.SPAWN_RADIUS_MAX
+	local radius = math.random(minRadius, maxRadius)
 	local x = math.cos(angle) * radius
 	local z = math.sin(angle) * radius
 	return Vector3.new(x, WaveConfig.SPAWN_HEIGHT, z)
@@ -796,6 +809,34 @@ local function runAI()
 	end)
 end
 
+function WaveService.setDungeonMode(enabled: boolean)
+	dungeonMode = enabled
+end
+
+function WaveService.onMonsterDied(callback: (Model) -> ())
+	table.insert(monsterDiedCallbacks, callback)
+end
+
+function WaveService.spawnDungeonMonsters(
+	count: number,
+	ownerUserId: number,
+	isBossRoom: boolean,
+	radiusMin: number,
+	radiusMax: number
+)
+	for index = 1, count do
+		local monster = WaveService.createMonster(getSpawnPosition(radiusMin, radiusMax))
+		monster:SetAttribute("DungeonOwner", ownerUserId)
+		if isBossRoom and index <= 2 then
+			local humanoid = monster:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid.MaxHealth = math.floor(humanoid.MaxHealth * 1.8)
+				humanoid.Health = humanoid.MaxHealth
+			end
+		end
+	end
+end
+
 function WaveService.startWave(): boolean
 	if waveInProgress or interWaveScheduled then
 		return false
@@ -853,6 +894,10 @@ function WaveService.init()
 	broadcastWaveState()
 
 	startWaveEvent.OnServerEvent:Connect(function(player)
+		if dungeonMode then
+			return
+		end
+
 		if waveInProgress or interWaveScheduled then
 			return
 		end
