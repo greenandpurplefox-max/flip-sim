@@ -131,6 +131,7 @@ function GamePhaseService.returnToLobby(player: Player, runGold: number?)
 	end
 
 	if DungeonRunServiceModule then
+		DungeonRunServiceModule.bankRunChests(player)
 		DungeonRunServiceModule.endRun(player)
 	end
 

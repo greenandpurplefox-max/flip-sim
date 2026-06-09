@@ -10,7 +10,7 @@ local WaveService = require(script.Parent.WaveService)
 
 local DungeonRunService = {}
 
-export type RunStatus = "starting" | "fighting" | "card_draft" | "treasure_chest" | "intermission" | "ended"
+export type RunStatus = "starting" | "fighting" | "card_draft" | "intermission" | "ended"
 
 export type RunState = {
 	room: number,
@@ -19,12 +19,12 @@ export type RunState = {
 	monstersRemaining: number,
 	isBossRoom: boolean,
 	activeCards: { string },
+	runChestCount: number,
 }
 
 local CardServiceModule = CardService
 local cardDraftPickEvent: RemoteEvent
 local dungeonRunStateEvent: RemoteEvent
-local treasureChestOpenedEvent: RemoteEvent
 
 local playerRuns: { [Player]: RunState } = {}
 local pendingDraftOptions: { [Player]: { string } } = {}
@@ -61,21 +61,6 @@ local function getDungeonRunStateEvent(): RemoteEvent
 	return dungeonRunStateEvent
 end
 
-local function getTreasureChestOpenedEvent(): RemoteEvent
-	if treasureChestOpenedEvent then
-		return treasureChestOpenedEvent
-	end
-
-	treasureChestOpenedEvent = ReplicatedStorage:FindFirstChild("TreasureChestOpened") :: RemoteEvent?
-	if not treasureChestOpenedEvent then
-		treasureChestOpenedEvent = Instance.new("RemoteEvent")
-		treasureChestOpenedEvent.Name = "TreasureChestOpened"
-		treasureChestOpenedEvent.Parent = ReplicatedStorage
-	end
-
-	return treasureChestOpenedEvent
-end
-
 local function getRun(player: Player): RunState?
 	return playerRuns[player]
 end
@@ -93,6 +78,7 @@ local function buildSnapshot(player: Player): RunState?
 		monstersRemaining = run.monstersRemaining,
 		isBossRoom = run.isBossRoom,
 		activeCards = CardServiceModule.getActiveCardIds(player),
+		runChestCount = TreasureChestService.getRunChestCount(player),
 	}
 end
 
@@ -182,19 +168,6 @@ local function proceedAfterRoomClear(player: Player, clearedRoom: number)
 	end)
 end
 
-local function onTreasureOpened(player: Player, clearedRoom: number, loot: TreasureChestService.ChestLoot)
-	local run = getRun(player)
-	if not run or run.status ~= "treasure_chest" then
-		return
-	end
-
-	run.gold += loot.gold
-	run.status = "intermission"
-	sendRunState(player)
-	getTreasureChestOpenedEvent():FireClient(player, loot, run.gold)
-	proceedAfterRoomClear(player, clearedRoom)
-end
-
 local function continueAfterRoomClear(player: Player)
 	local run = getRun(player)
 	if not run then
@@ -207,14 +180,8 @@ local function continueAfterRoomClear(player: Player)
 	local clearedRoom = run.room
 
 	if TreasureConfig.shouldSpawnChest(run.isBossRoom) then
-		run.status = "treasure_chest"
-		sendRunState(player)
-
 		local tierId = TreasureConfig.rollTier(run.isBossRoom, clearedRoom)
-		TreasureChestService.spawnChest(player, tierId, clearedRoom, function(loot)
-			onTreasureOpened(player, clearedRoom, loot)
-		end)
-		return
+		TreasureChestService.awardRunChest(player, tierId, clearedRoom)
 	end
 
 	run.status = "intermission"
@@ -265,6 +232,7 @@ function DungeonRunService.startRun(player: Player)
 	bumpToken(player)
 	CardServiceModule.resetRun(player)
 	pendingDraftOptions[player] = nil
+	TreasureChestService.clearRunChests(player)
 
 	playerRuns[player] = {
 		room = 1,
@@ -273,6 +241,7 @@ function DungeonRunService.startRun(player: Player)
 		monstersRemaining = 0,
 		isBossRoom = false,
 		activeCards = {},
+		runChestCount = 0,
 	}
 
 	sendRunState(player)
@@ -293,7 +262,7 @@ end
 
 function DungeonRunService.endRun(player: Player)
 	WaveService.clearMonstersForOwner(player.UserId)
-	TreasureChestService.destroyChest(player)
+	TreasureChestService.clearRunChests(player)
 	playerRuns[player] = nil
 	pendingDraftOptions[player] = nil
 	bumpToken(player)
@@ -302,6 +271,10 @@ end
 
 function DungeonRunService.setRunEndedHandler(handler: (Player, number) -> ())
 	runEndedHandler = handler
+end
+
+function DungeonRunService.bankRunChests(player: Player)
+	TreasureChestService.transferRunChestsToLobby(player)
 end
 
 function DungeonRunService.handlePlayerDeath(player: Player)
@@ -322,7 +295,6 @@ function DungeonRunService.init()
 
 	getDungeonRunStateEvent()
 	getCardDraftPickEvent()
-	getTreasureChestOpenedEvent()
 
 	getCardDraftPickEvent().OnServerEvent:Connect(function(player, cardId: string)
 		if typeof(cardId) ~= "string" then

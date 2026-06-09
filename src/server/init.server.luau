@@ -7,6 +7,7 @@ local LobbyEnvironmentService = require(script.LobbyEnvironmentService)
 local PlayerDataService = require(script.PlayerDataService)
 local WaveService = require(script.WaveService)
 local WeaponService = require(script.WeaponService)
+local TreasureChestService = require(script.TreasureChestService)
 
 local centerMarker = workspace:FindFirstChild("CenterMarker")
 if centerMarker then
@@ -19,6 +20,7 @@ DashService.init()
 WaveService.init()
 CardService.init()
 WeaponService.init()
+TreasureChestService.init()
 DungeonRunService.init()
 
 GamePhaseService.init({

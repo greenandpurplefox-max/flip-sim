@@ -2,7 +2,7 @@ local TreasureConfig = {}
 
 TreasureConfig.CHEST_SPAWN_CHANCE = 0.38
 TreasureConfig.BOSS_CHEST_GUARANTEED = true
-TreasureConfig.CHEST_AUTO_OPEN_SECONDS = 14
+TreasureConfig.DUNGEON_POPUP_SECONDS = 2.4
 
 TreasureConfig.TIERS = {
 	Common = {

@@ -172,18 +172,18 @@ local function renderRunState(state: any)
 
 	local bossText = if state.isBossRoom then "  |  BOSS ROOM" else ""
 	local cardCount = if state.activeCards then #state.activeCards else 0
+	local chestCount = if typeof(state.runChestCount) == "number" then state.runChestCount else 0
+	local chestText = if chestCount > 0 then `  |  Chests: {chestCount}` else ""
 
 	if state.status == "fighting" then
 		statusLabel.Text =
-			`Depth {state.room}{bossText}  |  Beasts left: {state.monstersRemaining}  |  Gold: {state.gold}  |  Relics: {cardCount}`
+			`Depth {state.room}{bossText}  |  Beasts left: {state.monstersRemaining}  |  Gold: {state.gold}{chestText}  |  Relics: {cardCount}`
 	elseif state.status == "card_draft" then
-		statusLabel.Text = `Depth {state.room} cleared  |  Gold: {state.gold}  |  Choose a relic...`
-	elseif state.status == "treasure_chest" then
-		statusLabel.Text = `Depth {state.room} cleared  |  Gold: {state.gold}  |  Treasure chest nearby! Hold E to open.`
+		statusLabel.Text = `Depth {state.room} cleared  |  Gold: {state.gold}{chestText}  |  Choose a relic...`
 	elseif state.status == "intermission" then
-		statusLabel.Text = `Depth {state.room} cleared  |  Gold: {state.gold}  |  Deeper...`
+		statusLabel.Text = `Depth {state.room} cleared  |  Gold: {state.gold}{chestText}  |  Deeper...`
 	else
-		statusLabel.Text = `Depth {state.room}  |  Gold: {state.gold}  |  Relics: {cardCount}`
+		statusLabel.Text = `Depth {state.room}  |  Gold: {state.gold}{chestText}  |  Relics: {cardCount}`
 	end
 end
 
