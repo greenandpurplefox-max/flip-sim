@@ -70,7 +70,15 @@ local function sendPhase(player: Player)
 	getPhaseStateEvent():FireClient(player, GamePhaseService.getPhase(player))
 end
 
+local function isPlayerActive(player: Player): boolean
+	return player.Parent ~= nil
+end
+
 local function teleportCharacter(player: Player, position: Vector3)
+	if not isPlayerActive(player) then
+		return
+	end
+
 	local character = player.Character
 	if not character then
 		return
@@ -95,6 +103,10 @@ local function teleportCharacter(player: Player, position: Vector3)
 end
 
 local function rescueFallenLobbyPlayer(player: Player)
+	if not isPlayerActive(player) then
+		return
+	end
+
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -144,7 +156,7 @@ function GamePhaseService.returnToLobby(player: Player, runGold: number?)
 end
 
 function GamePhaseService.enterDungeon(player: Player): boolean
-	if not LobbyConfig.USE_LOBBY then
+	if not LobbyConfig.USE_LOBBY or not isPlayerActive(player) then
 		return false
 	end
 
@@ -220,6 +232,10 @@ function GamePhaseService.wireDungeonPortal()
 end
 
 function GamePhaseService.onPlayerReady(player: Player)
+	if not isPlayerActive(player) then
+		return
+	end
+
 	playerPhases[player] = "Lobby"
 	player:SetAttribute("GamePhase", "Lobby")
 
@@ -235,6 +251,10 @@ local function runLobbySafetyLoop()
 	task.spawn(function()
 		while true do
 			for _, player in Players:GetPlayers() do
+				if not isPlayerActive(player) then
+					continue
+				end
+
 				if GamePhaseService.isInLobby(player) then
 					rescueFallenLobbyPlayer(player)
 				end
@@ -250,6 +270,10 @@ local function runPortalZoneLoop()
 	task.spawn(function()
 		while true do
 			for _, player in Players:GetPlayers() do
+				if not isPlayerActive(player) then
+					continue
+				end
+
 				if DungeonRunServiceModule and DungeonRunServiceModule.hasActiveRun(player) then
 					portalHoldTimes[player] = nil
 				else
@@ -306,7 +330,7 @@ function GamePhaseService.init(deps: {
 	local function bindPlayer(player: Player)
 		player.CharacterAdded:Connect(function(character)
 			task.defer(function()
-				if player.Character ~= character then
+				if not isPlayerActive(player) or player.Character ~= character or not character.Parent then
 					return
 				end
 

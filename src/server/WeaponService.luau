@@ -572,7 +572,20 @@ local function clearWaveWeapons(player: Player, character: Model?)
 	end
 end
 
+local function isPlayerActive(player: Player): boolean
+	return player.Parent ~= nil
+end
+
 local function equipWeaponTool(character: Model, tool: Tool)
+	if not character.Parent then
+		return
+	end
+
+	local owner = Players:GetPlayerFromCharacter(character)
+	if owner and not isPlayerActive(owner) then
+		return
+	end
+
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid and humanoid.Health > 0 and tool.Parent then
 		humanoid:EquipTool(tool)
@@ -748,9 +761,17 @@ end
 local function bindPermanentEquip(player: Player, tool: Tool)
 	tool.Unequipped:Connect(function()
 		task.defer(function()
+			if not isPlayerActive(player) then
+				return
+			end
+
 			local character = player.Character
+			if not character or not character.Parent then
+				return
+			end
+
 			local weaponId = playerWeapons[player]
-			if weaponId and tool.Parent and character and character:FindFirstChildOfClass("Humanoid") then
+			if weaponId and tool.Parent and character:FindFirstChildOfClass("Humanoid") then
 				local expected = findWaveWeapon(character)
 				if expected == tool or (not expected and tool:GetAttribute(WeaponConfig.WEAPON_ATTRIBUTE) == weaponId) then
 					equipWeaponTool(character, tool)
@@ -767,7 +788,7 @@ local function notifyLoadout(player: Player)
 end
 
 local function giveWeapon(player: Player, character: Model?, weaponId: string)
-	if not character then
+	if not isPlayerActive(player) or not character or not character.Parent then
 		return
 	end
 
@@ -789,6 +810,10 @@ local function giveWeapon(player: Player, character: Model?, weaponId: string)
 end
 
 function WeaponService.refreshPlayerLoadout(player: Player)
+	if not isPlayerActive(player) then
+		return
+	end
+
 	local weaponId = PlayerDataService.getEquippedWeapon(player)
 	playerWeapons[player] = weaponId
 	giveWeapon(player, player.Character, weaponId)
@@ -838,6 +863,10 @@ end
 
 local function onCharacterAdded(player: Player, character: Model)
 	task.defer(function()
+		if not isPlayerActive(player) or player.Character ~= character or not character.Parent then
+			return
+		end
+
 		local weaponId = PlayerDataService.getEquippedWeapon(player)
 		playerWeapons[player] = weaponId
 		giveWeapon(player, character, weaponId)

@@ -290,6 +290,10 @@ function DungeonRunService.bankRunChests(player: Player)
 end
 
 function DungeonRunService.handlePlayerDeath(player: Player)
+	if not player.Parent then
+		return
+	end
+
 	local run = getRun(player)
 	local runGold = if run then run.gold else 0
 
