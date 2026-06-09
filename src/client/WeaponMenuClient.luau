@@ -2,8 +2,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig)
+local TreasureChestPreview = require(script.Parent.TreasureChestPreview)
 
 local WeaponMenuClient = {}
 
@@ -12,8 +14,15 @@ local GOLD_DIM = Color3.fromRGB(140, 108, 42)
 local PANEL = Color3.fromRGB(28, 22, 18)
 local PANEL_LIGHT = Color3.fromRGB(48, 38, 32)
 local TEXT = Color3.fromRGB(244, 228, 196)
+local TEXT_DIM = Color3.fromRGB(170, 154, 128)
 local LOCKED = Color3.fromRGB(110, 110, 110)
 local ACCENT = Color3.fromRGB(58, 92, 148)
+
+type ChestEntry = {
+	tierId: string,
+	roomDepth: number,
+	tierName: string,
+}
 
 function WeaponMenuClient.init()
 	local player = Players.LocalPlayer
@@ -25,12 +34,16 @@ function WeaponMenuClient.init()
 	local loadoutUpdatedEvent = ReplicatedStorage:WaitForChild("LoadoutUpdated") :: RemoteEvent
 	local profileStateEvent = ReplicatedStorage:WaitForChild("PlayerProfileState") :: RemoteEvent
 	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
+	local chestStateEvent = ReplicatedStorage:WaitForChild("TreasureChestState") :: RemoteEvent
+	local openChestEvent = ReplicatedStorage:WaitForChild("OpenTreasureChest") :: RemoteEvent
+	local chestOpenedEvent = ReplicatedStorage:WaitForChild("TreasureChestOpened") :: RemoteEvent
 
 	local equippedWeapon = WeaponConfig.DEFAULT_WEAPON
 	local loadoutLocked = false
 	local menuOpen = false
 	local activeTab = "Equip"
 	local walletGold = LobbyConfig.STARTER_GOLD
+	local lobbyChests: { ChestEntry } = {}
 	local weaponLevels: { [string]: number } = {}
 	local unlockedWeapons: { [string]: boolean } = {
 		[LobbyConfig.STARTER_WEAPON] = true,
@@ -111,24 +124,40 @@ function WeaponMenuClient.init()
 	tabLayout.Parent = tabBar
 
 	local equipTab = Instance.new("TextButton")
-	equipTab.Size = UDim2.fromOffset(110, 32)
+	equipTab.Size = UDim2.fromOffset(100, 32)
 	equipTab.BackgroundColor3 = GOLD_DIM
 	equipTab.BorderSizePixel = 0
 	equipTab.Font = Enum.Font.GothamBold
 	equipTab.Text = "Equip"
 	equipTab.TextColor3 = TEXT
-	equipTab.TextSize = 16
+	equipTab.TextSize = 15
 	equipTab.Parent = tabBar
 
 	local upgradeTab = Instance.new("TextButton")
-	upgradeTab.Size = UDim2.fromOffset(110, 32)
+	upgradeTab.Size = UDim2.fromOffset(100, 32)
 	upgradeTab.BackgroundColor3 = PANEL_LIGHT
 	upgradeTab.BorderSizePixel = 0
 	upgradeTab.Font = Enum.Font.GothamBold
 	upgradeTab.Text = "Upgrade"
 	upgradeTab.TextColor3 = TEXT
-	upgradeTab.TextSize = 16
+	upgradeTab.TextSize = 15
 	upgradeTab.Parent = tabBar
+
+	local chestsTab = Instance.new("TextButton")
+	chestsTab.Size = UDim2.fromOffset(100, 32)
+	chestsTab.BackgroundColor3 = PANEL_LIGHT
+	chestsTab.BorderSizePixel = 0
+	chestsTab.Font = Enum.Font.GothamBold
+	chestsTab.Text = "Chests"
+	chestsTab.TextColor3 = TEXT
+	chestsTab.TextSize = 15
+	chestsTab.Parent = tabBar
+
+	for _, tab in { equipTab, upgradeTab, chestsTab } do
+		local tabCorner = Instance.new("UICorner")
+		tabCorner.CornerRadius = UDim.new(0, 8)
+		tabCorner.Parent = tab
+	end
 
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "WeaponList"
@@ -149,11 +178,121 @@ function WeaponMenuClient.init()
 		list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 8)
 	end)
 
+	local chestList = Instance.new("ScrollingFrame")
+	chestList.Name = "ChestList"
+	chestList.BackgroundTransparency = 1
+	chestList.BorderSizePixel = 0
+	chestList.Position = UDim2.fromOffset(16, 120)
+	chestList.Size = UDim2.new(1, -32, 1, -136)
+	chestList.CanvasSize = UDim2.fromOffset(0, 0)
+	chestList.ScrollBarThickness = 6
+	chestList.Visible = false
+	chestList.Parent = panel
+
+	local chestLayout = Instance.new("UIListLayout")
+	chestLayout.Padding = UDim.new(0, 10)
+	chestLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	chestLayout.Parent = chestList
+
+	chestLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		chestList.CanvasSize = UDim2.fromOffset(0, chestLayout.AbsoluteContentSize.Y + 8)
+	end)
+
+	local emptyChestLabel = Instance.new("TextLabel")
+	emptyChestLabel.Name = "EmptyChests"
+	emptyChestLabel.BackgroundTransparency = 1
+	emptyChestLabel.Size = UDim2.new(1, -32, 0, 80)
+	emptyChestLabel.Position = UDim2.fromOffset(16, 140)
+	emptyChestLabel.Font = Enum.Font.Gotham
+	emptyChestLabel.Text = "No chests yet.\nClear dungeon rooms for a chance to find treasure."
+	emptyChestLabel.TextColor3 = TEXT_DIM
+	emptyChestLabel.TextSize = 15
+	emptyChestLabel.TextWrapped = true
+	emptyChestLabel.Visible = false
+	emptyChestLabel.Parent = panel
+
 	local weaponButtons: { [string]: TextButton } = {}
 
 	local function getEffectiveDisplayStats(weaponId: string)
 		local level = weaponLevels[weaponId] or 1
 		return WeaponUpgradeConfig.getEffectiveStats(weaponId, level)
+	end
+
+	local function renderChestList()
+		for _, child in chestList:GetChildren() do
+			if child:IsA("Frame") then
+				child:Destroy()
+			end
+		end
+
+		emptyChestLabel.Visible = activeTab == "Chests" and #lobbyChests == 0
+		chestList.Visible = activeTab == "Chests" and #lobbyChests > 0
+
+		for index, chest in lobbyChests do
+			local tier = TreasureConfig.getTier(chest.tierId)
+			local row = Instance.new("Frame")
+			row.Size = UDim2.new(1, -4, 0, 96)
+			row.BackgroundColor3 = PANEL_LIGHT
+			row.BorderSizePixel = 0
+			row.LayoutOrder = index
+			row.Parent = chestList
+
+			local rowCorner = Instance.new("UICorner")
+			rowCorner.CornerRadius = UDim.new(0, 8)
+			rowCorner.Parent = row
+
+			local previewHost = Instance.new("Frame")
+			previewHost.BackgroundTransparency = 1
+			previewHost.Position = UDim2.fromOffset(8, 8)
+			previewHost.Size = UDim2.fromOffset(80, 80)
+			previewHost.Parent = row
+			TreasureChestPreview.mount(previewHost, chest.tierId, 80)
+
+			local nameLabel = Instance.new("TextLabel")
+			nameLabel.BackgroundTransparency = 1
+			nameLabel.Position = UDim2.fromOffset(96, 14)
+			nameLabel.Size = UDim2.new(1, -220, 0, 24)
+			nameLabel.Font = Enum.Font.GothamBold
+			nameLabel.Text = chest.tierName
+			nameLabel.TextColor3 = TEXT
+			nameLabel.TextSize = 17
+			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+			nameLabel.Parent = row
+
+			local depthLabel = Instance.new("TextLabel")
+			depthLabel.BackgroundTransparency = 1
+			depthLabel.Position = UDim2.fromOffset(96, 40)
+			depthLabel.Size = UDim2.new(1, -220, 0, 20)
+			depthLabel.Font = Enum.Font.Gotham
+			depthLabel.Text = `Depth {chest.roomDepth}`
+			depthLabel.TextColor3 = TEXT_DIM
+			depthLabel.TextSize = 14
+			depthLabel.TextXAlignment = Enum.TextXAlignment.Left
+			depthLabel.Parent = row
+
+			local openButton = Instance.new("TextButton")
+			openButton.AnchorPoint = Vector2.new(1, 0.5)
+			openButton.Position = UDim2.new(1, -8, 0.5, 0)
+			openButton.Size = UDim2.fromOffset(96, 40)
+			openButton.BackgroundColor3 = tier.trimColor
+			openButton.BorderSizePixel = 0
+			openButton.Font = Enum.Font.GothamBold
+			openButton.Text = "Open"
+			openButton.TextColor3 = Color3.new(0.08, 0.06, 0.05)
+			openButton.TextSize = 16
+			openButton.Parent = row
+
+			local openCorner = Instance.new("UICorner")
+			openCorner.CornerRadius = UDim.new(0, 8)
+			openCorner.Parent = openButton
+
+			openButton.MouseButton1Click:Connect(function()
+				if loadoutLocked or currentPhase ~= "Lobby" then
+					return
+				end
+				openChestEvent:FireServer(index)
+			end)
+		end
 	end
 
 	local function updateWeaponButtons()
@@ -209,13 +348,22 @@ function WeaponMenuClient.init()
 
 		equipTab.BackgroundColor3 = if activeTab == "Equip" then GOLD_DIM else PANEL_LIGHT
 		upgradeTab.BackgroundColor3 = if activeTab == "Upgrade" then GOLD_DIM else PANEL_LIGHT
+		chestsTab.BackgroundColor3 = if activeTab == "Chests" then GOLD_DIM else PANEL_LIGHT
+		chestsTab.Text = if #lobbyChests > 0 then `Chests ({#lobbyChests})` else "Chests"
+
+		list.Visible = activeTab ~= "Chests"
+		renderChestList()
 
 		if loadoutLocked or not inLobby then
 			statusLabel.Text = "Loadout locked during a dungeon run."
 		elseif activeTab == "Equip" then
 			statusLabel.Text = `Equipped: {WeaponConfig.getWeapon(equippedWeapon).displayName}  |  Gold: {walletGold}`
-		else
+		elseif activeTab == "Upgrade" then
 			statusLabel.Text = `Spend gold to upgrade weapons. Wallet: {walletGold}`
+		elseif #lobbyChests > 0 then
+			statusLabel.Text = `{#lobbyChests} chest(s) ready to open.`
+		else
+			statusLabel.Text = "Find chests in the dungeon, then open them here."
 		end
 
 		updateWeaponButtons()
@@ -267,6 +415,11 @@ function WeaponMenuClient.init()
 
 	upgradeTab.MouseButton1Click:Connect(function()
 		activeTab = "Upgrade"
+		updateMenuState()
+	end)
+
+	chestsTab.MouseButton1Click:Connect(function()
+		activeTab = "Chests"
 		updateMenuState()
 	end)
 
@@ -326,9 +479,45 @@ function WeaponMenuClient.init()
 			if phase == "Dungeon" then
 				menuOpen = false
 				panel.Visible = false
+			elseif #lobbyChests > 0 then
+				activeTab = "Chests"
+				menuOpen = true
+				panel.Visible = true
 			end
 			updateMenuState()
 		end
+	end)
+
+	chestStateEvent.OnClientEvent:Connect(function(payload)
+		lobbyChests = {}
+		if typeof(payload) == "table" then
+			for _, entry in payload do
+				if typeof(entry) == "table" and typeof(entry.tierId) == "string" then
+					table.insert(lobbyChests, {
+						tierId = entry.tierId,
+						roomDepth = if typeof(entry.roomDepth) == "number" then entry.roomDepth else 1,
+						tierName = if typeof(entry.tierName) == "string"
+							then entry.tierName
+							else TreasureConfig.getTier(entry.tierId).displayName,
+					})
+				end
+			end
+		end
+
+		if currentPhase == "Lobby" and #lobbyChests > 0 then
+			activeTab = "Chests"
+			menuOpen = true
+			panel.Visible = true
+		end
+		updateMenuState()
+	end)
+
+	chestOpenedEvent.OnClientEvent:Connect(function(loot)
+		if typeof(loot) == "table" and typeof(loot.gold) == "number" then
+			local tierName = if typeof(loot.tierName) == "string" then loot.tierName else "Chest"
+			statusLabel.Text = `{tierName} opened for {loot.gold} gold!`
+		end
+		updateMenuState()
 	end)
 
 	updateMenuState()

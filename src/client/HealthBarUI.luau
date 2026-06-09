@@ -1,7 +1,10 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
+
+local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -20,6 +23,7 @@ local fillBar: Frame
 local fillGlow: Frame
 local healthLabel: TextLabel
 local emblemLabel: TextLabel
+local chestNotifyLabel: TextLabel
 local hitSound: Sound
 
 local segmentCount = 24
@@ -29,6 +33,7 @@ local characterConnections: { RBXScriptConnection } = {}
 local damageIndicatorIndex = 0
 local hitPitch = BASE_PITCH
 local pitchResetToken = 0
+local chestNotifyToken = 0
 
 local PALETTE = {
 	shadow = Color3.fromRGB(8, 4, 10),
@@ -449,10 +454,65 @@ local function createUI()
 	bottomRunes.TextSize = 10
 	bottomRunes.ZIndex = 5
 	bottomRunes.Parent = container
+
+	chestNotifyLabel = Instance.new("TextLabel")
+	chestNotifyLabel.Name = "ChestNotify"
+	chestNotifyLabel.AnchorPoint = Vector2.new(0, 1)
+	chestNotifyLabel.BackgroundTransparency = 1
+	chestNotifyLabel.Position = UDim2.new(0, 16, 1, -106)
+	chestNotifyLabel.Size = UDim2.fromOffset(300, 24)
+	chestNotifyLabel.Font = Enum.Font.Antique
+	chestNotifyLabel.Text = ""
+	chestNotifyLabel.TextColor3 = PALETTE.goldBright
+	chestNotifyLabel.TextSize = 16
+	chestNotifyLabel.TextStrokeColor3 = PALETTE.shadow
+	chestNotifyLabel.TextStrokeTransparency = 0.1
+	chestNotifyLabel.TextTransparency = 1
+	chestNotifyLabel.TextXAlignment = Enum.TextXAlignment.Center
+	chestNotifyLabel.ZIndex = 12
+	chestNotifyLabel.Visible = false
+	chestNotifyLabel.Parent = screenGui
+end
+
+local function showChestAwarded(payload: any)
+	if typeof(payload) ~= "table" then
+		return
+	end
+
+	local tierId = if typeof(payload.tierId) == "string" then payload.tierId else "Common"
+	local tier = TreasureConfig.getTier(tierId)
+	local tierName = if typeof(payload.tierName) == "string" then payload.tierName else tier.displayName
+
+	chestNotifyLabel.Text = `{tierName} secured!`
+	chestNotifyLabel.TextColor3 = tier.glowColor
+	chestNotifyLabel.TextTransparency = 0
+	chestNotifyLabel.Visible = true
+
+	chestNotifyToken += 1
+	local token = chestNotifyToken
+	task.delay(3.2, function()
+		if chestNotifyToken ~= token or not chestNotifyLabel.Parent then
+			return
+		end
+		local fade = TweenService:Create(chestNotifyLabel, TweenInfo.new(0.35), {
+			TextTransparency = 1,
+			TextStrokeTransparency = 1,
+		})
+		fade:Play()
+		fade.Completed:Connect(function()
+			if chestNotifyToken == token then
+				chestNotifyLabel.Visible = false
+				chestNotifyLabel.TextStrokeTransparency = 0.1
+			end
+		end)
+	end)
 end
 
 function HealthBarUI.init()
 	createUI()
+
+	local awardedEvent = ReplicatedStorage:WaitForChild("TreasureChestAwarded") :: RemoteEvent
+	awardedEvent.OnClientEvent:Connect(showChestAwarded)
 
 	if player.Character then
 		bindCharacter(player.Character)
