@@ -80,7 +80,7 @@ local function startIdlePose(character: Model, tool: Tool)
 	end)
 end
 
-local function stopSwing(tool: Tool, character: Model?)
+local function stopSwing(tool: Tool?, character: Model?)
 	if swingConnection then
 		swingConnection:Disconnect()
 		swingConnection = nil
@@ -90,7 +90,7 @@ local function stopSwing(tool: Tool, character: Model?)
 	stopActiveTrack()
 	swinging = false
 
-	if character and tool.Parent == character then
+	if character and tool and tool.Parent == character then
 		local combatConfig = WeaponCombatConfig.getConfigForTool(tool)
 		local motors = BroadswordPose.getMotors(character)
 		BroadswordPose.reset(motors, tool, combatConfig.SHOULDER_GRIP)
@@ -271,7 +271,7 @@ local function bindCharacter(character: Model)
 
 	character.AncestryChanged:Connect(function(_, parent)
 		if not parent then
-			stopSwing(activeTool :: Tool, character)
+			stopSwing(activeTool, character)
 			stopIdlePose()
 		end
 	end)
