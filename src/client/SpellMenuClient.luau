@@ -30,7 +30,7 @@ function SpellMenuClient.init()
 	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
 
 	local equippedActiveSpell = SpellConfig.DEFAULT_ACTIVE
-	local equippedPassiveSpell = SpellConfig.DEFAULT_PASSIVE
+	local equippedPassiveSpell = SpellConfig.NO_PASSIVE
 	local loadoutLocked = false
 	local menuOpen = false
 	local activeTab = "Equip"
@@ -38,7 +38,6 @@ function SpellMenuClient.init()
 	local spellLevels: { [string]: number } = {}
 	local unlockedSpells: { [string]: boolean } = {
 		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
-		[LobbyConfig.STARTER_PASSIVE_SPELL] = true,
 	}
 	local currentPhase = "Lobby"
 
@@ -181,7 +180,7 @@ function SpellMenuClient.init()
 			local isActive = SpellConfig.getKind(spellId) == "Active"
 			local equipped = if isActive
 				then spellId == equippedActiveSpell
-				else spellId == equippedPassiveSpell
+				else SpellConfig.hasEquippedPassive(spellId) and spellId == equippedPassiveSpell
 			local ultimateTag = if stats.isUltimate then "  ULT" else ""
 			local kindLabel = getKindLabel(spellId)
 
@@ -245,13 +244,15 @@ function SpellMenuClient.init()
 		upgradeTab.BackgroundColor3 = if activeTab == "Upgrade" then GOLD_DIM else PANEL_LIGHT
 
 		local activeStats = getEffectiveDisplayStats(equippedActiveSpell)
-		local passiveStats = getEffectiveDisplayStats(equippedPassiveSpell)
+		local passiveName = if SpellConfig.hasEquippedPassive(equippedPassiveSpell)
+			then getEffectiveDisplayStats(equippedPassiveSpell).resolvedName
+			else "None"
 
 		if loadoutLocked or not inLobby then
 			statusLabel.Text = "Spell loadout locked during a dungeon run."
 		elseif activeTab == "Equip" then
 			statusLabel.Text =
-				`Active: {activeStats.resolvedName} (E)  |  Passive: {passiveStats.resolvedName}\nGold: {walletGold}`
+				`Active: {activeStats.resolvedName} (E)  |  Passive: {passiveName}\nGold: {walletGold}`
 		else
 			statusLabel.Text =
 				`Ultimates unlock at level {SpellUpgradeConfig.ULTIMATE_LEVEL}. Wallet: {walletGold}`

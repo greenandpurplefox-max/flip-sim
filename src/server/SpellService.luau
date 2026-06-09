@@ -12,7 +12,6 @@ local SpellService = {}
 
 local ON_HIT_PASSIVE_COOLDOWN = 0.4
 local PROJECTILE_LIFETIME = 2.5
-local STATIC_WARD_RANGE = 42
 
 local lastActiveCastAt: { [Player]: number } = {}
 local lastOnHitPassiveAt: { [Player]: number } = {}
@@ -320,43 +319,8 @@ local function flattenLookVector(root: BasePart): Vector3
 	return look.Unit
 end
 
-local function getRandomHorizontalDirection(): Vector3
-	local angle = math.random() * math.pi * 2
-	return Vector3.new(math.cos(angle), 0, math.sin(angle))
-end
-
 local function getMonsterRoot(monster: Model): BasePart?
 	return monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") :: BasePart?
-end
-
-local function findNearestMonsters(player: Player, origin: Vector3, maxRange: number, count: number): { Model }
-	local folder = getMonstersFolder()
-	if not folder then
-		return {}
-	end
-
-	local candidates: { { monster: Model, distance: number } } = {}
-	for _, child in folder:GetChildren() do
-		if child:IsA("Model") and canDamageMonster(child, player) then
-			local root = getMonsterRoot(child)
-			if root then
-				local distance = (root.Position - origin).Magnitude
-				if distance <= maxRange then
-					table.insert(candidates, { monster = child, distance = distance })
-				end
-			end
-		end
-	end
-
-	table.sort(candidates, function(a, b)
-		return a.distance < b.distance
-	end)
-
-	local results: { Model } = {}
-	for index = 1, math.min(count, #candidates) do
-		table.insert(results, candidates[index].monster)
-	end
-	return results
 end
 
 local function spawnProjectile(
@@ -402,20 +366,6 @@ local function spawnProjectile(
 	end)
 end
 
-local function fireRandomProjectiles(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not root then
-		return
-	end
-
-	local count = stats.projectileCount or 1
-	local origin = root.Position + Vector3.new(0, 1.2, 0)
-	for _ = 1, count do
-		spawnProjectile(player, origin, getRandomHorizontalDirection(), stats)
-	end
-end
-
 local function fireForwardProjectiles(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -424,37 +374,10 @@ local function fireForwardProjectiles(player: Player, stats: SpellUpgradeConfig.
 	end
 
 	local direction = flattenLookVector(root)
-	local origin = root.Position + Vector3.new(0, 1.2, 0) + direction * 1.5
 	local count = stats.projectileCount or 1
 	for index = 0, count - 1 do
-		local spread = if count > 1 then math.rad(8 * (index - (count - 1) * 0.5)) else 0
-		local rotated = CFrame.fromAxisAngle(Vector3.yAxis, spread) * direction
-		spawnProjectile(player, origin, rotated, stats)
-	end
-end
-
-local function fireStaticWard(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not root then
-		return
-	end
-
-	local count = stats.projectileCount or 1
-	local targets = findNearestMonsters(player, root.Position, STATIC_WARD_RANGE, count)
-	if #targets == 0 then
-		return
-	end
-
-	local origin = root.Position + Vector3.new(0, 1.2, 0)
-	for _, monster in targets do
-		local monsterRoot = getMonsterRoot(monster)
-		if monsterRoot then
-			local direction = monsterRoot.Position - origin
-			if direction.Magnitude > 0.01 then
-				spawnProjectile(player, origin, direction, stats)
-			end
-		end
+		local origin = root.Position + Vector3.new(0, 1.2, 0) + direction * (1.5 + index * 1.2)
+		spawnProjectile(player, origin, direction, stats)
 	end
 end
 
@@ -523,24 +446,24 @@ function SpellService.onPlayerDamaged(player: Player)
 		return
 	end
 
+	local spellId = PlayerDataService.getEquippedPassiveSpell(player)
+	if not SpellConfig.hasEquippedPassive(spellId) then
+		return
+	end
+
+	local base = SpellConfig.getSpell(spellId)
+	if not base or base.trigger ~= "OnHit" then
+		return
+	end
+
 	local now = os.clock()
 	if lastOnHitPassiveAt[player] and now - lastOnHitPassiveAt[player] < ON_HIT_PASSIVE_COOLDOWN then
 		return
 	end
 	lastOnHitPassiveAt[player] = now
 
-	local spellId = PlayerDataService.getEquippedPassiveSpell(player)
-	local base = SpellConfig.getSpell(spellId)
-	if not base or base.kind ~= "Passive" or base.trigger ~= "OnHit" then
-		return
-	end
-
 	local stats = getEffectiveStats(player, spellId)
-	if spellId == "StaticWard" then
-		fireStaticWard(player, stats)
-	else
-		fireRandomProjectiles(player, stats)
-	end
+	fireForwardProjectiles(player, stats)
 	notifyCastEffect(player, spellId, stats, "passive")
 end
 
@@ -634,6 +557,10 @@ local function tickPassiveIntervals()
 		end
 
 		local spellId = PlayerDataService.getEquippedPassiveSpell(player)
+		if not SpellConfig.hasEquippedPassive(spellId) then
+			continue
+		end
+
 		local base = SpellConfig.getSpell(spellId)
 		if not base or base.trigger ~= "Interval" then
 			continue

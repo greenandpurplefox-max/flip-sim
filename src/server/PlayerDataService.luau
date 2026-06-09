@@ -56,12 +56,11 @@ local function getDefaultProfile(): PlayerProfile
 	local spellLevels: { [string]: number } = {}
 	local unlockedSpells: { [string]: boolean } = {
 		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
-		[LobbyConfig.STARTER_PASSIVE_SPELL] = true,
 	}
 
 	for _, spell in SpellConfig.getSpellList() do
 		spellLevels[spell.id] = 1
-		if spell.id ~= LobbyConfig.STARTER_ACTIVE_SPELL and spell.id ~= LobbyConfig.STARTER_PASSIVE_SPELL then
+		if spell.id ~= LobbyConfig.STARTER_ACTIVE_SPELL then
 			unlockedSpells[spell.id] = false
 		end
 	end
@@ -72,7 +71,7 @@ local function getDefaultProfile(): PlayerProfile
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
 		equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL,
-		equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL,
+		equippedPassiveSpell = SpellConfig.NO_PASSIVE,
 		spellLevels = spellLevels,
 		unlockedSpells = unlockedSpells,
 		lobbyChests = {},
@@ -139,9 +138,12 @@ local function sanitizeProfile(data: any): PlayerProfile
 	profile.equippedActiveSpell = if SpellConfig.isValid(data.equippedActiveSpell)
 		then data.equippedActiveSpell
 		else defaults.equippedActiveSpell
-	profile.equippedPassiveSpell = if SpellConfig.isValid(data.equippedPassiveSpell)
-		then data.equippedPassiveSpell
-		else defaults.equippedPassiveSpell
+	profile.equippedPassiveSpell = defaults.equippedPassiveSpell
+	if typeof(data.equippedPassiveSpell) == "string" and data.equippedPassiveSpell ~= "" then
+		if SpellConfig.isValid(data.equippedPassiveSpell) and SpellConfig.getKind(data.equippedPassiveSpell) == "Passive" then
+			profile.equippedPassiveSpell = data.equippedPassiveSpell
+		end
+	end
 
 	if typeof(data.spellLevels) == "table" then
 		for spellId, level in data.spellLevels do
@@ -160,7 +162,6 @@ local function sanitizeProfile(data: any): PlayerProfile
 	end
 
 	profile.unlockedSpells[LobbyConfig.STARTER_ACTIVE_SPELL] = true
-	profile.unlockedSpells[LobbyConfig.STARTER_PASSIVE_SPELL] = true
 
 	if not profile.unlockedSpells[profile.equippedActiveSpell] then
 		profile.equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL
@@ -169,11 +170,10 @@ local function sanitizeProfile(data: any): PlayerProfile
 		profile.equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL
 	end
 
-	if not profile.unlockedSpells[profile.equippedPassiveSpell] then
-		profile.equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL
-	end
-	if SpellConfig.getKind(profile.equippedPassiveSpell) ~= "Passive" then
-		profile.equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL
+	if not SpellConfig.hasEquippedPassive(profile.equippedPassiveSpell)
+		or not profile.unlockedSpells[profile.equippedPassiveSpell]
+	then
+		profile.equippedPassiveSpell = SpellConfig.NO_PASSIVE
 	end
 
 	profile.lobbyChests = sanitizeLobbyChests(data.lobbyChests)
@@ -365,7 +365,7 @@ end
 
 function PlayerDataService.getEquippedPassiveSpell(player: Player): string
 	local profile = profiles[player]
-	return if profile then profile.equippedPassiveSpell else LobbyConfig.STARTER_PASSIVE_SPELL
+	return if profile then profile.equippedPassiveSpell else SpellConfig.NO_PASSIVE
 end
 
 function PlayerDataService.setEquippedActiveSpell(player: Player, spellId: string): boolean

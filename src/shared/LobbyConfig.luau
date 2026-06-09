@@ -16,7 +16,6 @@ LobbyConfig.LOBBY_FALL_Y = 2.5
 
 LobbyConfig.STARTER_WEAPON = "Broadsword"
 LobbyConfig.STARTER_ACTIVE_SPELL = "Firebolt"
-LobbyConfig.STARTER_PASSIVE_SPELL = "ArcaneVolley"
 LobbyConfig.STARTER_GOLD = 25
 
 return LobbyConfig

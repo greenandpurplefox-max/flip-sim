@@ -22,7 +22,7 @@ function SpellClient.init()
 	local inDungeon = false
 	local castBound = false
 	local equippedActiveSpell = SpellConfig.DEFAULT_ACTIVE
-	local equippedPassiveSpell = SpellConfig.DEFAULT_PASSIVE
+	local equippedPassiveSpell = SpellConfig.NO_PASSIVE
 	local spellLevels: { [string]: number } = {}
 
 	local screenGui = Instance.new("ScreenGui")

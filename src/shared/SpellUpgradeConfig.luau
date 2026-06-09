@@ -13,9 +13,7 @@ SpellUpgradeConfig.MIN_INTERVAL_MULT = 0.72
 SpellUpgradeConfig.UNLOCK_COSTS = {
 	Firebolt = 0,
 	FrostNova = 140,
-	ThornRetort = 110,
-	ArcaneVolley = 0,
-	StaticWard = 160,
+	ArcaneVolley = 120,
 }
 
 SpellUpgradeConfig.BASE_UPGRADE_COST = 30

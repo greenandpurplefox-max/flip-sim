@@ -687,7 +687,6 @@ LobbyConfig.LOBBY_FALL_Y = 2.5
 
 LobbyConfig.STARTER_WEAPON = "Broadsword"
 LobbyConfig.STARTER_ACTIVE_SPELL = "Firebolt"
-LobbyConfig.STARTER_PASSIVE_SPELL = "ArcaneVolley"
 LobbyConfig.STARTER_GOLD = 25
 
 return LobbyConfig
@@ -964,7 +963,7 @@ export type SpellStats = {
 }
 
 SpellConfig.DEFAULT_ACTIVE = "Firebolt"
-SpellConfig.DEFAULT_PASSIVE = "ArcaneVolley"
+SpellConfig.NO_PASSIVE = ""
 
 SpellConfig.Spells = {
 	Firebolt = {
@@ -997,31 +996,14 @@ SpellConfig.Spells = {
 		cooldown = 4.2,
 		aoeRadius = 10,
 	},
-	ThornRetort = {
-		id = "ThornRetort",
-		kind = "Passive",
-		trigger = "OnHit",
-		displayName = "Thorn Retort",
-		ultimateDisplayName = "Thorn Nova",
-		description = "When hit, fire a thorn in a random direction.",
-		ultimateDescription = "When hit, fire a burst of thorns in random directions.",
-		damageMin = 5,
-		damageMax = 9,
-		projectileSpeed = 70,
-		projectileSize = Vector3.new(0.7, 0.7, 2.2),
-		projectileColor = Color3.fromRGB(96, 200, 96),
-		projectileCount = 1,
-		ultimateProjectileCount = 4,
-		aoeRadius = 0,
-	},
 	ArcaneVolley = {
 		id = "ArcaneVolley",
 		kind = "Passive",
 		trigger = "Interval",
 		displayName = "Arcane Volley",
 		ultimateDisplayName = "Twin Volley",
-		description = "Every few seconds, shoot a bolt in front of you.",
-		ultimateDescription = "Every few seconds, shoot twin bolts forward.",
+		description = "Every few seconds, shoot a bolt straight ahead.",
+		ultimateDescription = "Every few seconds, shoot twin bolts straight ahead.",
 		damageMin = 6,
 		damageMax = 11,
 		projectileSpeed = 84,
@@ -1030,23 +1012,6 @@ SpellConfig.Spells = {
 		interval = 5,
 		projectileCount = 1,
 		ultimateProjectileCount = 2,
-		aoeRadius = 0,
-	},
-	StaticWard = {
-		id = "StaticWard",
-		kind = "Passive",
-		trigger = "OnHit",
-		displayName = "Static Ward",
-		ultimateDisplayName = "Storm Ward",
-		description = "When hit, lash the nearest foe with lightning.",
-		ultimateDescription = "When hit, chain lightning through nearby foes.",
-		damageMin = 7,
-		damageMax = 12,
-		projectileSpeed = 110,
-		projectileSize = Vector3.new(0.65, 0.65, 2.4),
-		projectileColor = Color3.fromRGB(255, 230, 96),
-		projectileCount = 1,
-		ultimateProjectileCount = 3,
 		aoeRadius = 0,
 	},
 }
@@ -1078,6 +1043,10 @@ function SpellConfig.getKind(id: string): SpellKind?
 	return if spell then spell.kind else nil
 end
 
+function SpellConfig.hasEquippedPassive(id: string): boolean
+	return id ~= "" and SpellConfig.isValid(id) and SpellConfig.getKind(id) == "Passive"
+end
+
 return SpellConfig
 ]]></string>
         </Properties>
@@ -1100,9 +1069,7 @@ SpellUpgradeConfig.MIN_INTERVAL_MULT = 0.72
 SpellUpgradeConfig.UNLOCK_COSTS = {
 	Firebolt = 0,
 	FrostNova = 140,
-	ThornRetort = 110,
-	ArcaneVolley = 0,
-	StaticWard = 160,
+	ArcaneVolley = 120,
 }
 
 SpellUpgradeConfig.BASE_UPGRADE_COST = 30
@@ -3914,12 +3881,11 @@ local function getDefaultProfile(): PlayerProfile
 	local spellLevels: { [string]: number } = {}
 	local unlockedSpells: { [string]: boolean } = {
 		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
-		[LobbyConfig.STARTER_PASSIVE_SPELL] = true,
 	}
 
 	for _, spell in SpellConfig.getSpellList() do
 		spellLevels[spell.id] = 1
-		if spell.id ~= LobbyConfig.STARTER_ACTIVE_SPELL and spell.id ~= LobbyConfig.STARTER_PASSIVE_SPELL then
+		if spell.id ~= LobbyConfig.STARTER_ACTIVE_SPELL then
 			unlockedSpells[spell.id] = false
 		end
 	end
@@ -3930,7 +3896,7 @@ local function getDefaultProfile(): PlayerProfile
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
 		equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL,
-		equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL,
+		equippedPassiveSpell = SpellConfig.NO_PASSIVE,
 		spellLevels = spellLevels,
 		unlockedSpells = unlockedSpells,
 		lobbyChests = {},
@@ -3997,9 +3963,12 @@ local function sanitizeProfile(data: any): PlayerProfile
 	profile.equippedActiveSpell = if SpellConfig.isValid(data.equippedActiveSpell)
 		then data.equippedActiveSpell
 		else defaults.equippedActiveSpell
-	profile.equippedPassiveSpell = if SpellConfig.isValid(data.equippedPassiveSpell)
-		then data.equippedPassiveSpell
-		else defaults.equippedPassiveSpell
+	profile.equippedPassiveSpell = defaults.equippedPassiveSpell
+	if typeof(data.equippedPassiveSpell) == "string" and data.equippedPassiveSpell ~= "" then
+		if SpellConfig.isValid(data.equippedPassiveSpell) and SpellConfig.getKind(data.equippedPassiveSpell) == "Passive" then
+			profile.equippedPassiveSpell = data.equippedPassiveSpell
+		end
+	end
 
 	if typeof(data.spellLevels) == "table" then
 		for spellId, level in data.spellLevels do
@@ -4018,7 +3987,6 @@ local function sanitizeProfile(data: any): PlayerProfile
 	end
 
 	profile.unlockedSpells[LobbyConfig.STARTER_ACTIVE_SPELL] = true
-	profile.unlockedSpells[LobbyConfig.STARTER_PASSIVE_SPELL] = true
 
 	if not profile.unlockedSpells[profile.equippedActiveSpell] then
 		profile.equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL
@@ -4027,11 +3995,10 @@ local function sanitizeProfile(data: any): PlayerProfile
 		profile.equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL
 	end
 
-	if not profile.unlockedSpells[profile.equippedPassiveSpell] then
-		profile.equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL
-	end
-	if SpellConfig.getKind(profile.equippedPassiveSpell) ~= "Passive" then
-		profile.equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL
+	if not SpellConfig.hasEquippedPassive(profile.equippedPassiveSpell)
+		or not profile.unlockedSpells[profile.equippedPassiveSpell]
+	then
+		profile.equippedPassiveSpell = SpellConfig.NO_PASSIVE
 	end
 
 	profile.lobbyChests = sanitizeLobbyChests(data.lobbyChests)
@@ -4223,7 +4190,7 @@ end
 
 function PlayerDataService.getEquippedPassiveSpell(player: Player): string
 	local profile = profiles[player]
-	return if profile then profile.equippedPassiveSpell else LobbyConfig.STARTER_PASSIVE_SPELL
+	return if profile then profile.equippedPassiveSpell else SpellConfig.NO_PASSIVE
 end
 
 function PlayerDataService.setEquippedActiveSpell(player: Player, spellId: string): boolean
@@ -4466,7 +4433,6 @@ local SpellService = {}
 
 local ON_HIT_PASSIVE_COOLDOWN = 0.4
 local PROJECTILE_LIFETIME = 2.5
-local STATIC_WARD_RANGE = 42
 
 local lastActiveCastAt: { [Player]: number } = {}
 local lastOnHitPassiveAt: { [Player]: number } = {}
@@ -4774,43 +4740,8 @@ local function flattenLookVector(root: BasePart): Vector3
 	return look.Unit
 end
 
-local function getRandomHorizontalDirection(): Vector3
-	local angle = math.random() * math.pi * 2
-	return Vector3.new(math.cos(angle), 0, math.sin(angle))
-end
-
 local function getMonsterRoot(monster: Model): BasePart?
 	return monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") :: BasePart?
-end
-
-local function findNearestMonsters(player: Player, origin: Vector3, maxRange: number, count: number): { Model }
-	local folder = getMonstersFolder()
-	if not folder then
-		return {}
-	end
-
-	local candidates: { { monster: Model, distance: number } } = {}
-	for _, child in folder:GetChildren() do
-		if child:IsA("Model") and canDamageMonster(child, player) then
-			local root = getMonsterRoot(child)
-			if root then
-				local distance = (root.Position - origin).Magnitude
-				if distance <= maxRange then
-					table.insert(candidates, { monster = child, distance = distance })
-				end
-			end
-		end
-	end
-
-	table.sort(candidates, function(a, b)
-		return a.distance < b.distance
-	end)
-
-	local results: { Model } = {}
-	for index = 1, math.min(count, #candidates) do
-		table.insert(results, candidates[index].monster)
-	end
-	return results
 end
 
 local function spawnProjectile(
@@ -4856,20 +4787,6 @@ local function spawnProjectile(
 	end)
 end
 
-local function fireRandomProjectiles(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not root then
-		return
-	end
-
-	local count = stats.projectileCount or 1
-	local origin = root.Position + Vector3.new(0, 1.2, 0)
-	for _ = 1, count do
-		spawnProjectile(player, origin, getRandomHorizontalDirection(), stats)
-	end
-end
-
 local function fireForwardProjectiles(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -4878,37 +4795,10 @@ local function fireForwardProjectiles(player: Player, stats: SpellUpgradeConfig.
 	end
 
 	local direction = flattenLookVector(root)
-	local origin = root.Position + Vector3.new(0, 1.2, 0) + direction * 1.5
 	local count = stats.projectileCount or 1
 	for index = 0, count - 1 do
-		local spread = if count > 1 then math.rad(8 * (index - (count - 1) * 0.5)) else 0
-		local rotated = CFrame.fromAxisAngle(Vector3.yAxis, spread) * direction
-		spawnProjectile(player, origin, rotated, stats)
-	end
-end
-
-local function fireStaticWard(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not root then
-		return
-	end
-
-	local count = stats.projectileCount or 1
-	local targets = findNearestMonsters(player, root.Position, STATIC_WARD_RANGE, count)
-	if #targets == 0 then
-		return
-	end
-
-	local origin = root.Position + Vector3.new(0, 1.2, 0)
-	for _, monster in targets do
-		local monsterRoot = getMonsterRoot(monster)
-		if monsterRoot then
-			local direction = monsterRoot.Position - origin
-			if direction.Magnitude > 0.01 then
-				spawnProjectile(player, origin, direction, stats)
-			end
-		end
+		local origin = root.Position + Vector3.new(0, 1.2, 0) + direction * (1.5 + index * 1.2)
+		spawnProjectile(player, origin, direction, stats)
 	end
 end
 
@@ -4977,24 +4867,24 @@ function SpellService.onPlayerDamaged(player: Player)
 		return
 	end
 
+	local spellId = PlayerDataService.getEquippedPassiveSpell(player)
+	if not SpellConfig.hasEquippedPassive(spellId) then
+		return
+	end
+
+	local base = SpellConfig.getSpell(spellId)
+	if not base or base.trigger ~= "OnHit" then
+		return
+	end
+
 	local now = os.clock()
 	if lastOnHitPassiveAt[player] and now - lastOnHitPassiveAt[player] < ON_HIT_PASSIVE_COOLDOWN then
 		return
 	end
 	lastOnHitPassiveAt[player] = now
 
-	local spellId = PlayerDataService.getEquippedPassiveSpell(player)
-	local base = SpellConfig.getSpell(spellId)
-	if not base or base.kind ~= "Passive" or base.trigger ~= "OnHit" then
-		return
-	end
-
 	local stats = getEffectiveStats(player, spellId)
-	if spellId == "StaticWard" then
-		fireStaticWard(player, stats)
-	else
-		fireRandomProjectiles(player, stats)
-	end
+	fireForwardProjectiles(player, stats)
 	notifyCastEffect(player, spellId, stats, "passive")
 end
 
@@ -5088,6 +4978,10 @@ local function tickPassiveIntervals()
 		end
 
 		local spellId = PlayerDataService.getEquippedPassiveSpell(player)
+		if not SpellConfig.hasEquippedPassive(spellId) then
+			continue
+		end
+
 		local base = SpellConfig.getSpell(spellId)
 		if not base or base.trigger ~= "Interval" then
 			continue
@@ -9332,7 +9226,7 @@ function SpellClient.init()
 	local inDungeon = false
 	local castBound = false
 	local equippedActiveSpell = SpellConfig.DEFAULT_ACTIVE
-	local equippedPassiveSpell = SpellConfig.DEFAULT_PASSIVE
+	local equippedPassiveSpell = SpellConfig.NO_PASSIVE
 	local spellLevels: { [string]: number } = {}
 
 	local screenGui = Instance.new("ScreenGui")
@@ -9561,6 +9455,19 @@ function SpellClient.init()
 		updateCastHud()
 	end)
 
+	profileStateEvent.OnClientEvent:Connect(function(snapshot)
+		if typeof(snapshot) ~= "table" or typeof(snapshot.spellLevels) ~= "table" then
+			return
+		end
+
+		for spellId, level in snapshot.spellLevels do
+			if typeof(level) == "number" then
+				spellLevels[spellId] = level
+			end
+		end
+		updateCastHud()
+	end)
+
 	phaseStateEvent.OnClientEvent:Connect(function(phase: string)
 		inDungeon = phase == "Dungeon"
 		setCastBinding(inDungeon)
@@ -9635,7 +9542,7 @@ function SpellMenuClient.init()
 	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
 
 	local equippedActiveSpell = SpellConfig.DEFAULT_ACTIVE
-	local equippedPassiveSpell = SpellConfig.DEFAULT_PASSIVE
+	local equippedPassiveSpell = SpellConfig.NO_PASSIVE
 	local loadoutLocked = false
 	local menuOpen = false
 	local activeTab = "Equip"
@@ -9643,7 +9550,6 @@ function SpellMenuClient.init()
 	local spellLevels: { [string]: number } = {}
 	local unlockedSpells: { [string]: boolean } = {
 		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
-		[LobbyConfig.STARTER_PASSIVE_SPELL] = true,
 	}
 	local currentPhase = "Lobby"
 
@@ -9786,7 +9692,7 @@ function SpellMenuClient.init()
 			local isActive = SpellConfig.getKind(spellId) == "Active"
 			local equipped = if isActive
 				then spellId == equippedActiveSpell
-				else spellId == equippedPassiveSpell
+				else SpellConfig.hasEquippedPassive(spellId) and spellId == equippedPassiveSpell
 			local ultimateTag = if stats.isUltimate then "  ULT" else ""
 			local kindLabel = getKindLabel(spellId)
 
@@ -9850,13 +9756,15 @@ function SpellMenuClient.init()
 		upgradeTab.BackgroundColor3 = if activeTab == "Upgrade" then GOLD_DIM else PANEL_LIGHT
 
 		local activeStats = getEffectiveDisplayStats(equippedActiveSpell)
-		local passiveStats = getEffectiveDisplayStats(equippedPassiveSpell)
+		local passiveName = if SpellConfig.hasEquippedPassive(equippedPassiveSpell)
+			then getEffectiveDisplayStats(equippedPassiveSpell).resolvedName
+			else "None"
 
 		if loadoutLocked or not inLobby then
 			statusLabel.Text = "Spell loadout locked during a dungeon run."
 		elseif activeTab == "Equip" then
 			statusLabel.Text =
-				`Active: {activeStats.resolvedName} (E)  |  Passive: {passiveStats.resolvedName}\nGold: {walletGold}`
+				`Active: {activeStats.resolvedName} (E)  |  Passive: {passiveName}\nGold: {walletGold}`
 		else
 			statusLabel.Text =
 				`Ultimates unlock at level {SpellUpgradeConfig.ULTIMATE_LEVEL}. Wallet: {walletGold}`

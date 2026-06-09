@@ -24,7 +24,7 @@ export type SpellStats = {
 }
 
 SpellConfig.DEFAULT_ACTIVE = "Firebolt"
-SpellConfig.DEFAULT_PASSIVE = "ArcaneVolley"
+SpellConfig.NO_PASSIVE = ""
 
 SpellConfig.Spells = {
 	Firebolt = {
@@ -57,31 +57,14 @@ SpellConfig.Spells = {
 		cooldown = 4.2,
 		aoeRadius = 10,
 	},
-	ThornRetort = {
-		id = "ThornRetort",
-		kind = "Passive",
-		trigger = "OnHit",
-		displayName = "Thorn Retort",
-		ultimateDisplayName = "Thorn Nova",
-		description = "When hit, fire a thorn in a random direction.",
-		ultimateDescription = "When hit, fire a burst of thorns in random directions.",
-		damageMin = 5,
-		damageMax = 9,
-		projectileSpeed = 70,
-		projectileSize = Vector3.new(0.7, 0.7, 2.2),
-		projectileColor = Color3.fromRGB(96, 200, 96),
-		projectileCount = 1,
-		ultimateProjectileCount = 4,
-		aoeRadius = 0,
-	},
 	ArcaneVolley = {
 		id = "ArcaneVolley",
 		kind = "Passive",
 		trigger = "Interval",
 		displayName = "Arcane Volley",
 		ultimateDisplayName = "Twin Volley",
-		description = "Every few seconds, shoot a bolt in front of you.",
-		ultimateDescription = "Every few seconds, shoot twin bolts forward.",
+		description = "Every few seconds, shoot a bolt straight ahead.",
+		ultimateDescription = "Every few seconds, shoot twin bolts straight ahead.",
 		damageMin = 6,
 		damageMax = 11,
 		projectileSpeed = 84,
@@ -90,23 +73,6 @@ SpellConfig.Spells = {
 		interval = 5,
 		projectileCount = 1,
 		ultimateProjectileCount = 2,
-		aoeRadius = 0,
-	},
-	StaticWard = {
-		id = "StaticWard",
-		kind = "Passive",
-		trigger = "OnHit",
-		displayName = "Static Ward",
-		ultimateDisplayName = "Storm Ward",
-		description = "When hit, lash the nearest foe with lightning.",
-		ultimateDescription = "When hit, chain lightning through nearby foes.",
-		damageMin = 7,
-		damageMax = 12,
-		projectileSpeed = 110,
-		projectileSize = Vector3.new(0.65, 0.65, 2.4),
-		projectileColor = Color3.fromRGB(255, 230, 96),
-		projectileCount = 1,
-		ultimateProjectileCount = 3,
 		aoeRadius = 0,
 	},
 }
@@ -136,6 +102,10 @@ end
 function SpellConfig.getKind(id: string): SpellKind?
 	local spell = SpellConfig.getSpell(id)
 	return if spell then spell.kind else nil
+end
+
+function SpellConfig.hasEquippedPassive(id: string): boolean
+	return id ~= "" and SpellConfig.isValid(id) and SpellConfig.getKind(id) == "Passive"
 end
 
 return SpellConfig
