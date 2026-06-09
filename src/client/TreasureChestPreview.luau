@@ -4,7 +4,17 @@ local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 
 local TreasureChestPreview = {}
 
-local function buildChestModel(tierId: string): Model
+export type ChestModelParts = {
+	model: Model,
+	base: BasePart,
+	lid: BasePart,
+	trim: BasePart,
+	glow: BasePart,
+	lidClosedCFrame: CFrame,
+	lidOpenCFrame: CFrame,
+}
+
+function TreasureChestPreview.buildChestModel(tierId: string): ChestModelParts
 	local tier = TreasureConfig.getTier(tierId)
 	local model = Instance.new("Model")
 	model.Name = "PreviewChest"
@@ -20,6 +30,7 @@ local function buildChestModel(tierId: string): Model
 	base.Parent = model
 
 	local trim = Instance.new("Part")
+	trim.Name = "ChestTrim"
 	trim.Size = Vector3.new(3.35, 0.28, 2.55)
 	trim.Color = tier.trimColor
 	trim.Material = Enum.Material.Metal
@@ -29,15 +40,18 @@ local function buildChestModel(tierId: string): Model
 	trim.Parent = model
 
 	local lid = Instance.new("Part")
+	lid.Name = "ChestLid"
 	lid.Size = Vector3.new(3.2, 0.85, 2.4)
 	lid.Color = tier.bodyColor
 	lid.Material = Enum.Material.Wood
 	lid.Anchored = true
 	lid.CanCollide = false
-	lid.CFrame = base.CFrame * CFrame.new(0, 1.05, -0.35)
+	local lidClosedCFrame = base.CFrame * CFrame.new(0, 1.05, -0.35)
+	lid.CFrame = lidClosedCFrame
 	lid.Parent = model
 
 	local glow = Instance.new("Part")
+	glow.Name = "ChestGlow"
 	glow.Size = Vector3.new(2.4, 0.12, 1.8)
 	glow.Color = tier.glowColor
 	glow.Material = Enum.Material.Neon
@@ -47,8 +61,18 @@ local function buildChestModel(tierId: string): Model
 	glow.CFrame = base.CFrame * CFrame.new(0, 1.55, 0)
 	glow.Parent = model
 
+	local lidOpenCFrame = lidClosedCFrame * CFrame.new(0, 0.18, -0.62) * CFrame.Angles(math.rad(-118), 0, 0)
+
 	model.PrimaryPart = base
-	return model
+	return {
+		model = model,
+		base = base,
+		lid = lid,
+		trim = trim,
+		glow = glow,
+		lidClosedCFrame = lidClosedCFrame,
+		lidOpenCFrame = lidOpenCFrame,
+	}
 end
 
 function TreasureChestPreview.mount(parent: Instance, tierId: string, size: number): ViewportFrame
@@ -57,12 +81,8 @@ function TreasureChestPreview.mount(parent: Instance, tierId: string, size: numb
 	viewport.BackgroundTransparency = 1
 	viewport.Parent = parent
 
-	local model = buildChestModel(tierId)
-	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("BasePart") then
-			descendant.Anchored = true
-		end
-	end
+	local parts = TreasureChestPreview.buildChestModel(tierId)
+	local model = parts.model
 	model:PivotTo(CFrame.Angles(0, math.rad(28), math.rad(-12)))
 	model.Parent = viewport
 
