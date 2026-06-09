@@ -236,48 +236,109 @@ local function createWarAxeTemplate(): Tool
 	tool.ToolTip = "Quick overhead chops with a wide edge"
 	tool:SetAttribute(WeaponConfig.WEAPON_ATTRIBUTE, "WarAxe")
 
+	local wood = Color3.fromRGB(72, 46, 28)
+	local leather = Color3.fromRGB(54, 34, 22)
+	local bronze = Color3.fromRGB(118, 92, 48)
+	local steel = Color3.fromRGB(168, 174, 184)
+	local edge = Color3.fromRGB(214, 220, 230)
+
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
-	handle.Size = Vector3.new(0.32, 1.05, 0.32)
-	handle.Color = Color3.fromRGB(88, 54, 32)
-	handle.Material = Enum.Material.Fabric
+	handle.Size = Vector3.new(0.26, 1.28, 0.26)
+	handle.Color = wood
+	handle.Material = Enum.Material.Wood
 	handle.CanCollide = false
 	handle.Massless = true
 	handle.Parent = tool
 
+	local gripWrap = Instance.new("Part")
+	gripWrap.Name = "GripWrap"
+	gripWrap.Size = Vector3.new(0.32, 0.52, 0.32)
+	gripWrap.Color = leather
+	gripWrap.Material = Enum.Material.Fabric
+	gripWrap.CanCollide = false
+	gripWrap.Massless = true
+	gripWrap.CFrame = handle.CFrame * CFrame.new(0, 0.28, 0)
+	gripWrap.Parent = tool
+
 	local guard = Instance.new("Part")
 	guard.Name = "Guard"
-	guard.Size = Vector3.new(0.75, 0.18, 0.75)
-	guard.Color = Color3.fromRGB(108, 88, 48)
+	guard.Size = Vector3.new(0.58, 0.22, 0.58)
+	guard.Color = bronze
 	guard.Material = Enum.Material.Metal
 	guard.CanCollide = false
 	guard.Massless = true
-	guard.CFrame = handle.CFrame * CFrame.new(0, -0.52, 0)
+	guard.CFrame = handle.CFrame * CFrame.new(0, -0.58, 0)
 	guard.Parent = tool
+
+	local socket = Instance.new("Part")
+	socket.Name = "Socket"
+	socket.Size = Vector3.new(0.34, 0.28, 0.34)
+	socket.Color = steel
+	socket.Material = Enum.Material.Metal
+	socket.CanCollide = false
+	socket.Massless = true
+	socket.CFrame = guard.CFrame * CFrame.new(0, -0.12, 0)
+	socket.Parent = tool
 
 	local blade = Instance.new("Part")
 	blade.Name = "Blade"
-	blade.Size = Vector3.new(1.35, 0.42, 1.85)
-	blade.Color = Color3.fromRGB(176, 182, 192)
+	blade.Size = Vector3.new(1.18, 0.24, 1.42)
+	blade.Color = steel
 	blade.Material = Enum.Material.Metal
 	blade.CanCollide = false
 	blade.Massless = true
-	blade.CFrame = handle.CFrame * CFrame.new(0, -0.72, -0.42) * CFrame.Angles(math.rad(18), 0, 0)
+	blade.CFrame = socket.CFrame * CFrame.new(0, 0.02, -0.62) * CFrame.Angles(math.rad(8), 0, 0)
 	blade.Parent = tool
+
+	local axeEdge = Instance.new("Part")
+	axeEdge.Name = "AxeEdge"
+	axeEdge.Size = Vector3.new(1.02, 0.1, 0.16)
+	axeEdge.Color = edge
+	axeEdge.Material = Enum.Material.Metal
+	axeEdge.CanCollide = false
+	axeEdge.Massless = true
+	axeEdge.CFrame = blade.CFrame * CFrame.new(0, 0, -0.72)
+	axeEdge.Parent = tool
 
 	local bladeTip = Instance.new("Part")
 	bladeTip.Name = "BladeTip"
-	bladeTip.Size = Vector3.new(1.15, 0.28, 0.55)
-	bladeTip.Color = Color3.fromRGB(198, 204, 214)
+	bladeTip.Size = Vector3.new(0.42, 0.18, 0.72)
+	bladeTip.Color = edge
 	bladeTip.Material = Enum.Material.Metal
 	bladeTip.CanCollide = false
 	bladeTip.Massless = true
-	bladeTip.CFrame = blade.CFrame * CFrame.new(0, 0, -1.05)
+	bladeTip.CFrame = blade.CFrame * CFrame.new(0, 0.08, -0.92)
 	bladeTip.Parent = tool
 
+	local beard = Instance.new("Part")
+	beard.Name = "Beard"
+	beard.Size = Vector3.new(0.72, 0.16, 0.48)
+	beard.Color = steel
+	beard.Material = Enum.Material.Metal
+	beard.CanCollide = false
+	beard.Massless = true
+	beard.CFrame = blade.CFrame * CFrame.new(0, -0.12, -0.28) * CFrame.Angles(math.rad(-24), 0, 0)
+	beard.Parent = tool
+
+	local poll = Instance.new("Part")
+	poll.Name = "Poll"
+	poll.Size = Vector3.new(0.18, 0.18, 0.42)
+	poll.Color = bronze
+	poll.Material = Enum.Material.Metal
+	poll.CanCollide = false
+	poll.Massless = true
+	poll.CFrame = socket.CFrame * CFrame.new(0, 0.02, 0.34)
+	poll.Parent = tool
+
+	weld(handle, gripWrap)
 	weld(handle, guard)
-	weld(handle, blade)
+	weld(guard, socket)
+	weld(socket, blade)
+	weld(blade, axeEdge)
 	weld(blade, bladeTip)
+	weld(blade, beard)
+	weld(socket, poll)
 
 	tool.Grip = WarAxeConfig.SHOULDER_GRIP
 	return tool

@@ -518,44 +518,89 @@ return DungeonConfig
 
 local HalberdConfig = {}
 
-local IDENTITY = CFrame.new()
+local SHOULDER_GRIP = CFrame.new(0.06, -0.5, 0.12) * CFrame.Angles(math.rad(86), math.rad(176), math.rad(96))
+local READY_GRIP = CFrame.new(0.08, -0.44, 0.18) * CFrame.Angles(math.rad(84), math.rad(174), math.rad(98))
+local WINDUP_GRIP = CFrame.new(0.42, -0.18, 0.34) * CFrame.Angles(math.rad(72), math.rad(160), math.rad(108))
+local STRIKE_GRIP = CFrame.new(0.14, -0.06, 0.58) * CFrame.Angles(math.rad(64), math.rad(168), math.rad(92))
+local FOLLOW_GRIP = CFrame.new(-0.18, 0.08, 0.42) * CFrame.Angles(math.rad(98), math.rad(152), math.rad(78))
 
 HalberdConfig.SHOULDER_POSE = {
-	rightShoulder = CFrame.Angles(math.rad(-12), math.rad(-10), math.rad(94)),
-	rightElbow = CFrame.Angles(math.rad(-42), math.rad(8), math.rad(6)),
-	rightWrist = CFrame.Angles(math.rad(8), math.rad(-20), math.rad(8)),
-	leftShoulder = CFrame.Angles(math.rad(8), math.rad(14), math.rad(-68)),
-	leftElbow = CFrame.Angles(math.rad(-36), math.rad(-6), math.rad(4)),
-	leftWrist = CFrame.Angles(math.rad(6), math.rad(18), math.rad(-6)),
-	grip = CFrame.new(0.04, -0.42, 0.08) * CFrame.Angles(math.rad(92), math.rad(178), math.rad(90)),
+	rightShoulder = CFrame.Angles(math.rad(-16), math.rad(-8), math.rad(106)),
+	rightElbow = CFrame.Angles(math.rad(-50), math.rad(12), math.rad(10)),
+	rightWrist = CFrame.Angles(math.rad(10), math.rad(-18), math.rad(12)),
+	leftShoulder = CFrame.Angles(math.rad(4), math.rad(18), math.rad(-84)),
+	leftElbow = CFrame.Angles(math.rad(-46), math.rad(-8), math.rad(6)),
+	leftWrist = CFrame.Angles(math.rad(8), math.rad(20), math.rad(-8)),
+	grip = SHOULDER_GRIP,
 }
 
-HalberdConfig.SHOULDER_GRIP = HalberdConfig.SHOULDER_POSE.grip
+HalberdConfig.SHOULDER_GRIP = SHOULDER_GRIP
 
-local SWEEP_POSE: BroadswordPose.Pose = {
-	rightShoulder = CFrame.Angles(math.rad(24), math.rad(-28), math.rad(118)),
-	rightElbow = CFrame.Angles(math.rad(-18), math.rad(14), math.rad(8)),
-	rightWrist = CFrame.Angles(math.rad(-6), math.rad(-8), math.rad(10)),
-	leftShoulder = CFrame.Angles(math.rad(18), math.rad(6), math.rad(-92)),
+local READY_POSE: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(-10), math.rad(-12), math.rad(112)),
+	rightElbow = CFrame.Angles(math.rad(-46), math.rad(10), math.rad(8)),
+	rightWrist = CFrame.Angles(math.rad(8), math.rad(-16), math.rad(10)),
+	leftShoulder = CFrame.Angles(math.rad(10), math.rad(14), math.rad(-88)),
+	leftElbow = CFrame.Angles(math.rad(-40), math.rad(-6), math.rad(4)),
+	leftWrist = CFrame.Angles(math.rad(6), math.rad(18), math.rad(-6)),
+	grip = READY_GRIP,
+}
+
+local WINDUP_POSE: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(6), math.rad(-34), math.rad(126)),
+	rightElbow = CFrame.Angles(math.rad(-28), math.rad(16), math.rad(10)),
+	rightWrist = CFrame.Angles(math.rad(-4), math.rad(-10), math.rad(14)),
+	leftShoulder = CFrame.Angles(math.rad(22), math.rad(4), math.rad(-102)),
+	leftElbow = CFrame.Angles(math.rad(-24), math.rad(-12), math.rad(2)),
+	leftWrist = CFrame.Angles(math.rad(2), math.rad(14), math.rad(-4)),
+	grip = WINDUP_GRIP,
+}
+
+local STRIKE_POSE: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(34), math.rad(-46), math.rad(138)),
+	rightElbow = CFrame.Angles(math.rad(-14), math.rad(18), math.rad(8)),
+	rightWrist = CFrame.Angles(math.rad(-8), math.rad(-6), math.rad(12)),
+	leftShoulder = CFrame.Angles(math.rad(28), math.rad(-6), math.rad(-112)),
+	leftElbow = CFrame.Angles(math.rad(-18), math.rad(-14), math.rad(2)),
+	leftWrist = CFrame.Angles(math.rad(-2), math.rad(10), math.rad(-4)),
+	grip = STRIKE_GRIP,
+}
+
+local FOLLOW_POSE: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(18), math.rad(-54), math.rad(122)),
+	rightElbow = CFrame.Angles(math.rad(-20), math.rad(14), math.rad(6)),
+	rightWrist = CFrame.Angles(math.rad(-4), math.rad(-4), math.rad(10)),
+	leftShoulder = CFrame.Angles(math.rad(14), math.rad(-10), math.rad(-98)),
 	leftElbow = CFrame.Angles(math.rad(-22), math.rad(-10), math.rad(2)),
-	leftWrist = CFrame.Angles(math.rad(4), math.rad(12), math.rad(-4)),
-	grip = CFrame.new(0.12, -0.08, 0.52) * CFrame.Angles(math.rad(78), math.rad(168), math.rad(96)),
+	leftWrist = CFrame.Angles(math.rad(2), math.rad(8), math.rad(-4)),
+	grip = FOLLOW_GRIP,
 }
 
 HalberdConfig.SWING_COOLDOWN = 0.72
-HalberdConfig.SWING_DURATION = 0.56
-HalberdConfig.STRIKE_START_RATIO = 0.28
-HalberdConfig.STRIKE_END_RATIO = 0.62
+HalberdConfig.SWING_DURATION = 0.68
+HalberdConfig.STRIKE_START_RATIO = 0.3
+HalberdConfig.STRIKE_END_RATIO = 0.52
 
 HalberdConfig.PoseKeyframes = {
 	{ time = 0, pose = HalberdConfig.SHOULDER_POSE },
-	{ time = 0.18, pose = SWEEP_POSE },
-	{ time = 0.56, pose = HalberdConfig.SHOULDER_POSE },
+	{ time = 0.1, pose = READY_POSE },
+	{ time = 0.24, pose = WINDUP_POSE },
+	{ time = 0.36, pose = STRIKE_POSE },
+	{ time = 0.5, pose = FOLLOW_POSE },
+	{ time = 0.68, pose = HalberdConfig.SHOULDER_POSE },
 }
 
 function HalberdConfig.smoothstep(alpha: number): number
 	alpha = math.clamp(alpha, 0, 1)
 	return alpha * alpha * (3 - 2 * alpha)
+end
+
+function HalberdConfig.easeSegment(alpha: number, sharp: boolean): number
+	alpha = math.clamp(alpha, 0, 1)
+	if sharp then
+		return 1 - (1 - alpha) * (1 - alpha)
+	end
+	return HalberdConfig.smoothstep(alpha)
 end
 
 function HalberdConfig.getSwingDuration(): number
@@ -572,7 +617,8 @@ function HalberdConfig.getPoseForSwing(elapsed: number): BroadswordPose.Pose
 		if time >= current.time and time <= nextKeyframe.time then
 			local span = nextKeyframe.time - current.time
 			local alpha = if span > 0 then (time - current.time) / span else 1
-			return BroadswordPose.lerp(current.pose, nextKeyframe.pose, HalberdConfig.smoothstep(alpha))
+			local sharp = nextKeyframe.pose == STRIKE_POSE
+			return BroadswordPose.lerp(current.pose, nextKeyframe.pose, HalberdConfig.easeSegment(alpha, sharp))
 		end
 	end
 
@@ -969,42 +1015,89 @@ local WarAxeConfig = {}
 
 local IDENTITY = CFrame.new()
 
+local SHOULDER_GRIP = CFrame.new(0.04, -0.12, 0.06) * CFrame.Angles(math.rad(94), math.rad(176), math.rad(90))
+local READY_GRIP = CFrame.new(0.06, -0.1, 0.1) * CFrame.Angles(math.rad(92), math.rad(174), math.rad(92))
+local WINDUP_GRIP = CFrame.new(0.34, -0.28, 0.18) * CFrame.Angles(math.rad(118), math.rad(162), math.rad(104))
+local STRIKE_GRIP = CFrame.new(0.16, -0.04, 0.42) * CFrame.Angles(math.rad(126), math.rad(168), math.rad(78))
+local FOLLOW_GRIP = CFrame.new(0.08, 0.08, 0.34) * CFrame.Angles(math.rad(108), math.rad(154), math.rad(72))
+
 WarAxeConfig.SHOULDER_POSE = {
-	rightShoulder = CFrame.Angles(math.rad(-8), math.rad(-14), math.rad(88)),
-	rightElbow = CFrame.Angles(math.rad(-38), math.rad(10), math.rad(8)),
-	rightWrist = CFrame.Angles(math.rad(14), math.rad(-18), math.rad(10)),
+	rightShoulder = CFrame.Angles(math.rad(-10), math.rad(-16), math.rad(92)),
+	rightElbow = CFrame.Angles(math.rad(-42), math.rad(12), math.rad(8)),
+	rightWrist = CFrame.Angles(math.rad(16), math.rad(-20), math.rad(12)),
 	leftShoulder = IDENTITY,
 	leftElbow = IDENTITY,
 	leftWrist = IDENTITY,
-	grip = CFrame.new(0.02, -0.08, 0.04) * CFrame.Angles(math.rad(96), math.rad(178), math.rad(88)),
+	grip = SHOULDER_GRIP,
 }
 
-WarAxeConfig.SHOULDER_GRIP = WarAxeConfig.SHOULDER_POSE.grip
+WarAxeConfig.SHOULDER_GRIP = SHOULDER_GRIP
 
-local CHOP_POSE: BroadswordPose.Pose = {
-	rightShoulder = CFrame.Angles(math.rad(52), math.rad(-18), math.rad(108)),
-	rightElbow = CFrame.Angles(math.rad(-12), math.rad(16), math.rad(6)),
-	rightWrist = CFrame.Angles(math.rad(-8), math.rad(-10), math.rad(12)),
+local READY_POSE: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(-4), math.rad(-18), math.rad(98)),
+	rightElbow = CFrame.Angles(math.rad(-38), math.rad(10), math.rad(6)),
+	rightWrist = CFrame.Angles(math.rad(12), math.rad(-16), math.rad(10)),
 	leftShoulder = IDENTITY,
 	leftElbow = IDENTITY,
 	leftWrist = IDENTITY,
-	grip = CFrame.new(0.18, -0.22, 0.38) * CFrame.Angles(math.rad(118), math.rad(168), math.rad(82)),
+	grip = READY_GRIP,
+}
+
+local WINDUP_POSE: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(18), math.rad(-28), math.rad(118)),
+	rightElbow = CFrame.Angles(math.rad(-24), math.rad(14), math.rad(8)),
+	rightWrist = CFrame.Angles(math.rad(-6), math.rad(-12), math.rad(14)),
+	leftShoulder = IDENTITY,
+	leftElbow = IDENTITY,
+	leftWrist = IDENTITY,
+	grip = WINDUP_GRIP,
+}
+
+local STRIKE_POSE: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(58), math.rad(-22), math.rad(112)),
+	rightElbow = CFrame.Angles(math.rad(-8), math.rad(18), math.rad(6)),
+	rightWrist = CFrame.Angles(math.rad(-10), math.rad(-8), math.rad(14)),
+	leftShoulder = IDENTITY,
+	leftElbow = IDENTITY,
+	leftWrist = IDENTITY,
+	grip = STRIKE_GRIP,
+}
+
+local FOLLOW_POSE: BroadswordPose.Pose = {
+	rightShoulder = CFrame.Angles(math.rad(44), math.rad(-26), math.rad(106)),
+	rightElbow = CFrame.Angles(math.rad(-14), math.rad(14), math.rad(4)),
+	rightWrist = CFrame.Angles(math.rad(-6), math.rad(-6), math.rad(10)),
+	leftShoulder = IDENTITY,
+	leftElbow = IDENTITY,
+	leftWrist = IDENTITY,
+	grip = FOLLOW_GRIP,
 }
 
 WarAxeConfig.SWING_COOLDOWN = 0.48
-WarAxeConfig.SWING_DURATION = 0.38
-WarAxeConfig.STRIKE_START_RATIO = 0.22
-WarAxeConfig.STRIKE_END_RATIO = 0.58
+WarAxeConfig.SWING_DURATION = 0.44
+WarAxeConfig.STRIKE_START_RATIO = 0.24
+WarAxeConfig.STRIKE_END_RATIO = 0.42
 
 WarAxeConfig.PoseKeyframes = {
 	{ time = 0, pose = WarAxeConfig.SHOULDER_POSE },
-	{ time = 0.14, pose = CHOP_POSE },
-	{ time = 0.38, pose = WarAxeConfig.SHOULDER_POSE },
+	{ time = 0.07, pose = READY_POSE },
+	{ time = 0.16, pose = WINDUP_POSE },
+	{ time = 0.26, pose = STRIKE_POSE },
+	{ time = 0.34, pose = FOLLOW_POSE },
+	{ time = 0.44, pose = WarAxeConfig.SHOULDER_POSE },
 }
 
 function WarAxeConfig.smoothstep(alpha: number): number
 	alpha = math.clamp(alpha, 0, 1)
 	return alpha * alpha * (3 - 2 * alpha)
+end
+
+function WarAxeConfig.easeSegment(alpha: number, sharp: boolean): number
+	alpha = math.clamp(alpha, 0, 1)
+	if sharp then
+		return 1 - (1 - alpha) * (1 - alpha)
+	end
+	return WarAxeConfig.smoothstep(alpha)
 end
 
 function WarAxeConfig.getSwingDuration(): number
@@ -1021,7 +1114,8 @@ function WarAxeConfig.getPoseForSwing(elapsed: number): BroadswordPose.Pose
 		if time >= current.time and time <= nextKeyframe.time then
 			local span = nextKeyframe.time - current.time
 			local alpha = if span > 0 then (time - current.time) / span else 1
-			return BroadswordPose.lerp(current.pose, nextKeyframe.pose, WarAxeConfig.smoothstep(alpha))
+			local sharp = nextKeyframe.pose == STRIKE_POSE
+			return BroadswordPose.lerp(current.pose, nextKeyframe.pose, WarAxeConfig.easeSegment(alpha, sharp))
 		end
 	end
 
@@ -5285,48 +5379,109 @@ local function createWarAxeTemplate(): Tool
 	tool.ToolTip = "Quick overhead chops with a wide edge"
 	tool:SetAttribute(WeaponConfig.WEAPON_ATTRIBUTE, "WarAxe")
 
+	local wood = Color3.fromRGB(72, 46, 28)
+	local leather = Color3.fromRGB(54, 34, 22)
+	local bronze = Color3.fromRGB(118, 92, 48)
+	local steel = Color3.fromRGB(168, 174, 184)
+	local edge = Color3.fromRGB(214, 220, 230)
+
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
-	handle.Size = Vector3.new(0.32, 1.05, 0.32)
-	handle.Color = Color3.fromRGB(88, 54, 32)
-	handle.Material = Enum.Material.Fabric
+	handle.Size = Vector3.new(0.26, 1.28, 0.26)
+	handle.Color = wood
+	handle.Material = Enum.Material.Wood
 	handle.CanCollide = false
 	handle.Massless = true
 	handle.Parent = tool
 
+	local gripWrap = Instance.new("Part")
+	gripWrap.Name = "GripWrap"
+	gripWrap.Size = Vector3.new(0.32, 0.52, 0.32)
+	gripWrap.Color = leather
+	gripWrap.Material = Enum.Material.Fabric
+	gripWrap.CanCollide = false
+	gripWrap.Massless = true
+	gripWrap.CFrame = handle.CFrame * CFrame.new(0, 0.28, 0)
+	gripWrap.Parent = tool
+
 	local guard = Instance.new("Part")
 	guard.Name = "Guard"
-	guard.Size = Vector3.new(0.75, 0.18, 0.75)
-	guard.Color = Color3.fromRGB(108, 88, 48)
+	guard.Size = Vector3.new(0.58, 0.22, 0.58)
+	guard.Color = bronze
 	guard.Material = Enum.Material.Metal
 	guard.CanCollide = false
 	guard.Massless = true
-	guard.CFrame = handle.CFrame * CFrame.new(0, -0.52, 0)
+	guard.CFrame = handle.CFrame * CFrame.new(0, -0.58, 0)
 	guard.Parent = tool
+
+	local socket = Instance.new("Part")
+	socket.Name = "Socket"
+	socket.Size = Vector3.new(0.34, 0.28, 0.34)
+	socket.Color = steel
+	socket.Material = Enum.Material.Metal
+	socket.CanCollide = false
+	socket.Massless = true
+	socket.CFrame = guard.CFrame * CFrame.new(0, -0.12, 0)
+	socket.Parent = tool
 
 	local blade = Instance.new("Part")
 	blade.Name = "Blade"
-	blade.Size = Vector3.new(1.35, 0.42, 1.85)
-	blade.Color = Color3.fromRGB(176, 182, 192)
+	blade.Size = Vector3.new(1.18, 0.24, 1.42)
+	blade.Color = steel
 	blade.Material = Enum.Material.Metal
 	blade.CanCollide = false
 	blade.Massless = true
-	blade.CFrame = handle.CFrame * CFrame.new(0, -0.72, -0.42) * CFrame.Angles(math.rad(18), 0, 0)
+	blade.CFrame = socket.CFrame * CFrame.new(0, 0.02, -0.62) * CFrame.Angles(math.rad(8), 0, 0)
 	blade.Parent = tool
+
+	local axeEdge = Instance.new("Part")
+	axeEdge.Name = "AxeEdge"
+	axeEdge.Size = Vector3.new(1.02, 0.1, 0.16)
+	axeEdge.Color = edge
+	axeEdge.Material = Enum.Material.Metal
+	axeEdge.CanCollide = false
+	axeEdge.Massless = true
+	axeEdge.CFrame = blade.CFrame * CFrame.new(0, 0, -0.72)
+	axeEdge.Parent = tool
 
 	local bladeTip = Instance.new("Part")
 	bladeTip.Name = "BladeTip"
-	bladeTip.Size = Vector3.new(1.15, 0.28, 0.55)
-	bladeTip.Color = Color3.fromRGB(198, 204, 214)
+	bladeTip.Size = Vector3.new(0.42, 0.18, 0.72)
+	bladeTip.Color = edge
 	bladeTip.Material = Enum.Material.Metal
 	bladeTip.CanCollide = false
 	bladeTip.Massless = true
-	bladeTip.CFrame = blade.CFrame * CFrame.new(0, 0, -1.05)
+	bladeTip.CFrame = blade.CFrame * CFrame.new(0, 0.08, -0.92)
 	bladeTip.Parent = tool
 
+	local beard = Instance.new("Part")
+	beard.Name = "Beard"
+	beard.Size = Vector3.new(0.72, 0.16, 0.48)
+	beard.Color = steel
+	beard.Material = Enum.Material.Metal
+	beard.CanCollide = false
+	beard.Massless = true
+	beard.CFrame = blade.CFrame * CFrame.new(0, -0.12, -0.28) * CFrame.Angles(math.rad(-24), 0, 0)
+	beard.Parent = tool
+
+	local poll = Instance.new("Part")
+	poll.Name = "Poll"
+	poll.Size = Vector3.new(0.18, 0.18, 0.42)
+	poll.Color = bronze
+	poll.Material = Enum.Material.Metal
+	poll.CanCollide = false
+	poll.Massless = true
+	poll.CFrame = socket.CFrame * CFrame.new(0, 0.02, 0.34)
+	poll.Parent = tool
+
+	weld(handle, gripWrap)
 	weld(handle, guard)
-	weld(handle, blade)
+	weld(guard, socket)
+	weld(socket, blade)
+	weld(blade, axeEdge)
 	weld(blade, bladeTip)
+	weld(blade, beard)
+	weld(socket, poll)
 
 	tool.Grip = WarAxeConfig.SHOULDER_GRIP
 	return tool
@@ -5340,48 +5495,131 @@ local function createHalberdTemplate(): Tool
 	tool.ToolTip = "Long reach polearm sweeps"
 	tool:SetAttribute(WeaponConfig.WEAPON_ATTRIBUTE, "Halberd")
 
+	local wood = Color3.fromRGB(68, 44, 26)
+	local leather = Color3.fromRGB(54, 34, 22)
+	local bronze = Color3.fromRGB(132, 104, 56)
+	local steel = Color3.fromRGB(168, 174, 184)
+	local edge = Color3.fromRGB(214, 220, 230)
+
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
-	handle.Size = Vector3.new(0.22, 5.2, 0.22)
-	handle.Color = Color3.fromRGB(96, 68, 38)
+	handle.Size = Vector3.new(0.16, 5.75, 0.16)
+	handle.Color = wood
 	handle.Material = Enum.Material.Wood
 	handle.CanCollide = false
 	handle.Massless = true
 	handle.Parent = tool
 
+	local gripWrap = Instance.new("Part")
+	gripWrap.Name = "GripWrap"
+	gripWrap.Size = Vector3.new(0.24, 0.95, 0.24)
+	gripWrap.Color = leather
+	gripWrap.Material = Enum.Material.Fabric
+	gripWrap.CanCollide = false
+	gripWrap.Massless = true
+	gripWrap.CFrame = handle.CFrame * CFrame.new(0, 1.15, 0)
+	gripWrap.Parent = tool
+
+	local shaftBand = Instance.new("Part")
+	shaftBand.Name = "ShaftBand"
+	shaftBand.Size = Vector3.new(0.22, 0.12, 0.22)
+	shaftBand.Color = bronze
+	shaftBand.Material = Enum.Material.Metal
+	shaftBand.CanCollide = false
+	shaftBand.Massless = true
+	shaftBand.CFrame = handle.CFrame * CFrame.new(0, 0.35, 0)
+	shaftBand.Parent = tool
+
+	local bottomCap = Instance.new("Part")
+	bottomCap.Name = "BottomCap"
+	bottomCap.Size = Vector3.new(0.2, 0.16, 0.2)
+	bottomCap.Color = bronze
+	bottomCap.Material = Enum.Material.Metal
+	bottomCap.CanCollide = false
+	bottomCap.Massless = true
+	bottomCap.CFrame = handle.CFrame * CFrame.new(0, -2.82, 0)
+	bottomCap.Parent = tool
+
 	local guard = Instance.new("Part")
 	guard.Name = "Guard"
-	guard.Size = Vector3.new(0.55, 0.12, 0.55)
-	guard.Color = Color3.fromRGB(128, 108, 58)
+	guard.Size = Vector3.new(0.46, 0.34, 0.46)
+	guard.Color = bronze
 	guard.Material = Enum.Material.Metal
 	guard.CanCollide = false
 	guard.Massless = true
-	guard.CFrame = handle.CFrame * CFrame.new(0, -2.35, 0)
+	guard.CFrame = handle.CFrame * CFrame.new(0, -2.58, 0)
 	guard.Parent = tool
+
+	local langetLeft = Instance.new("Part")
+	langetLeft.Name = "LangetLeft"
+	langetLeft.Size = Vector3.new(0.06, 0.72, 0.14)
+	langetLeft.Color = steel
+	langetLeft.Material = Enum.Material.Metal
+	langetLeft.CanCollide = false
+	langetLeft.Massless = true
+	langetLeft.CFrame = guard.CFrame * CFrame.new(-0.16, -0.28, 0)
+	langetLeft.Parent = tool
+
+	local langetRight = Instance.new("Part")
+	langetRight.Name = "LangetRight"
+	langetRight.Size = Vector3.new(0.06, 0.72, 0.14)
+	langetRight.Color = steel
+	langetRight.Material = Enum.Material.Metal
+	langetRight.CanCollide = false
+	langetRight.Massless = true
+	langetRight.CFrame = guard.CFrame * CFrame.new(0.16, -0.28, 0)
+	langetRight.Parent = tool
 
 	local blade = Instance.new("Part")
 	blade.Name = "Blade"
-	blade.Size = Vector3.new(0.18, 2.4, 1.45)
-	blade.Color = Color3.fromRGB(184, 190, 200)
+	blade.Size = Vector3.new(0.12, 1.05, 1.65)
+	blade.Color = steel
 	blade.Material = Enum.Material.Metal
 	blade.CanCollide = false
 	blade.Massless = true
-	blade.CFrame = handle.CFrame * CFrame.new(0, -3.55, -0.35) * CFrame.Angles(math.rad(12), 0, 0)
+	blade.CFrame = guard.CFrame * CFrame.new(0, -0.08, -0.72) * CFrame.Angles(math.rad(14), 0, 0)
 	blade.Parent = tool
+
+	local axeEdge = Instance.new("Part")
+	axeEdge.Name = "AxeEdge"
+	axeEdge.Size = Vector3.new(0.05, 0.92, 0.18)
+	axeEdge.Color = edge
+	axeEdge.Material = Enum.Material.Metal
+	axeEdge.CanCollide = false
+	axeEdge.Massless = true
+	axeEdge.CFrame = blade.CFrame * CFrame.new(0, 0, -0.78)
+	axeEdge.Parent = tool
 
 	local bladeTip = Instance.new("Part")
 	bladeTip.Name = "BladeTip"
-	bladeTip.Size = Vector3.new(0.14, 0.65, 0.95)
-	bladeTip.Color = Color3.fromRGB(204, 210, 220)
+	bladeTip.Size = Vector3.new(0.1, 1.55, 0.1)
+	bladeTip.Color = edge
 	bladeTip.Material = Enum.Material.Metal
 	bladeTip.CanCollide = false
 	bladeTip.Massless = true
-	bladeTip.CFrame = blade.CFrame * CFrame.new(0, -1.35, -0.18)
+	bladeTip.CFrame = guard.CFrame * CFrame.new(0, -0.92, 0)
 	bladeTip.Parent = tool
 
+	local hookBeak = Instance.new("Part")
+	hookBeak.Name = "HookBeak"
+	hookBeak.Size = Vector3.new(0.1, 0.48, 0.82)
+	hookBeak.Color = steel
+	hookBeak.Material = Enum.Material.Metal
+	hookBeak.CanCollide = false
+	hookBeak.Massless = true
+	hookBeak.CFrame = guard.CFrame * CFrame.new(0, -0.12, 0.58) * CFrame.Angles(math.rad(-18), 0, 0)
+	hookBeak.Parent = tool
+
+	weld(handle, gripWrap)
+	weld(handle, shaftBand)
+	weld(handle, bottomCap)
 	weld(handle, guard)
-	weld(handle, blade)
-	weld(blade, bladeTip)
+	weld(guard, langetLeft)
+	weld(guard, langetRight)
+	weld(guard, blade)
+	weld(blade, axeEdge)
+	weld(guard, bladeTip)
+	weld(guard, hookBeak)
 
 	tool.Grip = HalberdConfig.SHOULDER_GRIP
 	return tool
@@ -6433,15 +6671,17 @@ local function createUI()
 
 	statusLabel = Instance.new("TextLabel")
 	statusLabel.Name = "RunStatus"
-	statusLabel.Size = UDim2.fromOffset(360, 72)
-	statusLabel.Position = UDim2.new(0.5, -180, 0, 12)
+	statusLabel.AnchorPoint = Vector2.new(0.5, 1)
+	statusLabel.Size = UDim2.fromOffset(520, 56)
+	statusLabel.Position = UDim2.new(0.5, 0, 1, -12)
 	statusLabel.BackgroundColor3 = PANEL
 	statusLabel.BorderSizePixel = 0
 	statusLabel.Font = Enum.Font.GothamBold
 	statusLabel.Text = "Entering the dungeon..."
 	statusLabel.TextColor3 = TEXT
-	statusLabel.TextSize = 18
+	statusLabel.TextSize = 17
 	statusLabel.TextWrapped = true
+	statusLabel.ZIndex = 8
 	statusLabel.Parent = screenGui
 
 	local statusCorner = Instance.new("UICorner")
@@ -7850,7 +8090,7 @@ local function startIdlePose(character: Model, tool: Tool)
 	end)
 end
 
-local function stopSwing(tool: Tool, character: Model?)
+local function stopSwing(tool: Tool?, character: Model?)
 	if swingConnection then
 		swingConnection:Disconnect()
 		swingConnection = nil
@@ -7860,7 +8100,7 @@ local function stopSwing(tool: Tool, character: Model?)
 	stopActiveTrack()
 	swinging = false
 
-	if character and tool.Parent == character then
+	if character and tool and tool.Parent == character then
 		local combatConfig = WeaponCombatConfig.getConfigForTool(tool)
 		local motors = BroadswordPose.getMotors(character)
 		BroadswordPose.reset(motors, tool, combatConfig.SHOULDER_GRIP)
@@ -8041,7 +8281,7 @@ local function bindCharacter(character: Model)
 
 	character.AncestryChanged:Connect(function(_, parent)
 		if not parent then
-			stopSwing(activeTool :: Tool, character)
+			stopSwing(activeTool, character)
 			stopIdlePose()
 		end
 	end)

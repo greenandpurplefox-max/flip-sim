@@ -29,15 +29,17 @@ local function createUI()
 
 	statusLabel = Instance.new("TextLabel")
 	statusLabel.Name = "RunStatus"
-	statusLabel.Size = UDim2.fromOffset(360, 72)
-	statusLabel.Position = UDim2.new(0.5, -180, 0, 12)
+	statusLabel.AnchorPoint = Vector2.new(0.5, 1)
+	statusLabel.Size = UDim2.fromOffset(520, 56)
+	statusLabel.Position = UDim2.new(0.5, 0, 1, -12)
 	statusLabel.BackgroundColor3 = PANEL
 	statusLabel.BorderSizePixel = 0
 	statusLabel.Font = Enum.Font.GothamBold
 	statusLabel.Text = "Entering the dungeon..."
 	statusLabel.TextColor3 = TEXT
-	statusLabel.TextSize = 18
+	statusLabel.TextSize = 17
 	statusLabel.TextWrapped = true
+	statusLabel.ZIndex = 8
 	statusLabel.Parent = screenGui
 
 	local statusCorner = Instance.new("UICorner")
