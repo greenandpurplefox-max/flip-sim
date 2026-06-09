@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 
 local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 
@@ -20,7 +21,6 @@ export type ChestLoot = {
 }
 
 local runChests: { [Player]: { PendingChest } } = {}
-local lobbyChests: { [Player]: { PendingChest } } = {}
 
 local treasureChestAwardedEvent: RemoteEvent
 local treasureChestStateEvent: RemoteEvent
@@ -105,7 +105,7 @@ local function serializeChests(chests: { PendingChest }?)
 end
 
 local function syncLobbyChests(player: Player)
-	getTreasureChestStateEvent():FireClient(player, serializeChests(lobbyChests[player]))
+	getTreasureChestStateEvent():FireClient(player, serializeChests(PlayerDataService.getLobbyChests(player)))
 end
 
 function TreasureChestService.getRunChestCount(player: Player): number
@@ -144,14 +144,11 @@ function TreasureChestService.transferRunChestsToLobby(player: Player)
 		return
 	end
 
-	if not lobbyChests[player] then
-		lobbyChests[player] = {}
-	end
-
+	local chests = PlayerDataService.getLobbyChests(player)
 	for _, chest in earned do
-		table.insert(lobbyChests[player], chest)
+		table.insert(chests, chest)
 	end
-
+	PlayerDataService.setLobbyChests(player, chests)
 	syncLobbyChests(player)
 end
 
@@ -160,8 +157,8 @@ function TreasureChestService.openLobbyChest(player: Player, chestIndex: number)
 		return false
 	end
 
-	local chests = lobbyChests[player]
-	if not chests or chestIndex < 1 or chestIndex > #chests then
+	local chests = PlayerDataService.getLobbyChests(player)
+	if chestIndex < 1 or chestIndex > #chests then
 		return false
 	end
 
@@ -169,6 +166,8 @@ function TreasureChestService.openLobbyChest(player: Player, chestIndex: number)
 	if not chest then
 		return false
 	end
+
+	PlayerDataService.setLobbyChests(player, chests)
 
 	local tier = TreasureConfig.getTier(chest.tierId)
 	local gold = TreasureConfig.rollGold(chest.tierId, chest.roomDepth)
@@ -200,9 +199,20 @@ function TreasureChestService.init()
 		TreasureChestService.openLobbyChest(player, math.floor(chestIndex))
 	end)
 
-	game:GetService("Players").PlayerRemoving:Connect(function(player)
+	local function bindPlayer(player: Player)
+		task.defer(function()
+			syncLobbyChests(player)
+		end)
+	end
+
+	for _, player in Players:GetPlayers() do
+		bindPlayer(player)
+	end
+
+	Players.PlayerAdded:Connect(bindPlayer)
+
+	Players.PlayerRemoving:Connect(function(player)
 		runChests[player] = nil
-		lobbyChests[player] = nil
 	end)
 end
 

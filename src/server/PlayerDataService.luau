@@ -1,23 +1,38 @@
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig)
 
 local PlayerDataService = {}
+
+export type LobbyChest = {
+	tierId: string,
+	roomDepth: number,
+}
 
 export type PlayerProfile = {
 	gold: number,
 	equippedWeapon: string,
 	weaponLevels: { [string]: number },
 	unlockedWeapons: { [string]: boolean },
+	lobbyChests: { LobbyChest },
 }
 
-local profileStore = nil
+local DATASTORE_NAME = "FlipSimPlayerProfiles_v1"
+local AUTO_SAVE_INTERVAL_SECONDS = 45
+local SAVE_DEBOUNCE_SECONDS = 6
+local SAVE_RETRY_COUNT = 3
+
+local profileStore: GlobalDataStore? = nil
+local dataStoreEnabled = false
 local profiles: { [Player]: PlayerProfile } = {}
 local profileStateEvent: RemoteEvent
+local pendingSaveTasks: { [Player]: thread } = {}
 
 local function getDefaultProfile(): PlayerProfile
 	local weaponLevels: { [string]: number } = {}
@@ -37,7 +52,32 @@ local function getDefaultProfile(): PlayerProfile
 		equippedWeapon = LobbyConfig.STARTER_WEAPON,
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
+		lobbyChests = {},
 	}
+end
+
+local function sanitizeLobbyChests(data: any): { LobbyChest }
+	local chests: { LobbyChest } = {}
+	if typeof(data) ~= "table" then
+		return chests
+	end
+
+	for _, chest in data do
+		if typeof(chest) == "table" and typeof(chest.tierId) == "string" then
+			local tier = TreasureConfig.getTier(chest.tierId)
+			if tier then
+				local roomDepth = if typeof(chest.roomDepth) == "number"
+					then math.max(1, math.floor(chest.roomDepth))
+					else 1
+				table.insert(chests, {
+					tierId = chest.tierId,
+					roomDepth = roomDepth,
+				})
+			end
+		end
+	end
+
+	return chests
 end
 
 local function sanitizeProfile(data: any): PlayerProfile
@@ -73,6 +113,8 @@ local function sanitizeProfile(data: any): PlayerProfile
 		profile.equippedWeapon = LobbyConfig.STARTER_WEAPON
 	end
 
+	profile.lobbyChests = sanitizeLobbyChests(data.lobbyChests)
+
 	return profile
 end
 
@@ -104,7 +146,28 @@ local function buildSnapshot(profile: PlayerProfile)
 		equippedWeapon = profile.equippedWeapon,
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
+		lobbyChests = profile.lobbyChests,
 	}
+end
+
+local function getProfileKey(player: Player): string
+	return `player_{player.UserId}`
+end
+
+local function scheduleSave(player: Player)
+	if not dataStoreEnabled or not profiles[player] then
+		return
+	end
+
+	local pending = pendingSaveTasks[player]
+	if pending then
+		task.cancel(pending)
+	end
+
+	pendingSaveTasks[player] = task.delay(SAVE_DEBOUNCE_SECONDS, function()
+		pendingSaveTasks[player] = nil
+		PlayerDataService.saveProfile(player)
+	end)
 end
 
 function PlayerDataService.sendProfile(player: Player)
@@ -131,6 +194,7 @@ function PlayerDataService.addGold(player: Player, amount: number)
 
 	profile.gold += math.floor(amount)
 	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
 end
 
 function PlayerDataService.trySpendGold(player: Player, amount: number): boolean
@@ -141,6 +205,7 @@ function PlayerDataService.trySpendGold(player: Player, amount: number): boolean
 
 	profile.gold -= math.floor(amount)
 	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
 	return true
 end
 
@@ -157,6 +222,7 @@ function PlayerDataService.setEquippedWeapon(player: Player, weaponId: string): 
 
 	profile.equippedWeapon = weaponId
 	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
 	return true
 end
 
@@ -191,6 +257,7 @@ function PlayerDataService.tryUnlockWeapon(player: Player, weaponId: string): (b
 	profile.gold -= cost
 	profile.unlockedWeapons[weaponId] = true
 	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
 	return true, nil
 end
 
@@ -213,30 +280,60 @@ function PlayerDataService.tryUpgradeWeapon(player: Player, weaponId: string): (
 	profile.gold -= cost
 	profile.weaponLevels[weaponId] = currentLevel + 1
 	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
 	return true, nil
+end
+
+function PlayerDataService.getLobbyChests(player: Player): { LobbyChest }
+	local profile = profiles[player]
+	if not profile then
+		return {}
+	end
+	return profile.lobbyChests
+end
+
+function PlayerDataService.setLobbyChests(player: Player, chests: { LobbyChest })
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+
+	profile.lobbyChests = chests
+	scheduleSave(player)
 end
 
 function PlayerDataService.saveProfile(player: Player)
 	local profile = profiles[player]
-	if not profile or not profileStore then
+	if not profile or not profileStore or not dataStoreEnabled then
 		return
 	end
 
+	local key = getProfileKey(player)
+	local snapshot = buildSnapshot(profile)
+
 	task.spawn(function()
-		pcall(function()
-			profileStore:SetAsync(`player_{player.UserId}`, buildSnapshot(profile))
-		end)
+		for attempt = 1, SAVE_RETRY_COUNT do
+			local ok = pcall(function()
+				profileStore:UpdateAsync(key, function()
+					return snapshot
+				end)
+			end)
+			if ok then
+				return
+			end
+			task.wait(attempt)
+		end
 	end)
 end
 
 local function loadProfile(player: Player): PlayerProfile
-	if not profileStore then
+	if not profileStore or not dataStoreEnabled then
 		return getDefaultProfile()
 	end
 
 	local loaded: any = nil
 	local ok = pcall(function()
-		loaded = profileStore:GetAsync(`player_{player.UserId}`)
+		loaded = profileStore:GetAsync(getProfileKey(player))
 	end)
 
 	if ok then
@@ -246,31 +343,80 @@ local function loadProfile(player: Player): PlayerProfile
 	return getDefaultProfile()
 end
 
-function PlayerDataService.init()
-	pcall(function()
-		profileStore = DataStoreService:GetDataStore("FlipSimPlayerProfiles_v1")
+local function initProfileStore(): boolean
+	local ok, store = pcall(function()
+		return DataStoreService:GetDataStore(DATASTORE_NAME)
 	end)
+	if not ok or not store then
+		return false
+	end
+
+	if RunService:IsStudio() then
+		local apiOk = pcall(function()
+			store:GetAsync("__studio_api_probe__")
+		end)
+		if not apiOk then
+			return false
+		end
+	end
+
+	profileStore = store
+	return true
+end
+
+local function bindPlayer(player: Player)
+	profiles[player] = loadProfile(player)
+	PlayerDataService.sendProfile(player)
+end
+
+local function unbindPlayer(player: Player)
+	local pending = pendingSaveTasks[player]
+	if pending then
+		task.cancel(pending)
+		pendingSaveTasks[player] = nil
+	end
+
+	PlayerDataService.saveProfile(player)
+	profiles[player] = nil
+end
+
+function PlayerDataService.init()
+	dataStoreEnabled = initProfileStore()
+	if not dataStoreEnabled then
+		if RunService:IsStudio() then
+			warn(
+				"[PlayerDataService] DataStore disabled in Studio. Enable 'Studio Access to API Services' in Game Settings to save progress."
+			)
+		else
+			warn("[PlayerDataService] DataStore unavailable. Progress will not persist this session.")
+		end
+	end
 
 	getProfileStateEvent()
 
 	for _, player in Players:GetPlayers() do
-		profiles[player] = loadProfile(player)
-		PlayerDataService.sendProfile(player)
+		bindPlayer(player)
 	end
 
-	Players.PlayerAdded:Connect(function(player)
-		profiles[player] = loadProfile(player)
-		PlayerDataService.sendProfile(player)
-	end)
-
-	Players.PlayerRemoving:Connect(function(player)
-		PlayerDataService.saveProfile(player)
-		profiles[player] = nil
-	end)
+	Players.PlayerAdded:Connect(bindPlayer)
+	Players.PlayerRemoving:Connect(unbindPlayer)
 
 	game:BindToClose(function()
 		for _, player in Players:GetPlayers() do
 			PlayerDataService.saveProfile(player)
+		end
+		task.wait(2)
+	end)
+
+	task.spawn(function()
+		while true do
+			task.wait(AUTO_SAVE_INTERVAL_SECONDS)
+			if not dataStoreEnabled then
+				continue
+			end
+			for _, player in Players:GetPlayers() do
+				PlayerDataService.saveProfile(player)
+			end
 		end
 	end)
 end
