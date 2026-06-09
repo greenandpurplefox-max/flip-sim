@@ -291,48 +291,131 @@ local function createHalberdTemplate(): Tool
 	tool.ToolTip = "Long reach polearm sweeps"
 	tool:SetAttribute(WeaponConfig.WEAPON_ATTRIBUTE, "Halberd")
 
+	local wood = Color3.fromRGB(68, 44, 26)
+	local leather = Color3.fromRGB(54, 34, 22)
+	local bronze = Color3.fromRGB(132, 104, 56)
+	local steel = Color3.fromRGB(168, 174, 184)
+	local edge = Color3.fromRGB(214, 220, 230)
+
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
-	handle.Size = Vector3.new(0.22, 5.2, 0.22)
-	handle.Color = Color3.fromRGB(96, 68, 38)
+	handle.Size = Vector3.new(0.16, 5.75, 0.16)
+	handle.Color = wood
 	handle.Material = Enum.Material.Wood
 	handle.CanCollide = false
 	handle.Massless = true
 	handle.Parent = tool
 
+	local gripWrap = Instance.new("Part")
+	gripWrap.Name = "GripWrap"
+	gripWrap.Size = Vector3.new(0.24, 0.95, 0.24)
+	gripWrap.Color = leather
+	gripWrap.Material = Enum.Material.Fabric
+	gripWrap.CanCollide = false
+	gripWrap.Massless = true
+	gripWrap.CFrame = handle.CFrame * CFrame.new(0, 1.15, 0)
+	gripWrap.Parent = tool
+
+	local shaftBand = Instance.new("Part")
+	shaftBand.Name = "ShaftBand"
+	shaftBand.Size = Vector3.new(0.22, 0.12, 0.22)
+	shaftBand.Color = bronze
+	shaftBand.Material = Enum.Material.Metal
+	shaftBand.CanCollide = false
+	shaftBand.Massless = true
+	shaftBand.CFrame = handle.CFrame * CFrame.new(0, 0.35, 0)
+	shaftBand.Parent = tool
+
+	local bottomCap = Instance.new("Part")
+	bottomCap.Name = "BottomCap"
+	bottomCap.Size = Vector3.new(0.2, 0.16, 0.2)
+	bottomCap.Color = bronze
+	bottomCap.Material = Enum.Material.Metal
+	bottomCap.CanCollide = false
+	bottomCap.Massless = true
+	bottomCap.CFrame = handle.CFrame * CFrame.new(0, -2.82, 0)
+	bottomCap.Parent = tool
+
 	local guard = Instance.new("Part")
 	guard.Name = "Guard"
-	guard.Size = Vector3.new(0.55, 0.12, 0.55)
-	guard.Color = Color3.fromRGB(128, 108, 58)
+	guard.Size = Vector3.new(0.46, 0.34, 0.46)
+	guard.Color = bronze
 	guard.Material = Enum.Material.Metal
 	guard.CanCollide = false
 	guard.Massless = true
-	guard.CFrame = handle.CFrame * CFrame.new(0, -2.35, 0)
+	guard.CFrame = handle.CFrame * CFrame.new(0, -2.58, 0)
 	guard.Parent = tool
+
+	local langetLeft = Instance.new("Part")
+	langetLeft.Name = "LangetLeft"
+	langetLeft.Size = Vector3.new(0.06, 0.72, 0.14)
+	langetLeft.Color = steel
+	langetLeft.Material = Enum.Material.Metal
+	langetLeft.CanCollide = false
+	langetLeft.Massless = true
+	langetLeft.CFrame = guard.CFrame * CFrame.new(-0.16, -0.28, 0)
+	langetLeft.Parent = tool
+
+	local langetRight = Instance.new("Part")
+	langetRight.Name = "LangetRight"
+	langetRight.Size = Vector3.new(0.06, 0.72, 0.14)
+	langetRight.Color = steel
+	langetRight.Material = Enum.Material.Metal
+	langetRight.CanCollide = false
+	langetRight.Massless = true
+	langetRight.CFrame = guard.CFrame * CFrame.new(0.16, -0.28, 0)
+	langetRight.Parent = tool
 
 	local blade = Instance.new("Part")
 	blade.Name = "Blade"
-	blade.Size = Vector3.new(0.18, 2.4, 1.45)
-	blade.Color = Color3.fromRGB(184, 190, 200)
+	blade.Size = Vector3.new(0.12, 1.05, 1.65)
+	blade.Color = steel
 	blade.Material = Enum.Material.Metal
 	blade.CanCollide = false
 	blade.Massless = true
-	blade.CFrame = handle.CFrame * CFrame.new(0, -3.55, -0.35) * CFrame.Angles(math.rad(12), 0, 0)
+	blade.CFrame = guard.CFrame * CFrame.new(0, -0.08, -0.72) * CFrame.Angles(math.rad(14), 0, 0)
 	blade.Parent = tool
+
+	local axeEdge = Instance.new("Part")
+	axeEdge.Name = "AxeEdge"
+	axeEdge.Size = Vector3.new(0.05, 0.92, 0.18)
+	axeEdge.Color = edge
+	axeEdge.Material = Enum.Material.Metal
+	axeEdge.CanCollide = false
+	axeEdge.Massless = true
+	axeEdge.CFrame = blade.CFrame * CFrame.new(0, 0, -0.78)
+	axeEdge.Parent = tool
 
 	local bladeTip = Instance.new("Part")
 	bladeTip.Name = "BladeTip"
-	bladeTip.Size = Vector3.new(0.14, 0.65, 0.95)
-	bladeTip.Color = Color3.fromRGB(204, 210, 220)
+	bladeTip.Size = Vector3.new(0.1, 1.55, 0.1)
+	bladeTip.Color = edge
 	bladeTip.Material = Enum.Material.Metal
 	bladeTip.CanCollide = false
 	bladeTip.Massless = true
-	bladeTip.CFrame = blade.CFrame * CFrame.new(0, -1.35, -0.18)
+	bladeTip.CFrame = guard.CFrame * CFrame.new(0, -0.92, 0)
 	bladeTip.Parent = tool
 
+	local hookBeak = Instance.new("Part")
+	hookBeak.Name = "HookBeak"
+	hookBeak.Size = Vector3.new(0.1, 0.48, 0.82)
+	hookBeak.Color = steel
+	hookBeak.Material = Enum.Material.Metal
+	hookBeak.CanCollide = false
+	hookBeak.Massless = true
+	hookBeak.CFrame = guard.CFrame * CFrame.new(0, -0.12, 0.58) * CFrame.Angles(math.rad(-18), 0, 0)
+	hookBeak.Parent = tool
+
+	weld(handle, gripWrap)
+	weld(handle, shaftBand)
+	weld(handle, bottomCap)
 	weld(handle, guard)
-	weld(handle, blade)
-	weld(blade, bladeTip)
+	weld(guard, langetLeft)
+	weld(guard, langetRight)
+	weld(guard, blade)
+	weld(blade, axeEdge)
+	weld(guard, bladeTip)
+	weld(guard, hookBeak)
 
 	tool.Grip = HalberdConfig.SHOULDER_GRIP
 	return tool
