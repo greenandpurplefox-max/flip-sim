@@ -81,28 +81,10 @@ function LobbyHubClient.init()
 	hintLabel.TextWrapped = true
 	hintLabel.Parent = hintFrame
 
-	local dungeonHint = Instance.new("TextLabel")
-	dungeonHint.Name = "DungeonHint"
-	dungeonHint.Size = UDim2.fromOffset(360, 48)
-	dungeonHint.Position = UDim2.new(0.5, -180, 0, 12)
-	dungeonHint.BackgroundColor3 = PANEL
-	dungeonHint.BorderSizePixel = 0
-	dungeonHint.Font = Enum.Font.GothamBold
-	dungeonHint.Text = "Dungeon run active"
-	dungeonHint.TextColor3 = Color3.fromRGB(255, 120, 96)
-	dungeonHint.TextSize = 18
-	dungeonHint.Visible = false
-	dungeonHint.Parent = screenGui
-
-	local dungeonCorner = Instance.new("UICorner")
-	dungeonCorner.CornerRadius = UDim.new(0, 10)
-	dungeonCorner.Parent = dungeonHint
-
 	local function renderPhase()
 		local inLobby = currentPhase == "Lobby"
 		walletFrame.Visible = inLobby
 		hintFrame.Visible = inLobby
-		dungeonHint.Visible = not inLobby
 	end
 
 	local function renderWallet()
