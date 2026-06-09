@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BlacksmithConfig = require(ReplicatedStorage.Shared.BlacksmithConfig)
+local BobConfig = require(ReplicatedStorage.Shared.BobConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 
 local LobbyEnvironmentService = {}
@@ -156,13 +157,98 @@ local function createBlacksmith(parent: Instance)
 	humanoid.Parent = model
 
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = BlacksmithConfig.PROMPT_ACTION_TEXT
+	prompt.ActionText = "Upgrade"
 	prompt.ObjectText = BlacksmithConfig.PROMPT_OBJECT_TEXT
 	prompt.MaxActivationDistance = BlacksmithConfig.PROMPT_DISTANCE
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = root
 
 	model:SetAttribute("BlacksmithNpc", true)
+	model.Parent = parent
+end
+
+local function createBob(parent: Instance)
+	local model = Instance.new("Model")
+	model.Name = "Bob"
+
+	local skin = Color3.fromRGB(204, 168, 132)
+	local shirt = Color3.fromRGB(72, 108, 148)
+	local pants = Color3.fromRGB(52, 58, 68)
+	local shoes = Color3.fromRGB(42, 38, 36)
+
+	local rootPosition = BobConfig.POSITION + Vector3.new(0, 3.1, 0)
+	local rootCFrame = CFrame.lookAt(
+		rootPosition,
+		Vector3.new(BobConfig.LOOK_AT.X, rootPosition.Y, BobConfig.LOOK_AT.Z)
+	)
+
+	local root = createPart("HumanoidRootPart", Vector3.new(2, 2.2, 1), rootCFrame, shirt, model, {
+		material = Enum.Material.Fabric,
+	})
+	model.PrimaryPart = root
+
+	local head = createPart("Head", Vector3.new(1.35, 1.35, 1.35), rootCFrame * CFrame.new(0, 1.75, 0), skin, model, {
+		shape = Enum.PartType.Ball,
+		canCollide = false,
+	})
+	weld(root, head, CFrame.new(0, 1.75, 0), CFrame.new())
+
+	local face = Instance.new("Decal")
+	face.Name = "face"
+	face.Texture = "rbxasset://textures/face.png"
+	face.Face = Enum.NormalId.Front
+	face.Parent = head
+
+	local hair = createPart("Hair", Vector3.new(1.45, 0.55, 1.45), rootCFrame * CFrame.new(0, 2.15, 0), Color3.fromRGB(92, 64, 42), model, {
+		canCollide = false,
+	})
+	weld(head, hair, CFrame.new(0, 0.45, 0), CFrame.new())
+
+	local leftArm = createPart("LeftArm", Vector3.new(1, 2.2, 1), rootCFrame * CFrame.new(-1.55, 0.1, 0), shirt, model, {
+		material = Enum.Material.Fabric,
+		canCollide = false,
+	})
+	weld(root, leftArm, CFrame.new(-1.55, 0.1, 0), CFrame.new())
+
+	local rightArm = createPart("RightArm", Vector3.new(1, 2.2, 1), rootCFrame * CFrame.new(1.55, 0.1, 0), shirt, model, {
+		material = Enum.Material.Fabric,
+		canCollide = false,
+	})
+	weld(root, rightArm, CFrame.new(1.55, 0.1, 0), CFrame.new())
+
+	local leftLeg = createPart("LeftLeg", Vector3.new(1, 2, 1), rootCFrame * CFrame.new(-0.55, -2.1, 0), pants, model, {
+		canCollide = false,
+	})
+	weld(root, leftLeg, CFrame.new(-0.55, -2.1, 0), CFrame.new())
+
+	local rightLeg = createPart("RightLeg", Vector3.new(1, 2, 1), rootCFrame * CFrame.new(0.55, -2.1, 0), pants, model, {
+		canCollide = false,
+	})
+	weld(root, rightLeg, CFrame.new(0.55, -2.1, 0), CFrame.new())
+
+	local leftShoe = createPart("LeftShoe", Vector3.new(1.05, 0.35, 1.2), rootCFrame * CFrame.new(-0.55, -3.05, 0.08), shoes, model, {
+		canCollide = false,
+	})
+	weld(leftLeg, leftShoe, CFrame.new(0, -1.05, 0.08), CFrame.new())
+
+	local rightShoe = createPart("RightShoe", Vector3.new(1.05, 0.35, 1.2), rootCFrame * CFrame.new(0.55, -3.05, 0.08), shoes, model, {
+		canCollide = false,
+	})
+	weld(rightLeg, rightShoe, CFrame.new(0, -1.05, 0.08), CFrame.new())
+
+	local humanoid = Instance.new("Humanoid")
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	humanoid.Parent = model
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = BobConfig.PROMPT_ACTION_TEXT
+	prompt.ObjectText = BobConfig.PROMPT_OBJECT_TEXT
+	prompt.MaxActivationDistance = BobConfig.PROMPT_DISTANCE
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = root
+
+	model:SetAttribute("GuideNpc", true)
 	model.Parent = parent
 end
 
@@ -200,6 +286,7 @@ function LobbyEnvironmentService.init()
 	)
 
 	createSign(folder, BlacksmithConfig.POSITION + Vector3.new(0, 6.5, 0), "Blacksmith", Color3.fromRGB(255, 196, 96))
+	createSign(folder, BobConfig.POSITION + Vector3.new(0, 6.5, 0), "Bob", Color3.fromRGB(144, 196, 255))
 	createSign(folder, LobbyConfig.PORTAL_POSITION + Vector3.new(0, 0, 8), "Dungeon Gate", Color3.fromRGB(120, 255, 160))
 
 	local forge = createPart(
@@ -220,6 +307,7 @@ function LobbyEnvironmentService.init()
 	)
 
 	createBlacksmith(folder)
+	createBob(folder)
 
 	local portalBase = createPart(
 		"DungeonPortal",

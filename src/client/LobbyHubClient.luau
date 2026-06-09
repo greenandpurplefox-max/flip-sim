@@ -56,8 +56,8 @@ function LobbyHubClient.init()
 
 	local hintFrame = Instance.new("Frame")
 	hintFrame.Name = "LobbyHint"
-	hintFrame.Size = UDim2.fromOffset(420, 72)
-	hintFrame.Position = UDim2.new(0.5, -210, 1, -92)
+	hintFrame.Size = UDim2.fromOffset(460, 72)
+	hintFrame.Position = UDim2.new(0.5, -230, 1, -150)
 	hintFrame.BackgroundColor3 = PANEL
 	hintFrame.BorderSizePixel = 0
 	hintFrame.Parent = screenGui
@@ -75,7 +75,7 @@ function LobbyHubClient.init()
 	hintLabel.BackgroundTransparency = 1
 	hintLabel.Size = UDim2.fromScale(1, 1)
 	hintLabel.Font = Enum.Font.Gotham
-	hintLabel.Text = "Talk to Harold at the forge for dungeon tips.\nOpen Weapons to equip and upgrade. Stand on the green gate to enter."
+	hintLabel.Text = "Talk to Bob for dungeon tips.\nUpgrade weapons and spells from the lobby menus. Stand on the green gate to enter."
 	hintLabel.TextColor3 = TEXT
 	hintLabel.TextSize = 16
 	hintLabel.TextWrapped = true

@@ -3,7 +3,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local BlacksmithConfig = require(ReplicatedStorage.Shared.BlacksmithConfig)
+local BobConfig = require(ReplicatedStorage.Shared.BobConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local WeaponMenuClient = require(script.Parent.WeaponMenuClient)
 
 local BlacksmithDialogueClient = {}
 
@@ -12,6 +14,11 @@ local PANEL = Color3.fromRGB(24, 18, 16)
 local PANEL_LIGHT = Color3.fromRGB(42, 34, 28)
 local TEXT = Color3.fromRGB(244, 228, 196)
 local TEXT_DIM = Color3.fromRGB(170, 154, 128)
+
+type DialogueNpc = {
+	objectText: string,
+	lines: { string },
+}
 
 function BlacksmithDialogueClient.init()
 	if not LobbyConfig.USE_LOBBY then
@@ -25,10 +32,10 @@ function BlacksmithDialogueClient.init()
 	local currentPhase = "Lobby"
 	local dialogueOpen = false
 	local dialogueIndex = 1
-	local dialogueLines = BlacksmithConfig.getDialogueLines()
+	local activeNpc: DialogueNpc? = nil
 
 	local screenGui = Instance.new("ScreenGui")
-	screenGui.Name = "BlacksmithDialogueUI"
+	screenGui.Name = "NpcDialogueUI"
 	screenGui.ResetOnSpawn = false
 	screenGui.Enabled = false
 	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -57,7 +64,7 @@ function BlacksmithDialogueClient.init()
 	nameLabel.Position = UDim2.fromOffset(20, 14)
 	nameLabel.Size = UDim2.new(1, -40, 0, 28)
 	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.Text = BlacksmithConfig.PROMPT_OBJECT_TEXT
+	nameLabel.Text = ""
 	nameLabel.TextColor3 = GOLD
 	nameLabel.TextSize = 22
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -121,23 +128,28 @@ function BlacksmithDialogueClient.init()
 	leaveCorner.Parent = leaveButton
 
 	local function renderLine()
-		bodyLabel.Text = dialogueLines[dialogueIndex] or ""
-		progressLabel.Text = `{dialogueIndex}/{#dialogueLines}`
-		local onLastLine = dialogueIndex >= #dialogueLines
-		continueButton.Text = if onLastLine then "Done" else "Continue"
-		continueButton.Visible = true
+		if not activeNpc then
+			return
+		end
+
+		nameLabel.Text = activeNpc.objectText
+		bodyLabel.Text = activeNpc.lines[dialogueIndex] or ""
+		progressLabel.Text = `{dialogueIndex}/{#activeNpc.lines}`
+		continueButton.Text = if dialogueIndex >= #activeNpc.lines then "Done" else "Continue"
 	end
 
 	local function closeDialogue()
 		dialogueOpen = false
+		activeNpc = nil
 		screenGui.Enabled = false
 	end
 
-	local function openDialogue()
+	local function openDialogue(npc: DialogueNpc)
 		if currentPhase ~= "Lobby" then
 			return
 		end
 
+		activeNpc = npc
 		dialogueIndex = 1
 		dialogueOpen = true
 		screenGui.Enabled = true
@@ -145,7 +157,11 @@ function BlacksmithDialogueClient.init()
 	end
 
 	local function advanceDialogue()
-		if dialogueIndex >= #dialogueLines then
+		if not activeNpc then
+			return
+		end
+
+		if dialogueIndex >= #activeNpc.lines then
 			closeDialogue()
 			return
 		end
@@ -178,6 +194,30 @@ function BlacksmithDialogueClient.init()
 		end
 	end)
 
+	local function bindDialogueNpc(model: Model, npc: DialogueNpc)
+		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then
+			return
+		end
+
+		local prompt = root:FindFirstChildOfClass("ProximityPrompt")
+		if not prompt then
+			return
+		end
+
+		prompt.Triggered:Connect(function(triggerPlayer)
+			if triggerPlayer ~= player or currentPhase ~= "Lobby" then
+				return
+			end
+
+			if dialogueOpen and activeNpc == npc then
+				advanceDialogue()
+			else
+				openDialogue(npc)
+			end
+		end)
+	end
+
 	local function bindBlacksmith(model: Model)
 		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not root then
@@ -194,13 +234,14 @@ function BlacksmithDialogueClient.init()
 				return
 			end
 
-			if dialogueOpen then
-				advanceDialogue()
-			else
-				openDialogue()
-			end
+			WeaponMenuClient.openToTab("Upgrade")
 		end)
 	end
+
+	local bobNpc: DialogueNpc = {
+		objectText = BobConfig.PROMPT_OBJECT_TEXT,
+		lines = BobConfig.getDialogueLines(),
+	}
 
 	task.spawn(function()
 		local lobby = workspace:WaitForChild("Lobby", 30)
@@ -208,16 +249,23 @@ function BlacksmithDialogueClient.init()
 			return
 		end
 
-		local existing = lobby:FindFirstChild("Blacksmith")
-		if existing and existing:IsA("Model") then
-			bindBlacksmith(existing)
+		local function tryBind(child: Instance)
+			if not child:IsA("Model") then
+				return
+			end
+
+			if child.Name == "Blacksmith" then
+				bindBlacksmith(child)
+			elseif child.Name == "Bob" then
+				bindDialogueNpc(child, bobNpc)
+			end
 		end
 
-		lobby.ChildAdded:Connect(function(child)
-			if child.Name == "Blacksmith" and child:IsA("Model") then
-				bindBlacksmith(child)
-			end
-		end)
+		for _, child in lobby:GetChildren() do
+			tryBind(child)
+		end
+
+		lobby.ChildAdded:Connect(tryBind)
 	end)
 end
 

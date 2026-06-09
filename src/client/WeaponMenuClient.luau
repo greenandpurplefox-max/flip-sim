@@ -61,8 +61,9 @@ function WeaponMenuClient.init()
 
 	local menuButton = Instance.new("TextButton")
 	menuButton.Name = "WeaponsButton"
+	menuButton.AnchorPoint = Vector2.new(1, 1)
 	menuButton.Size = UDim2.fromOffset(220, 52)
-	menuButton.Position = UDim2.new(0.5, -110, 0, 76)
+	menuButton.Position = UDim2.new(0.5, -6, 1, -12)
 	menuButton.BackgroundColor3 = ACCENT
 	menuButton.BorderSizePixel = 0
 	menuButton.Font = Enum.Font.GothamBold
@@ -77,8 +78,8 @@ function WeaponMenuClient.init()
 
 	local panel = Instance.new("Frame")
 	panel.Name = "WeaponPanel"
-	panel.AnchorPoint = Vector2.new(0.5, 0)
-	panel.Position = UDim2.new(0.5, 0, 0, 136)
+	panel.AnchorPoint = Vector2.new(0.5, 1)
+	panel.Position = UDim2.new(0.5, 0, 1, -70)
 	panel.Size = UDim2.fromOffset(360, 360)
 	panel.BackgroundColor3 = PANEL
 	panel.BorderSizePixel = 0
@@ -520,7 +521,27 @@ function WeaponMenuClient.init()
 		updateMenuState()
 	end)
 
+	WeaponMenuClient._openToTab = function(tab: string)
+		if loadoutLocked or currentPhase ~= "Lobby" then
+			return
+		end
+
+		if tab == "Equip" or tab == "Upgrade" or tab == "Chests" then
+			activeTab = tab
+		end
+
+		menuOpen = true
+		panel.Visible = true
+		updateMenuState()
+	end
+
 	updateMenuState()
+end
+
+function WeaponMenuClient.openToTab(tab: string)
+	if WeaponMenuClient._openToTab then
+		WeaponMenuClient._openToTab(tab)
+	end
 end
 
 return WeaponMenuClient

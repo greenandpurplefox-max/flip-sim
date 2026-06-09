@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
+local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
 local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig)
@@ -20,6 +22,10 @@ export type PlayerProfile = {
 	equippedWeapon: string,
 	weaponLevels: { [string]: number },
 	unlockedWeapons: { [string]: boolean },
+	equippedActiveSpell: string,
+	equippedPassiveSpell: string,
+	spellLevels: { [string]: number },
+	unlockedSpells: { [string]: boolean },
 	lobbyChests: { LobbyChest },
 }
 
@@ -47,11 +53,28 @@ local function getDefaultProfile(): PlayerProfile
 		end
 	end
 
+	local spellLevels: { [string]: number } = {}
+	local unlockedSpells: { [string]: boolean } = {
+		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
+		[LobbyConfig.STARTER_PASSIVE_SPELL] = true,
+	}
+
+	for _, spell in SpellConfig.getSpellList() do
+		spellLevels[spell.id] = 1
+		if spell.id ~= LobbyConfig.STARTER_ACTIVE_SPELL and spell.id ~= LobbyConfig.STARTER_PASSIVE_SPELL then
+			unlockedSpells[spell.id] = false
+		end
+	end
+
 	return {
 		gold = LobbyConfig.STARTER_GOLD,
 		equippedWeapon = LobbyConfig.STARTER_WEAPON,
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
+		equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL,
+		equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL,
+		spellLevels = spellLevels,
+		unlockedSpells = unlockedSpells,
 		lobbyChests = {},
 	}
 end
@@ -113,6 +136,46 @@ local function sanitizeProfile(data: any): PlayerProfile
 		profile.equippedWeapon = LobbyConfig.STARTER_WEAPON
 	end
 
+	profile.equippedActiveSpell = if SpellConfig.isValid(data.equippedActiveSpell)
+		then data.equippedActiveSpell
+		else defaults.equippedActiveSpell
+	profile.equippedPassiveSpell = if SpellConfig.isValid(data.equippedPassiveSpell)
+		then data.equippedPassiveSpell
+		else defaults.equippedPassiveSpell
+
+	if typeof(data.spellLevels) == "table" then
+		for spellId, level in data.spellLevels do
+			if SpellConfig.isValid(spellId) and typeof(level) == "number" then
+				profile.spellLevels[spellId] = math.clamp(math.floor(level), 1, SpellUpgradeConfig.MAX_LEVEL)
+			end
+		end
+	end
+
+	if typeof(data.unlockedSpells) == "table" then
+		for spellId, unlocked in data.unlockedSpells do
+			if SpellConfig.isValid(spellId) and typeof(unlocked) == "boolean" then
+				profile.unlockedSpells[spellId] = unlocked
+			end
+		end
+	end
+
+	profile.unlockedSpells[LobbyConfig.STARTER_ACTIVE_SPELL] = true
+	profile.unlockedSpells[LobbyConfig.STARTER_PASSIVE_SPELL] = true
+
+	if not profile.unlockedSpells[profile.equippedActiveSpell] then
+		profile.equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL
+	end
+	if SpellConfig.getKind(profile.equippedActiveSpell) ~= "Active" then
+		profile.equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL
+	end
+
+	if not profile.unlockedSpells[profile.equippedPassiveSpell] then
+		profile.equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL
+	end
+	if SpellConfig.getKind(profile.equippedPassiveSpell) ~= "Passive" then
+		profile.equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL
+	end
+
 	profile.lobbyChests = sanitizeLobbyChests(data.lobbyChests)
 
 	return profile
@@ -141,11 +204,22 @@ local function buildSnapshot(profile: PlayerProfile)
 		unlockedWeapons[weapon.id] = profile.unlockedWeapons[weapon.id] == true
 	end
 
+	local spellLevels: { [string]: number } = {}
+	local unlockedSpells: { [string]: boolean } = {}
+	for _, spell in SpellConfig.getSpellList() do
+		spellLevels[spell.id] = profile.spellLevels[spell.id] or 1
+		unlockedSpells[spell.id] = profile.unlockedSpells[spell.id] == true
+	end
+
 	return {
 		gold = profile.gold,
 		equippedWeapon = profile.equippedWeapon,
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
+		equippedActiveSpell = profile.equippedActiveSpell,
+		equippedPassiveSpell = profile.equippedPassiveSpell,
+		spellLevels = spellLevels,
+		unlockedSpells = unlockedSpells,
 		lobbyChests = profile.lobbyChests,
 	}
 end
@@ -279,6 +353,98 @@ function PlayerDataService.tryUpgradeWeapon(player: Player, weaponId: string): (
 
 	profile.gold -= cost
 	profile.weaponLevels[weaponId] = currentLevel + 1
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+	return true, nil
+end
+
+function PlayerDataService.getEquippedActiveSpell(player: Player): string
+	local profile = profiles[player]
+	return if profile then profile.equippedActiveSpell else LobbyConfig.STARTER_ACTIVE_SPELL
+end
+
+function PlayerDataService.getEquippedPassiveSpell(player: Player): string
+	local profile = profiles[player]
+	return if profile then profile.equippedPassiveSpell else LobbyConfig.STARTER_PASSIVE_SPELL
+end
+
+function PlayerDataService.setEquippedActiveSpell(player: Player, spellId: string): boolean
+	local profile = profiles[player]
+	if not profile or SpellConfig.getKind(spellId) ~= "Active" or not profile.unlockedSpells[spellId] then
+		return false
+	end
+
+	profile.equippedActiveSpell = spellId
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+	return true
+end
+
+function PlayerDataService.setEquippedPassiveSpell(player: Player, spellId: string): boolean
+	local profile = profiles[player]
+	if not profile or SpellConfig.getKind(spellId) ~= "Passive" or not profile.unlockedSpells[spellId] then
+		return false
+	end
+
+	profile.equippedPassiveSpell = spellId
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+	return true
+end
+
+function PlayerDataService.isSpellUnlocked(player: Player, spellId: string): boolean
+	local profile = profiles[player]
+	return profile ~= nil and profile.unlockedSpells[spellId] == true
+end
+
+function PlayerDataService.getSpellLevel(player: Player, spellId: string): number
+	local profile = profiles[player]
+	if not profile then
+		return 1
+	end
+	return profile.spellLevels[spellId] or 1
+end
+
+function PlayerDataService.tryUnlockSpell(player: Player, spellId: string): (boolean, string?)
+	local profile = profiles[player]
+	if not profile or not SpellConfig.isValid(spellId) then
+		return false, "Invalid spell."
+	end
+
+	if profile.unlockedSpells[spellId] then
+		return false, "Already unlocked."
+	end
+
+	local cost = SpellUpgradeConfig.getUnlockCost(spellId)
+	if profile.gold < cost then
+		return false, "Not enough gold."
+	end
+
+	profile.gold -= cost
+	profile.unlockedSpells[spellId] = true
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+	return true, nil
+end
+
+function PlayerDataService.tryUpgradeSpell(player: Player, spellId: string): (boolean, string?)
+	local profile = profiles[player]
+	if not profile or not profile.unlockedSpells[spellId] then
+		return false, "Spell locked."
+	end
+
+	local currentLevel = profile.spellLevels[spellId] or 1
+	if currentLevel >= SpellUpgradeConfig.MAX_LEVEL then
+		return false, "Max level reached."
+	end
+
+	local cost = SpellUpgradeConfig.getUpgradeCost(spellId, currentLevel)
+	if profile.gold < cost then
+		return false, "Not enough gold."
+	end
+
+	profile.gold -= cost
+	profile.spellLevels[spellId] = currentLevel + 1
 	PlayerDataService.sendProfile(player)
 	scheduleSave(player)
 	return true, nil

@@ -24,9 +24,7 @@
       <Item class="ModuleScript" referent="3">
         <Properties>
           <string name="Name">BlacksmithConfig</string>
-          <string name="Source"><![CDATA[local DungeonConfig = require(script.Parent.DungeonConfig)
-local LobbyConfig = require(script.Parent.LobbyConfig)
-
+          <string name="Source"><![CDATA[local LobbyConfig = require(script.Parent.LobbyConfig)
 local BlacksmithConfig = {}
 
 BlacksmithConfig.DISPLAY_NAME = "Harold"
@@ -37,7 +35,27 @@ BlacksmithConfig.PROMPT_DISTANCE = 11
 BlacksmithConfig.POSITION = LobbyConfig.FORGE_POSITION + Vector3.new(3.2, 0, 1.4)
 BlacksmithConfig.LOOK_AT = LobbyConfig.LOBBY_CENTER + Vector3.new(0, 5, 0)
 
-function BlacksmithConfig.getDialogueLines(): { string }
+return BlacksmithConfig
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="4">
+        <Properties>
+          <string name="Name">BobConfig</string>
+          <string name="Source"><![CDATA[local DungeonConfig = require(script.Parent.DungeonConfig)
+local LobbyConfig = require(script.Parent.LobbyConfig)
+
+local BobConfig = {}
+
+BobConfig.DISPLAY_NAME = "Bob"
+BobConfig.PROMPT_OBJECT_TEXT = "Bob the Guide"
+BobConfig.PROMPT_ACTION_TEXT = "Talk"
+BobConfig.PROMPT_DISTANCE = 11
+
+BobConfig.POSITION = LobbyConfig.LOBBY_SPAWN + Vector3.new(14, 0, -8)
+BobConfig.LOOK_AT = LobbyConfig.LOBBY_CENTER + Vector3.new(0, 5, 0)
+
+function BobConfig.getDialogueLines(): { string }
 	local bossInterval = DungeonConfig.BOSS_EVERY_N_ROOMS
 	local cardInterval = DungeonConfig.CARD_OFFER_EVERY_N_ROOMS
 
@@ -46,15 +64,15 @@ function BlacksmithConfig.getDialogueLines(): { string }
 		"Each room you clear pushes you deeper. More beasts spill in every depth, and the old ones grow meaner as you descend.",
 		`Every {bossInterval} depths, the Gravewarden Alpha rises to block the way. Break it, or it breaks you.`,
 		`Clear rooms for run gold. Every {cardInterval} depths the dungeon offers relic choices — pick wisely, they last the whole run.`,
-		"If you fall down there, the gold you earned on that run still lands in your purse. Upgrade your weapons at my forge before you march.",
+		"If you fall down there, the gold you earned on that run still lands in your purse. Talk to Harold at the forge to upgrade your weapons before you march.",
 	}
 end
 
-return BlacksmithConfig
+return BobConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="4">
+      <Item class="ModuleScript" referent="5">
         <Properties>
           <string name="Name">BossConfig</string>
           <string name="Source"><![CDATA[local BossConfig = {}
@@ -69,6 +87,7 @@ BossConfig.WALK_SPEED = 15
 BossConfig.ATTACK_RANGE = 8
 BossConfig.ATTACK_COOLDOWN = 2.75
 BossConfig.SCALE = 2.65
+BossConfig.HIP_HEIGHT = 2.45
 
 BossConfig.ATTACKS = {
 	GroundSlam = {
@@ -112,11 +131,15 @@ function BossConfig.getBossDepthIndex(room: number, bossEveryN: number): number
 	return math.max(1, math.floor(room / bossEveryN))
 end
 
+function BossConfig.getHipHeight(scale: number): number
+	return BossConfig.HIP_HEIGHT * (scale / BossConfig.SCALE)
+end
+
 return BossConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="5">
+      <Item class="ModuleScript" referent="6">
         <Properties>
           <string name="Name">BroadswordConfig</string>
           <string name="Source"><![CDATA[local BroadswordPose = require(script.Parent.BroadswordPose)
@@ -263,7 +286,7 @@ return BroadswordConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="6">
+      <Item class="ModuleScript" referent="7">
         <Properties>
           <string name="Name">BroadswordPose</string>
           <string name="Source"><![CDATA[local BroadswordPose = {}
@@ -381,7 +404,7 @@ return BroadswordPose
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="7">
+      <Item class="ModuleScript" referent="8">
         <Properties>
           <string name="Name">CardConfig</string>
           <string name="Source"><![CDATA[local CardConfig = {}
@@ -481,7 +504,7 @@ return CardConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="8">
+      <Item class="ModuleScript" referent="9">
         <Properties>
           <string name="Name">DungeonConfig</string>
           <string name="Source"><![CDATA[local DungeonConfig = {}
@@ -511,7 +534,7 @@ return DungeonConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="9">
+      <Item class="ModuleScript" referent="10">
         <Properties>
           <string name="Name">HalberdConfig</string>
           <string name="Source"><![CDATA[local BroadswordPose = require(script.Parent.BroadswordPose)
@@ -634,7 +657,7 @@ return HalberdConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="10">
+      <Item class="ModuleScript" referent="11">
         <Properties>
           <string name="Name">Hello</string>
           <string name="Source"><![CDATA[return function()
@@ -643,7 +666,7 @@ end
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="11">
+      <Item class="ModuleScript" referent="12">
         <Properties>
           <string name="Name">LobbyConfig</string>
           <string name="Source"><![CDATA[local LobbyConfig = {}
@@ -663,13 +686,15 @@ LobbyConfig.FORGE_POSITION = Vector3.new(-18, 6, -650)
 LobbyConfig.LOBBY_FALL_Y = 2.5
 
 LobbyConfig.STARTER_WEAPON = "Broadsword"
+LobbyConfig.STARTER_ACTIVE_SPELL = "Firebolt"
+LobbyConfig.STARTER_PASSIVE_SPELL = "ArcaneVolley"
 LobbyConfig.STARTER_GOLD = 25
 
 return LobbyConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="12">
+      <Item class="ModuleScript" referent="13">
         <Properties>
           <string name="Name">MonsterConfig</string>
           <string name="Source"><![CDATA[local MonsterConfig = {}
@@ -819,7 +844,7 @@ return MonsterConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="13">
+      <Item class="ModuleScript" referent="14">
         <Properties>
           <string name="Name">MovementConfig</string>
           <string name="Source"><![CDATA[local MovementConfig = {
@@ -833,7 +858,7 @@ return MovementConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="14">
+      <Item class="ModuleScript" referent="15">
         <Properties>
           <string name="Name">RapierConfig</string>
           <string name="Source"><![CDATA[local BroadswordPose = require(script.Parent.BroadswordPose)
@@ -910,7 +935,253 @@ return RapierConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="15">
+      <Item class="ModuleScript" referent="16">
+        <Properties>
+          <string name="Name">SpellConfig</string>
+          <string name="Source"><![CDATA[local SpellConfig = {}
+
+export type SpellKind = "Active" | "Passive"
+export type PassiveTrigger = "OnHit" | "Interval"
+
+export type SpellStats = {
+	id: string,
+	kind: SpellKind,
+	displayName: string,
+	ultimateDisplayName: string,
+	description: string,
+	ultimateDescription: string,
+	damageMin: number,
+	damageMax: number,
+	projectileSpeed: number,
+	projectileSize: Vector3,
+	projectileColor: Color3,
+	cooldown: number?,
+	interval: number?,
+	trigger: PassiveTrigger?,
+	projectileCount: number?,
+	ultimateProjectileCount: number?,
+	aoeRadius: number?,
+}
+
+SpellConfig.DEFAULT_ACTIVE = "Firebolt"
+SpellConfig.DEFAULT_PASSIVE = "ArcaneVolley"
+
+SpellConfig.Spells = {
+	Firebolt = {
+		id = "Firebolt",
+		kind = "Active",
+		displayName = "Firebolt",
+		ultimateDisplayName = "Inferno Lance",
+		description = "Press E to launch a flaming bolt forward.",
+		ultimateDescription = "Press E to fire a blazing lance that pierces deeper.",
+		damageMin = 8,
+		damageMax = 14,
+		projectileSpeed = 92,
+		projectileSize = Vector3.new(0.85, 0.85, 3.2),
+		projectileColor = Color3.fromRGB(255, 120, 48),
+		cooldown = 2.4,
+		aoeRadius = 0,
+	},
+	FrostNova = {
+		id = "FrostNova",
+		kind = "Active",
+		displayName = "Frost Nova",
+		ultimateDisplayName = "Blizzard Core",
+		description = "Press E to burst ice in front of you.",
+		ultimateDescription = "Press E to unleash a wider freezing blast.",
+		damageMin = 10,
+		damageMax = 18,
+		projectileSpeed = 0,
+		projectileSize = Vector3.new(1.8, 1.8, 1.8),
+		projectileColor = Color3.fromRGB(120, 200, 255),
+		cooldown = 4.2,
+		aoeRadius = 10,
+	},
+	ThornRetort = {
+		id = "ThornRetort",
+		kind = "Passive",
+		trigger = "OnHit",
+		displayName = "Thorn Retort",
+		ultimateDisplayName = "Thorn Nova",
+		description = "When hit, fire a thorn in a random direction.",
+		ultimateDescription = "When hit, fire a burst of thorns in random directions.",
+		damageMin = 5,
+		damageMax = 9,
+		projectileSpeed = 70,
+		projectileSize = Vector3.new(0.7, 0.7, 2.2),
+		projectileColor = Color3.fromRGB(96, 200, 96),
+		projectileCount = 1,
+		ultimateProjectileCount = 4,
+		aoeRadius = 0,
+	},
+	ArcaneVolley = {
+		id = "ArcaneVolley",
+		kind = "Passive",
+		trigger = "Interval",
+		displayName = "Arcane Volley",
+		ultimateDisplayName = "Twin Volley",
+		description = "Every few seconds, shoot a bolt in front of you.",
+		ultimateDescription = "Every few seconds, shoot twin bolts forward.",
+		damageMin = 6,
+		damageMax = 11,
+		projectileSpeed = 84,
+		projectileSize = Vector3.new(0.75, 0.75, 2.6),
+		projectileColor = Color3.fromRGB(160, 96, 255),
+		interval = 5,
+		projectileCount = 1,
+		ultimateProjectileCount = 2,
+		aoeRadius = 0,
+	},
+	StaticWard = {
+		id = "StaticWard",
+		kind = "Passive",
+		trigger = "OnHit",
+		displayName = "Static Ward",
+		ultimateDisplayName = "Storm Ward",
+		description = "When hit, lash the nearest foe with lightning.",
+		ultimateDescription = "When hit, chain lightning through nearby foes.",
+		damageMin = 7,
+		damageMax = 12,
+		projectileSpeed = 110,
+		projectileSize = Vector3.new(0.65, 0.65, 2.4),
+		projectileColor = Color3.fromRGB(255, 230, 96),
+		projectileCount = 1,
+		ultimateProjectileCount = 3,
+		aoeRadius = 0,
+	},
+}
+
+function SpellConfig.getSpell(id: string): SpellStats?
+	return SpellConfig.Spells[id]
+end
+
+function SpellConfig.getSpellList(): { SpellStats }
+	local list: { SpellStats } = {}
+	for _, spell in SpellConfig.Spells do
+		table.insert(list, spell)
+	end
+	table.sort(list, function(a, b)
+		if a.kind == b.kind then
+			return a.displayName < b.displayName
+		end
+		return a.kind < b.kind
+	end)
+	return list
+end
+
+function SpellConfig.isValid(id: string): boolean
+	return SpellConfig.Spells[id] ~= nil
+end
+
+function SpellConfig.getKind(id: string): SpellKind?
+	local spell = SpellConfig.getSpell(id)
+	return if spell then spell.kind else nil
+end
+
+return SpellConfig
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="17">
+        <Properties>
+          <string name="Name">SpellUpgradeConfig</string>
+          <string name="Source"><![CDATA[local SpellConfig = require(script.Parent.SpellConfig)
+
+local SpellUpgradeConfig = {}
+
+SpellUpgradeConfig.MAX_LEVEL = 20
+SpellUpgradeConfig.ULTIMATE_LEVEL = 10
+SpellUpgradeConfig.DAMAGE_PER_LEVEL = 0.09
+SpellUpgradeConfig.COOLDOWN_REDUCTION_PER_LEVEL = 0.018
+SpellUpgradeConfig.INTERVAL_REDUCTION_PER_LEVEL = 0.025
+SpellUpgradeConfig.MIN_COOLDOWN_MULT = 0.7
+SpellUpgradeConfig.MIN_INTERVAL_MULT = 0.72
+
+SpellUpgradeConfig.UNLOCK_COSTS = {
+	Firebolt = 0,
+	FrostNova = 140,
+	ThornRetort = 110,
+	ArcaneVolley = 0,
+	StaticWard = 160,
+}
+
+SpellUpgradeConfig.BASE_UPGRADE_COST = 30
+SpellUpgradeConfig.UPGRADE_COST_GROWTH = 1.34
+
+export type EffectiveSpellStats = SpellConfig.SpellStats & {
+	level: number,
+	isUltimate: boolean,
+	resolvedName: string,
+	resolvedDescription: string,
+}
+
+function SpellUpgradeConfig.getUnlockCost(spellId: string): number
+	return SpellUpgradeConfig.UNLOCK_COSTS[spellId] or 9999
+end
+
+function SpellUpgradeConfig.getUpgradeCost(spellId: string, currentLevel: number): number
+	if currentLevel >= SpellUpgradeConfig.MAX_LEVEL then
+		return 0
+	end
+
+	local base = SpellUpgradeConfig.BASE_UPGRADE_COST + (SpellUpgradeConfig.getUnlockCost(spellId) * 0.1)
+	return math.floor(base * (SpellUpgradeConfig.UPGRADE_COST_GROWTH ^ (currentLevel - 1)))
+end
+
+function SpellUpgradeConfig.getEffectiveStats(spellId: string, level: number): EffectiveSpellStats
+	local base = SpellConfig.getSpell(spellId) or SpellConfig.Spells.Firebolt
+	local clampedLevel = math.clamp(level, 1, SpellUpgradeConfig.MAX_LEVEL)
+	local isUltimate = clampedLevel >= SpellUpgradeConfig.ULTIMATE_LEVEL
+	local damageMult = 1 + (clampedLevel - 1) * SpellUpgradeConfig.DAMAGE_PER_LEVEL
+	local cooldownMult = math.max(
+		SpellUpgradeConfig.MIN_COOLDOWN_MULT,
+		1 - (clampedLevel - 1) * SpellUpgradeConfig.COOLDOWN_REDUCTION_PER_LEVEL
+	)
+	local intervalMult = math.max(
+		SpellUpgradeConfig.MIN_INTERVAL_MULT,
+		1 - (clampedLevel - 1) * SpellUpgradeConfig.INTERVAL_REDUCTION_PER_LEVEL
+	)
+
+	local projectileCount = base.projectileCount or 1
+	if isUltimate and base.ultimateProjectileCount then
+		projectileCount = base.ultimateProjectileCount
+	end
+
+	local aoeRadius = base.aoeRadius or 0
+	if isUltimate and aoeRadius > 0 then
+		aoeRadius *= 1.35
+	end
+
+	return {
+		id = base.id,
+		kind = base.kind,
+		displayName = base.displayName,
+		ultimateDisplayName = base.ultimateDisplayName,
+		description = base.description,
+		ultimateDescription = base.ultimateDescription,
+		damageMin = math.max(1, math.floor(base.damageMin * damageMult)),
+		damageMax = math.max(1, math.floor(base.damageMax * damageMult)),
+		projectileSpeed = base.projectileSpeed,
+		projectileSize = if isUltimate then base.projectileSize * 1.3 else base.projectileSize,
+		projectileColor = if isUltimate then base.projectileColor:Lerp(Color3.new(1, 1, 1), 0.25) else base.projectileColor,
+		cooldown = if base.cooldown then math.floor(base.cooldown * cooldownMult * 100) / 100 else nil,
+		interval = if base.interval then math.floor(base.interval * intervalMult * 100) / 100 else nil,
+		trigger = base.trigger,
+		projectileCount = projectileCount,
+		ultimateProjectileCount = base.ultimateProjectileCount,
+		aoeRadius = aoeRadius,
+		level = clampedLevel,
+		isUltimate = isUltimate,
+		resolvedName = if isUltimate then base.ultimateDisplayName else base.displayName,
+		resolvedDescription = if isUltimate then base.ultimateDescription else base.description,
+	}
+end
+
+return SpellUpgradeConfig
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="18">
         <Properties>
           <string name="Name">TreasureConfig</string>
           <string name="Source"><![CDATA[local TreasureConfig = {}
@@ -1006,7 +1277,7 @@ return TreasureConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="16">
+      <Item class="ModuleScript" referent="19">
         <Properties>
           <string name="Name">WarAxeConfig</string>
           <string name="Source"><![CDATA[local BroadswordPose = require(script.Parent.BroadswordPose)
@@ -1131,7 +1402,7 @@ return WarAxeConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="17">
+      <Item class="ModuleScript" referent="20">
         <Properties>
           <string name="Name">WarHammerConfig</string>
           <string name="Source"><![CDATA[local BroadswordPose = require(script.Parent.BroadswordPose)
@@ -1208,7 +1479,7 @@ return WarHammerConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="18">
+      <Item class="ModuleScript" referent="21">
         <Properties>
           <string name="Name">WaveConfig</string>
           <string name="Source"><![CDATA[local WaveConfig = {
@@ -1252,7 +1523,7 @@ return WaveConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="19">
+      <Item class="ModuleScript" referent="22">
         <Properties>
           <string name="Name">WeaponCombatConfig</string>
           <string name="Source"><![CDATA[local BroadswordConfig = require(script.Parent.BroadswordConfig)
@@ -1294,7 +1565,7 @@ return WeaponCombatConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="20">
+      <Item class="ModuleScript" referent="23">
         <Properties>
           <string name="Name">WeaponConfig</string>
           <string name="Source"><![CDATA[local WeaponConfig = {}
@@ -1385,7 +1656,7 @@ return WeaponConfig
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="21">
+      <Item class="ModuleScript" referent="24">
         <Properties>
           <string name="Name">WeaponUpgradeConfig</string>
           <string name="Source"><![CDATA[local WeaponConfig = require(script.Parent.WeaponConfig)
@@ -1447,11 +1718,11 @@ return WeaponUpgradeConfig
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="22">
+  <Item class="ServerScriptService" referent="25">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Script" referent="23">
+    <Item class="Script" referent="26">
       <Properties>
         <string name="Name">Server</string>
         <token name="RunContext">0</token>
@@ -1463,7 +1734,9 @@ local GamePhaseService = require(script.GamePhaseService)
 local LobbyEnvironmentService = require(script.LobbyEnvironmentService)
 local PlayerDataService = require(script.PlayerDataService)
 local WaveService = require(script.WaveService)
+local BossService = require(script.BossService)
 local WeaponService = require(script.WeaponService)
+local SpellService = require(script.SpellService)
 local TreasureChestService = require(script.TreasureChestService)
 
 local centerMarker = workspace:FindFirstChild("CenterMarker")
@@ -1477,6 +1750,9 @@ DashService.init()
 WaveService.init()
 CardService.init()
 WeaponService.init()
+SpellService.init()
+WaveService.setOnPlayerDamagedCallback(SpellService.onPlayerDamaged)
+BossService.setOnPlayerDamagedCallback(SpellService.onPlayerDamaged)
 TreasureChestService.init()
 DungeonRunService.init()
 
@@ -1484,6 +1760,7 @@ GamePhaseService.init({
 	dungeonRunService = DungeonRunService,
 	playerDataService = PlayerDataService,
 	weaponService = WeaponService,
+	spellService = SpellService,
 })
 
 DungeonRunService.setRunEndedHandler(function(player, runGold)
@@ -1494,7 +1771,7 @@ LobbyEnvironmentService.init()
 GamePhaseService.wireDungeonPortal()
 ]]></string>
       </Properties>
-      <Item class="ModuleScript" referent="24">
+      <Item class="ModuleScript" referent="27">
         <Properties>
           <string name="Name">AnimationOverrideService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -1546,14 +1823,13 @@ return AnimationOverrideService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="25">
+      <Item class="ModuleScript" referent="28">
         <Properties>
           <string name="Name">BossService</string>
           <string name="Source"><![CDATA[local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossConfig = require(ReplicatedStorage.Shared.BossConfig)
 local DungeonConfig = require(ReplicatedStorage.Shared.DungeonConfig)
-local WaveConfig = require(ReplicatedStorage.Shared.WaveConfig)
 
 local BossService = {}
 
@@ -1573,6 +1849,7 @@ type BossRuntime = {
 
 local bossRuntimes: { [Model]: BossRuntime } = {}
 local attackingBosses: { [Model]: boolean } = {}
+BossService.onPlayerDamagedCallback = nil
 
 local function weld(part0: BasePart, part1: BasePart)
 	local constraint = Instance.new("WeldConstraint")
@@ -1661,6 +1938,9 @@ local function damagePlayersInRadius(origin: Vector3, radius: number, damage: nu
 			local distance = (humanoidRootPart.Position - origin).Magnitude
 			if distance <= radius then
 				humanoid:TakeDamage(damage)
+				if BossService.onPlayerDamagedCallback then
+					BossService.onPlayerDamagedCallback(player)
+				end
 			end
 		end
 	end
@@ -1911,6 +2191,19 @@ function BossService.updateBoss(monster: Model, target: Model)
 	end
 end
 
+local function snapBossToGround(position: Vector3, hipHeight: number, ignore: { Instance }): Vector3
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+	rayParams.FilterDescendantsInstances = ignore
+
+	local result = workspace:Raycast(position + Vector3.new(0, 40, 0), Vector3.new(0, -120, 0), rayParams)
+	if result then
+		return Vector3.new(position.X, result.Position.Y + hipHeight, position.Z)
+	end
+
+	return position
+end
+
 function BossService.createBoss(
 	spawnPosition: Vector3,
 	roomDepth: number,
@@ -1967,8 +2260,12 @@ function BossService.createBoss(
 	local frontRightLeg = createPart("FrontRightLeg", s(Vector3.new(0.28, 0.88, 0.28)), darkFur, model, { canCollide = true })
 	local backLeftLeg = createPart("BackLeftLeg", s(Vector3.new(0.28, 0.92, 0.3)), darkFur, model, { canCollide = true })
 	local backRightLeg = createPart("BackRightLeg", s(Vector3.new(0.28, 0.92, 0.3)), darkFur, model, { canCollide = true })
+	local frontLeftPaw = createPart("FrontLeftPaw", s(Vector3.new(0.32, 0.12, 0.36)), darkFur, model, { massless = true, canCollide = true })
+	local frontRightPaw = createPart("FrontRightPaw", s(Vector3.new(0.32, 0.12, 0.36)), darkFur, model, { massless = true, canCollide = true })
+	local backLeftPaw = createPart("BackLeftPaw", s(Vector3.new(0.34, 0.12, 0.38)), darkFur, model, { massless = true, canCollide = true })
+	local backRightPaw = createPart("BackRightPaw", s(Vector3.new(0.34, 0.12, 0.38)), darkFur, model, { massless = true, canCollide = true })
 
-	local rootCFrame = CFrame.new(spawnPosition)
+	local rootCFrame = CFrame.new(snapBossToGround(spawnPosition, BossConfig.getHipHeight(scale), { monstersFolder }))
 	humanoidRootPart.CFrame = rootCFrame
 	body.CFrame = rootCFrame
 	chest.CFrame = rootCFrame * sOffset(CFrame.new(0, 0.08, -0.72))
@@ -1984,6 +2281,10 @@ function BossService.createBoss(
 	frontRightLeg.CFrame = rootCFrame * sOffset(CFrame.new(0.38, -0.42, -0.68))
 	backLeftLeg.CFrame = rootCFrame * sOffset(CFrame.new(-0.34, -0.42, 0.72))
 	backRightLeg.CFrame = rootCFrame * sOffset(CFrame.new(0.34, -0.42, 0.72))
+	frontLeftPaw.CFrame = frontLeftLeg.CFrame * sOffset(CFrame.new(0, -0.48, -0.04))
+	frontRightPaw.CFrame = frontRightLeg.CFrame * sOffset(CFrame.new(0, -0.48, -0.04))
+	backLeftPaw.CFrame = backLeftLeg.CFrame * sOffset(CFrame.new(0, -0.5, 0.02))
+	backRightPaw.CFrame = backRightLeg.CFrame * sOffset(CFrame.new(0, -0.5, 0.02))
 
 	weld(humanoidRootPart, body)
 	weld(body, chest)
@@ -2002,6 +2303,11 @@ function BossService.createBoss(
 	local backLeftLegRest = sOffset(CFrame.new(-0.34, -0.42, 0.72))
 	local backRightLegRest = sOffset(CFrame.new(0.34, -0.42, 0.72))
 
+	weld(frontLeftLeg, frontLeftPaw)
+	weld(frontRightLeg, frontRightPaw)
+	weld(backLeftLeg, backLeftPaw)
+	weld(backRightLeg, backRightPaw)
+
 	local neckMotor = attachMotor(body, head, "NeckMotor", neckRest)
 	local tailMotor = attachMotor(body, tail, "TailMotor", tailRest)
 	local frontLeftLegMotor = attachMotor(humanoidRootPart, frontLeftLeg, "FrontLeftLegMotor", frontLeftLegRest)
@@ -2011,7 +2317,7 @@ function BossService.createBoss(
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.WalkSpeed = BossConfig.WALK_SPEED
-	humanoid.HipHeight = WaveConfig.MONSTER_HIP_HEIGHT * scale
+	humanoid.HipHeight = BossConfig.getHipHeight(scale)
 	humanoid.MaxHealth = maxHealth
 	humanoid.Health = maxHealth
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
@@ -2093,11 +2399,15 @@ function BossService.createBoss(
 	return model
 end
 
+function BossService.setOnPlayerDamagedCallback(callback: ((Player) -> ())?)
+	BossService.onPlayerDamagedCallback = callback
+end
+
 return BossService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="26">
+      <Item class="ModuleScript" referent="29">
         <Properties>
           <string name="Name">CardService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -2257,7 +2567,7 @@ return CardService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="27">
+      <Item class="ModuleScript" referent="30">
         <Properties>
           <string name="Name">DashService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -2380,7 +2690,7 @@ return DashService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="28">
+      <Item class="ModuleScript" referent="31">
         <Properties>
           <string name="Name">DungeonRunService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -2760,7 +3070,7 @@ return DungeonRunService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="29">
+      <Item class="ModuleScript" referent="32">
         <Properties>
           <string name="Name">GamePhaseService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -2779,6 +3089,7 @@ local enterDungeonEvent: RemoteEvent
 local DungeonRunServiceModule = nil
 local PlayerDataServiceModule = nil
 local WeaponServiceModule = nil
+local SpellServiceModule = nil
 local portalPromptConnection: RBXScriptConnection? = nil
 local lastPortalEnterAt: { [Player]: number } = {}
 
@@ -2918,6 +3229,9 @@ function GamePhaseService.returnToLobby(player: Player, runGold: number?)
 	if WeaponServiceModule then
 		WeaponServiceModule.refreshPlayerLoadout(player)
 	end
+	if SpellServiceModule then
+		SpellServiceModule.refreshPlayerLoadout(player)
+	end
 end
 
 function GamePhaseService.enterDungeon(player: Player): boolean
@@ -2950,6 +3264,9 @@ function GamePhaseService.enterDungeon(player: Player): boolean
 
 	if WeaponServiceModule then
 		WeaponServiceModule.refreshPlayerLoadout(player)
+	end
+	if SpellServiceModule then
+		SpellServiceModule.refreshPlayerLoadout(player)
 	end
 
 	if DungeonRunServiceModule then
@@ -3009,6 +3326,9 @@ function GamePhaseService.onPlayerReady(player: Player)
 
 	if WeaponServiceModule then
 		WeaponServiceModule.refreshPlayerLoadout(player)
+	end
+	if SpellServiceModule then
+		SpellServiceModule.refreshPlayerLoadout(player)
 	end
 end
 
@@ -3076,6 +3396,7 @@ function GamePhaseService.init(deps: {
 	dungeonRunService: any,
 	playerDataService: any,
 	weaponService: any,
+	spellService: any?,
 })
 	if not LobbyConfig.USE_LOBBY then
 		return
@@ -3084,6 +3405,7 @@ function GamePhaseService.init(deps: {
 	DungeonRunServiceModule = deps.dungeonRunService
 	PlayerDataServiceModule = deps.playerDataService
 	WeaponServiceModule = deps.weaponService
+	SpellServiceModule = deps.spellService
 
 	getPhaseStateEvent()
 	getEnterDungeonEvent()
@@ -3107,6 +3429,9 @@ function GamePhaseService.init(deps: {
 
 				if WeaponServiceModule then
 					WeaponServiceModule.refreshPlayerLoadout(player)
+				end
+				if SpellServiceModule then
+					SpellServiceModule.refreshPlayerLoadout(player)
 				end
 			end)
 		end)
@@ -3138,12 +3463,13 @@ return GamePhaseService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="30">
+      <Item class="ModuleScript" referent="33">
         <Properties>
           <string name="Name">LobbyEnvironmentService</string>
           <string name="Source"><![CDATA[local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BlacksmithConfig = require(ReplicatedStorage.Shared.BlacksmithConfig)
+local BobConfig = require(ReplicatedStorage.Shared.BobConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 
 local LobbyEnvironmentService = {}
@@ -3299,13 +3625,98 @@ local function createBlacksmith(parent: Instance)
 	humanoid.Parent = model
 
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = BlacksmithConfig.PROMPT_ACTION_TEXT
+	prompt.ActionText = "Upgrade"
 	prompt.ObjectText = BlacksmithConfig.PROMPT_OBJECT_TEXT
 	prompt.MaxActivationDistance = BlacksmithConfig.PROMPT_DISTANCE
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = root
 
 	model:SetAttribute("BlacksmithNpc", true)
+	model.Parent = parent
+end
+
+local function createBob(parent: Instance)
+	local model = Instance.new("Model")
+	model.Name = "Bob"
+
+	local skin = Color3.fromRGB(204, 168, 132)
+	local shirt = Color3.fromRGB(72, 108, 148)
+	local pants = Color3.fromRGB(52, 58, 68)
+	local shoes = Color3.fromRGB(42, 38, 36)
+
+	local rootPosition = BobConfig.POSITION + Vector3.new(0, 3.1, 0)
+	local rootCFrame = CFrame.lookAt(
+		rootPosition,
+		Vector3.new(BobConfig.LOOK_AT.X, rootPosition.Y, BobConfig.LOOK_AT.Z)
+	)
+
+	local root = createPart("HumanoidRootPart", Vector3.new(2, 2.2, 1), rootCFrame, shirt, model, {
+		material = Enum.Material.Fabric,
+	})
+	model.PrimaryPart = root
+
+	local head = createPart("Head", Vector3.new(1.35, 1.35, 1.35), rootCFrame * CFrame.new(0, 1.75, 0), skin, model, {
+		shape = Enum.PartType.Ball,
+		canCollide = false,
+	})
+	weld(root, head, CFrame.new(0, 1.75, 0), CFrame.new())
+
+	local face = Instance.new("Decal")
+	face.Name = "face"
+	face.Texture = "rbxasset://textures/face.png"
+	face.Face = Enum.NormalId.Front
+	face.Parent = head
+
+	local hair = createPart("Hair", Vector3.new(1.45, 0.55, 1.45), rootCFrame * CFrame.new(0, 2.15, 0), Color3.fromRGB(92, 64, 42), model, {
+		canCollide = false,
+	})
+	weld(head, hair, CFrame.new(0, 0.45, 0), CFrame.new())
+
+	local leftArm = createPart("LeftArm", Vector3.new(1, 2.2, 1), rootCFrame * CFrame.new(-1.55, 0.1, 0), shirt, model, {
+		material = Enum.Material.Fabric,
+		canCollide = false,
+	})
+	weld(root, leftArm, CFrame.new(-1.55, 0.1, 0), CFrame.new())
+
+	local rightArm = createPart("RightArm", Vector3.new(1, 2.2, 1), rootCFrame * CFrame.new(1.55, 0.1, 0), shirt, model, {
+		material = Enum.Material.Fabric,
+		canCollide = false,
+	})
+	weld(root, rightArm, CFrame.new(1.55, 0.1, 0), CFrame.new())
+
+	local leftLeg = createPart("LeftLeg", Vector3.new(1, 2, 1), rootCFrame * CFrame.new(-0.55, -2.1, 0), pants, model, {
+		canCollide = false,
+	})
+	weld(root, leftLeg, CFrame.new(-0.55, -2.1, 0), CFrame.new())
+
+	local rightLeg = createPart("RightLeg", Vector3.new(1, 2, 1), rootCFrame * CFrame.new(0.55, -2.1, 0), pants, model, {
+		canCollide = false,
+	})
+	weld(root, rightLeg, CFrame.new(0.55, -2.1, 0), CFrame.new())
+
+	local leftShoe = createPart("LeftShoe", Vector3.new(1.05, 0.35, 1.2), rootCFrame * CFrame.new(-0.55, -3.05, 0.08), shoes, model, {
+		canCollide = false,
+	})
+	weld(leftLeg, leftShoe, CFrame.new(0, -1.05, 0.08), CFrame.new())
+
+	local rightShoe = createPart("RightShoe", Vector3.new(1.05, 0.35, 1.2), rootCFrame * CFrame.new(0.55, -3.05, 0.08), shoes, model, {
+		canCollide = false,
+	})
+	weld(rightLeg, rightShoe, CFrame.new(0, -1.05, 0.08), CFrame.new())
+
+	local humanoid = Instance.new("Humanoid")
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	humanoid.Parent = model
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = BobConfig.PROMPT_ACTION_TEXT
+	prompt.ObjectText = BobConfig.PROMPT_OBJECT_TEXT
+	prompt.MaxActivationDistance = BobConfig.PROMPT_DISTANCE
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = root
+
+	model:SetAttribute("GuideNpc", true)
 	model.Parent = parent
 end
 
@@ -3343,6 +3754,7 @@ function LobbyEnvironmentService.init()
 	)
 
 	createSign(folder, BlacksmithConfig.POSITION + Vector3.new(0, 6.5, 0), "Blacksmith", Color3.fromRGB(255, 196, 96))
+	createSign(folder, BobConfig.POSITION + Vector3.new(0, 6.5, 0), "Bob", Color3.fromRGB(144, 196, 255))
 	createSign(folder, LobbyConfig.PORTAL_POSITION + Vector3.new(0, 0, 8), "Dungeon Gate", Color3.fromRGB(120, 255, 160))
 
 	local forge = createPart(
@@ -3363,6 +3775,7 @@ function LobbyEnvironmentService.init()
 	)
 
 	createBlacksmith(folder)
+	createBob(folder)
 
 	local portalBase = createPart(
 		"DungeonPortal",
@@ -3440,7 +3853,7 @@ return LobbyEnvironmentService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="31">
+      <Item class="ModuleScript" referent="34">
         <Properties>
           <string name="Name">PlayerDataService</string>
           <string name="Source"><![CDATA[local DataStoreService = game:GetService("DataStoreService")
@@ -3449,6 +3862,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
+local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
 local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig)
@@ -3465,6 +3880,10 @@ export type PlayerProfile = {
 	equippedWeapon: string,
 	weaponLevels: { [string]: number },
 	unlockedWeapons: { [string]: boolean },
+	equippedActiveSpell: string,
+	equippedPassiveSpell: string,
+	spellLevels: { [string]: number },
+	unlockedSpells: { [string]: boolean },
 	lobbyChests: { LobbyChest },
 }
 
@@ -3492,11 +3911,28 @@ local function getDefaultProfile(): PlayerProfile
 		end
 	end
 
+	local spellLevels: { [string]: number } = {}
+	local unlockedSpells: { [string]: boolean } = {
+		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
+		[LobbyConfig.STARTER_PASSIVE_SPELL] = true,
+	}
+
+	for _, spell in SpellConfig.getSpellList() do
+		spellLevels[spell.id] = 1
+		if spell.id ~= LobbyConfig.STARTER_ACTIVE_SPELL and spell.id ~= LobbyConfig.STARTER_PASSIVE_SPELL then
+			unlockedSpells[spell.id] = false
+		end
+	end
+
 	return {
 		gold = LobbyConfig.STARTER_GOLD,
 		equippedWeapon = LobbyConfig.STARTER_WEAPON,
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
+		equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL,
+		equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL,
+		spellLevels = spellLevels,
+		unlockedSpells = unlockedSpells,
 		lobbyChests = {},
 	}
 end
@@ -3558,6 +3994,46 @@ local function sanitizeProfile(data: any): PlayerProfile
 		profile.equippedWeapon = LobbyConfig.STARTER_WEAPON
 	end
 
+	profile.equippedActiveSpell = if SpellConfig.isValid(data.equippedActiveSpell)
+		then data.equippedActiveSpell
+		else defaults.equippedActiveSpell
+	profile.equippedPassiveSpell = if SpellConfig.isValid(data.equippedPassiveSpell)
+		then data.equippedPassiveSpell
+		else defaults.equippedPassiveSpell
+
+	if typeof(data.spellLevels) == "table" then
+		for spellId, level in data.spellLevels do
+			if SpellConfig.isValid(spellId) and typeof(level) == "number" then
+				profile.spellLevels[spellId] = math.clamp(math.floor(level), 1, SpellUpgradeConfig.MAX_LEVEL)
+			end
+		end
+	end
+
+	if typeof(data.unlockedSpells) == "table" then
+		for spellId, unlocked in data.unlockedSpells do
+			if SpellConfig.isValid(spellId) and typeof(unlocked) == "boolean" then
+				profile.unlockedSpells[spellId] = unlocked
+			end
+		end
+	end
+
+	profile.unlockedSpells[LobbyConfig.STARTER_ACTIVE_SPELL] = true
+	profile.unlockedSpells[LobbyConfig.STARTER_PASSIVE_SPELL] = true
+
+	if not profile.unlockedSpells[profile.equippedActiveSpell] then
+		profile.equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL
+	end
+	if SpellConfig.getKind(profile.equippedActiveSpell) ~= "Active" then
+		profile.equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL
+	end
+
+	if not profile.unlockedSpells[profile.equippedPassiveSpell] then
+		profile.equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL
+	end
+	if SpellConfig.getKind(profile.equippedPassiveSpell) ~= "Passive" then
+		profile.equippedPassiveSpell = LobbyConfig.STARTER_PASSIVE_SPELL
+	end
+
 	profile.lobbyChests = sanitizeLobbyChests(data.lobbyChests)
 
 	return profile
@@ -3586,11 +4062,22 @@ local function buildSnapshot(profile: PlayerProfile)
 		unlockedWeapons[weapon.id] = profile.unlockedWeapons[weapon.id] == true
 	end
 
+	local spellLevels: { [string]: number } = {}
+	local unlockedSpells: { [string]: boolean } = {}
+	for _, spell in SpellConfig.getSpellList() do
+		spellLevels[spell.id] = profile.spellLevels[spell.id] or 1
+		unlockedSpells[spell.id] = profile.unlockedSpells[spell.id] == true
+	end
+
 	return {
 		gold = profile.gold,
 		equippedWeapon = profile.equippedWeapon,
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
+		equippedActiveSpell = profile.equippedActiveSpell,
+		equippedPassiveSpell = profile.equippedPassiveSpell,
+		spellLevels = spellLevels,
+		unlockedSpells = unlockedSpells,
 		lobbyChests = profile.lobbyChests,
 	}
 end
@@ -3724,6 +4211,98 @@ function PlayerDataService.tryUpgradeWeapon(player: Player, weaponId: string): (
 
 	profile.gold -= cost
 	profile.weaponLevels[weaponId] = currentLevel + 1
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+	return true, nil
+end
+
+function PlayerDataService.getEquippedActiveSpell(player: Player): string
+	local profile = profiles[player]
+	return if profile then profile.equippedActiveSpell else LobbyConfig.STARTER_ACTIVE_SPELL
+end
+
+function PlayerDataService.getEquippedPassiveSpell(player: Player): string
+	local profile = profiles[player]
+	return if profile then profile.equippedPassiveSpell else LobbyConfig.STARTER_PASSIVE_SPELL
+end
+
+function PlayerDataService.setEquippedActiveSpell(player: Player, spellId: string): boolean
+	local profile = profiles[player]
+	if not profile or SpellConfig.getKind(spellId) ~= "Active" or not profile.unlockedSpells[spellId] then
+		return false
+	end
+
+	profile.equippedActiveSpell = spellId
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+	return true
+end
+
+function PlayerDataService.setEquippedPassiveSpell(player: Player, spellId: string): boolean
+	local profile = profiles[player]
+	if not profile or SpellConfig.getKind(spellId) ~= "Passive" or not profile.unlockedSpells[spellId] then
+		return false
+	end
+
+	profile.equippedPassiveSpell = spellId
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+	return true
+end
+
+function PlayerDataService.isSpellUnlocked(player: Player, spellId: string): boolean
+	local profile = profiles[player]
+	return profile ~= nil and profile.unlockedSpells[spellId] == true
+end
+
+function PlayerDataService.getSpellLevel(player: Player, spellId: string): number
+	local profile = profiles[player]
+	if not profile then
+		return 1
+	end
+	return profile.spellLevels[spellId] or 1
+end
+
+function PlayerDataService.tryUnlockSpell(player: Player, spellId: string): (boolean, string?)
+	local profile = profiles[player]
+	if not profile or not SpellConfig.isValid(spellId) then
+		return false, "Invalid spell."
+	end
+
+	if profile.unlockedSpells[spellId] then
+		return false, "Already unlocked."
+	end
+
+	local cost = SpellUpgradeConfig.getUnlockCost(spellId)
+	if profile.gold < cost then
+		return false, "Not enough gold."
+	end
+
+	profile.gold -= cost
+	profile.unlockedSpells[spellId] = true
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+	return true, nil
+end
+
+function PlayerDataService.tryUpgradeSpell(player: Player, spellId: string): (boolean, string?)
+	local profile = profiles[player]
+	if not profile or not profile.unlockedSpells[spellId] then
+		return false, "Spell locked."
+	end
+
+	local currentLevel = profile.spellLevels[spellId] or 1
+	if currentLevel >= SpellUpgradeConfig.MAX_LEVEL then
+		return false, "Max level reached."
+	end
+
+	local cost = SpellUpgradeConfig.getUpgradeCost(spellId, currentLevel)
+	if profile.gold < cost then
+		return false, "Not enough gold."
+	end
+
+	profile.gold -= cost
+	profile.spellLevels[spellId] = currentLevel + 1
 	PlayerDataService.sendProfile(player)
 	scheduleSave(player)
 	return true, nil
@@ -3870,7 +4449,728 @@ return PlayerDataService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="32">
+      <Item class="ModuleScript" referent="35">
+        <Properties>
+          <string name="Name">SpellService</string>
+          <string name="Source"><![CDATA[local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
+local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
+
+local CardService = require(script.Parent.CardService)
+local GamePhaseService = require(script.Parent.GamePhaseService)
+local PlayerDataService = require(script.Parent.PlayerDataService)
+
+local SpellService = {}
+
+local ON_HIT_PASSIVE_COOLDOWN = 0.4
+local PROJECTILE_LIFETIME = 2.5
+local STATIC_WARD_RANGE = 42
+
+local lastActiveCastAt: { [Player]: number } = {}
+local lastOnHitPassiveAt: { [Player]: number } = {}
+local lastIntervalCastAt: { [Player]: number } = {}
+
+local equipSpellEvent: RemoteEvent
+local upgradeSpellEvent: RemoteEvent
+local unlockSpellEvent: RemoteEvent
+local castSpellEvent: RemoteEvent
+local spellLoadoutUpdatedEvent: RemoteEvent
+local spellCastEffectEvent: RemoteEvent
+
+local function isPlayerActive(player: Player): boolean
+	return player.Parent ~= nil
+end
+
+local function getEquipSpellEvent(): RemoteEvent
+	if equipSpellEvent then
+		return equipSpellEvent
+	end
+
+	equipSpellEvent = ReplicatedStorage:FindFirstChild("EquipSpell") :: RemoteEvent?
+	if not equipSpellEvent then
+		equipSpellEvent = Instance.new("RemoteEvent")
+		equipSpellEvent.Name = "EquipSpell"
+		equipSpellEvent.Parent = ReplicatedStorage
+	end
+
+	return equipSpellEvent
+end
+
+local function getUpgradeSpellEvent(): RemoteEvent
+	if upgradeSpellEvent then
+		return upgradeSpellEvent
+	end
+
+	upgradeSpellEvent = ReplicatedStorage:FindFirstChild("UpgradeSpell") :: RemoteEvent?
+	if not upgradeSpellEvent then
+		upgradeSpellEvent = Instance.new("RemoteEvent")
+		upgradeSpellEvent.Name = "UpgradeSpell"
+		upgradeSpellEvent.Parent = ReplicatedStorage
+	end
+
+	return upgradeSpellEvent
+end
+
+local function getUnlockSpellEvent(): RemoteEvent
+	if unlockSpellEvent then
+		return unlockSpellEvent
+	end
+
+	unlockSpellEvent = ReplicatedStorage:FindFirstChild("UnlockSpell") :: RemoteEvent?
+	if not unlockSpellEvent then
+		unlockSpellEvent = Instance.new("RemoteEvent")
+		unlockSpellEvent.Name = "UnlockSpell"
+		unlockSpellEvent.Parent = ReplicatedStorage
+	end
+
+	return unlockSpellEvent
+end
+
+local function getCastSpellEvent(): RemoteEvent
+	if castSpellEvent then
+		return castSpellEvent
+	end
+
+	castSpellEvent = ReplicatedStorage:FindFirstChild("CastSpell") :: RemoteEvent?
+	if not castSpellEvent then
+		castSpellEvent = Instance.new("RemoteEvent")
+		castSpellEvent.Name = "CastSpell"
+		castSpellEvent.Parent = ReplicatedStorage
+	end
+
+	return castSpellEvent
+end
+
+local function getSpellLoadoutUpdatedEvent(): RemoteEvent
+	if spellLoadoutUpdatedEvent then
+		return spellLoadoutUpdatedEvent
+	end
+
+	spellLoadoutUpdatedEvent = ReplicatedStorage:FindFirstChild("SpellLoadoutUpdated") :: RemoteEvent?
+	if not spellLoadoutUpdatedEvent then
+		spellLoadoutUpdatedEvent = Instance.new("RemoteEvent")
+		spellLoadoutUpdatedEvent.Name = "SpellLoadoutUpdated"
+		spellLoadoutUpdatedEvent.Parent = ReplicatedStorage
+	end
+
+	return spellLoadoutUpdatedEvent
+end
+
+local function getSpellCastEffectEvent(): RemoteEvent
+	if spellCastEffectEvent then
+		return spellCastEffectEvent
+	end
+
+	spellCastEffectEvent = ReplicatedStorage:FindFirstChild("SpellCastEffect") :: RemoteEvent?
+	if not spellCastEffectEvent then
+		spellCastEffectEvent = Instance.new("RemoteEvent")
+		spellCastEffectEvent.Name = "SpellCastEffect"
+		spellCastEffectEvent.Parent = ReplicatedStorage
+	end
+
+	return spellCastEffectEvent
+end
+
+local function getEffectiveStats(player: Player, spellId: string): SpellUpgradeConfig.EffectiveSpellStats
+	local level = PlayerDataService.getSpellLevel(player, spellId)
+	return SpellUpgradeConfig.getEffectiveStats(spellId, level)
+end
+
+local function getMonstersFolder(): Folder?
+	return workspace:FindFirstChild("WaveMonsters") :: Folder?
+end
+
+local function getProjectileFolder(): Folder
+	local folder = workspace:FindFirstChild("SpellProjectiles") :: Folder?
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "SpellProjectiles"
+		folder.Parent = workspace
+	end
+	return folder
+end
+
+local function createSparkEmitter(parent: Instance, color: Color3, rate: number, lifetime: NumberRange)
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Name = "SpellSparkles"
+	emitter.Color = ColorSequence.new(color, color:Lerp(Color3.new(1, 1, 1), 0.65))
+	emitter.LightEmission = 1
+	emitter.LightInfluence = 0
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.45),
+		NumberSequenceKeypoint.new(0.5, 0.9),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	emitter.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	emitter.Lifetime = lifetime
+	emitter.Rate = rate
+	emitter.Speed = NumberRange.new(4, 12)
+	emitter.SpreadAngle = Vector2.new(35, 35)
+	emitter.Drag = 2
+	emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	emitter.Parent = parent
+	return emitter
+end
+
+local function decorateProjectile(part: BasePart, stats: SpellUpgradeConfig.EffectiveSpellStats)
+	local glow = Instance.new("Part")
+	glow.Name = "SpellGlow"
+	glow.Size = part.Size * 1.55
+	glow.Material = Enum.Material.Neon
+	glow.Color = stats.projectileColor
+	glow.Transparency = 0.55
+	glow.CanCollide = false
+	glow.Massless = true
+	glow.Anchored = false
+	glow.CFrame = part.CFrame
+	glow.Parent = part
+
+	local glowWeld = Instance.new("WeldConstraint")
+	glowWeld.Part0 = part
+	glowWeld.Part1 = glow
+	glowWeld.Parent = part
+
+	local light = Instance.new("PointLight")
+	light.Color = stats.projectileColor
+	light.Brightness = if stats.isUltimate then 4 else 2.8
+	light.Range = if stats.isUltimate then 20 else 14
+	light.Parent = part
+
+	local frontAttachment = Instance.new("Attachment")
+	frontAttachment.Name = "Front"
+	frontAttachment.Position = Vector3.new(0, 0, -part.Size.Z * 0.45)
+	frontAttachment.Parent = part
+
+	local backAttachment = Instance.new("Attachment")
+	backAttachment.Name = "Back"
+	backAttachment.Position = Vector3.new(0, 0, part.Size.Z * 0.45)
+	backAttachment.Parent = part
+
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = backAttachment
+	trail.Attachment1 = frontAttachment
+	trail.Color = ColorSequence.new(stats.projectileColor, stats.projectileColor:Lerp(Color3.new(1, 1, 1), 0.5))
+	trail.LightEmission = 1
+	trail.Lifetime = if stats.isUltimate then 0.35 else 0.22
+	trail.MinLength = 0.05
+	trail.WidthScale = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	trail.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.15),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	trail.Parent = part
+
+	createSparkEmitter(part, stats.projectileColor, if stats.isUltimate then 70 else 45, NumberRange.new(0.12, 0.28))
+end
+
+local function spawnImpactBurst(position: Vector3, color: Color3)
+	local burst = Instance.new("Part")
+	burst.Name = "SpellImpactBurst"
+	burst.Anchored = true
+	burst.CanCollide = false
+	burst.CanQuery = false
+	burst.CanTouch = false
+	burst.Material = Enum.Material.Neon
+	burst.Color = color
+	burst.Size = Vector3.new(2.4, 2.4, 2.4)
+	burst.Transparency = 0.35
+	burst.CFrame = CFrame.new(position)
+	burst.Parent = getProjectileFolder()
+
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Brightness = 5
+	light.Range = 16
+	light.Parent = burst
+
+	local emitter = createSparkEmitter(burst, color, 120, NumberRange.new(0.2, 0.45))
+	emitter.Speed = NumberRange.new(8, 18)
+	emitter:Emit(24)
+
+	task.delay(0.35, function()
+		emitter.Enabled = false
+		task.delay(0.4, function()
+			burst:Destroy()
+		end)
+	end)
+end
+
+local function spawnNovaBurst(center: Vector3, radius: number, color: Color3, isUltimate: boolean)
+	local ring = Instance.new("Part")
+	ring.Name = "SpellNovaRing"
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.CanQuery = false
+	ring.CanTouch = false
+	ring.Material = Enum.Material.Neon
+	ring.Color = color
+	ring.Size = Vector3.new(radius * 0.35, 0.35, radius * 0.35)
+	ring.Transparency = 0.25
+	ring.CFrame = CFrame.new(center)
+	ring.Parent = getProjectileFolder()
+
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Brightness = if isUltimate then 6 else 4
+	light.Range = radius * 1.2
+	light.Parent = ring
+
+	local emitter = createSparkEmitter(ring, color, 0, NumberRange.new(0.35, 0.7))
+	emitter.Speed = NumberRange.new(radius * 0.35, radius * 0.8)
+	emitter:Emit(if isUltimate then 80 else 48)
+
+	task.spawn(function()
+		local startSize = ring.Size
+		local endSize = Vector3.new(radius * 2.1, 0.2, radius * 2.1)
+		for step = 1, 10 do
+			local alpha = step / 10
+			ring.Size = startSize:Lerp(endSize, alpha)
+			ring.Transparency = 0.25 + alpha * 0.55
+			task.wait(0.03)
+		end
+		ring:Destroy()
+	end)
+end
+
+local function canDamageMonster(monster: Model, player: Player): boolean
+	if monster.Name ~= "WaveMonster" then
+		return false
+	end
+
+	local ownerId = monster:GetAttribute("DungeonOwner")
+	if typeof(ownerId) == "number" and ownerId ~= player.UserId then
+		return false
+	end
+
+	return true
+end
+
+local function applySpellDamage(player: Player, monster: Model, stats: SpellUpgradeConfig.EffectiveSpellStats)
+	local humanoid = monster:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 or not canDamageMonster(monster, player) then
+		return
+	end
+
+	local damage = math.random(stats.damageMin, stats.damageMax)
+	local modifiers = CardService.getModifiers(player)
+	damage = math.max(1, math.floor(damage * modifiers.damageMult))
+	CardService.applyLifesteal(player, damage)
+	humanoid:TakeDamage(damage)
+end
+
+local function flattenLookVector(root: BasePart): Vector3
+	local look = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
+	if look.Magnitude < 0.01 then
+		return Vector3.new(0, 0, -1)
+	end
+	return look.Unit
+end
+
+local function getRandomHorizontalDirection(): Vector3
+	local angle = math.random() * math.pi * 2
+	return Vector3.new(math.cos(angle), 0, math.sin(angle))
+end
+
+local function getMonsterRoot(monster: Model): BasePart?
+	return monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+
+local function findNearestMonsters(player: Player, origin: Vector3, maxRange: number, count: number): { Model }
+	local folder = getMonstersFolder()
+	if not folder then
+		return {}
+	end
+
+	local candidates: { { monster: Model, distance: number } } = {}
+	for _, child in folder:GetChildren() do
+		if child:IsA("Model") and canDamageMonster(child, player) then
+			local root = getMonsterRoot(child)
+			if root then
+				local distance = (root.Position - origin).Magnitude
+				if distance <= maxRange then
+					table.insert(candidates, { monster = child, distance = distance })
+				end
+			end
+		end
+	end
+
+	table.sort(candidates, function(a, b)
+		return a.distance < b.distance
+	end)
+
+	local results: { Model } = {}
+	for index = 1, math.min(count, #candidates) do
+		table.insert(results, candidates[index].monster)
+	end
+	return results
+end
+
+local function spawnProjectile(
+	player: Player,
+	origin: Vector3,
+	direction: Vector3,
+	stats: SpellUpgradeConfig.EffectiveSpellStats
+)
+	if direction.Magnitude < 0.01 or stats.projectileSpeed <= 0 then
+		return
+	end
+
+	local folder = getProjectileFolder()
+	local part = Instance.new("Part")
+	part.Name = "SpellProjectile"
+	part.Size = stats.projectileSize
+	part.Material = Enum.Material.Neon
+	part.Color = stats.projectileColor
+	part.CanCollide = false
+	part.Anchored = false
+	part.Massless = true
+	part.CFrame = CFrame.lookAt(origin, origin + direction)
+	part.Parent = folder
+
+	decorateProjectile(part, stats)
+	part.AssemblyLinearVelocity = direction.Unit * stats.projectileSpeed
+
+	local hitMonsters: { [Model]: boolean } = {}
+	local connection = part.Touched:Connect(function(hit)
+		local monster = hit:FindFirstAncestorOfClass("Model")
+		if not monster or hitMonsters[monster] or not canDamageMonster(monster, player) then
+			return
+		end
+
+		hitMonsters[monster] = true
+		spawnImpactBurst(part.Position, stats.projectileColor)
+		applySpellDamage(player, monster, stats)
+	end)
+
+	task.delay(PROJECTILE_LIFETIME, function()
+		connection:Disconnect()
+		part:Destroy()
+	end)
+end
+
+local function fireRandomProjectiles(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return
+	end
+
+	local count = stats.projectileCount or 1
+	local origin = root.Position + Vector3.new(0, 1.2, 0)
+	for _ = 1, count do
+		spawnProjectile(player, origin, getRandomHorizontalDirection(), stats)
+	end
+end
+
+local function fireForwardProjectiles(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return
+	end
+
+	local direction = flattenLookVector(root)
+	local origin = root.Position + Vector3.new(0, 1.2, 0) + direction * 1.5
+	local count = stats.projectileCount or 1
+	for index = 0, count - 1 do
+		local spread = if count > 1 then math.rad(8 * (index - (count - 1) * 0.5)) else 0
+		local rotated = CFrame.fromAxisAngle(Vector3.yAxis, spread) * direction
+		spawnProjectile(player, origin, rotated, stats)
+	end
+end
+
+local function fireStaticWard(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return
+	end
+
+	local count = stats.projectileCount or 1
+	local targets = findNearestMonsters(player, root.Position, STATIC_WARD_RANGE, count)
+	if #targets == 0 then
+		return
+	end
+
+	local origin = root.Position + Vector3.new(0, 1.2, 0)
+	for _, monster in targets do
+		local monsterRoot = getMonsterRoot(monster)
+		if monsterRoot then
+			local direction = monsterRoot.Position - origin
+			if direction.Magnitude > 0.01 then
+				spawnProjectile(player, origin, direction, stats)
+			end
+		end
+	end
+end
+
+local function castFrostNova(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return
+	end
+
+	local look = flattenLookVector(root)
+	local center = root.Position + look * 5
+	local radius = stats.aoeRadius or 10
+	spawnNovaBurst(center, radius, stats.projectileColor, stats.isUltimate)
+	local folder = getMonstersFolder()
+	if not folder then
+		return
+	end
+
+	for _, monster in folder:GetChildren() do
+		if monster:IsA("Model") then
+			local monsterRoot = getMonsterRoot(monster)
+			if monsterRoot and (monsterRoot.Position - center).Magnitude <= radius then
+				applySpellDamage(player, monster, stats)
+			end
+		end
+	end
+end
+
+local function notifyCastEffect(
+	player: Player,
+	spellId: string,
+	stats: SpellUpgradeConfig.EffectiveSpellStats,
+	kind: string?
+)
+	getSpellCastEffectEvent():FireClient(
+		player,
+		spellId,
+		stats.resolvedName,
+		stats.projectileColor,
+		kind or "cast"
+	)
+end
+
+local function notifyLoadout(player: Player)
+	getSpellLoadoutUpdatedEvent():FireClient(
+		player,
+		PlayerDataService.getEquippedActiveSpell(player),
+		PlayerDataService.getEquippedPassiveSpell(player),
+		GamePhaseService.isLoadoutLocked(player)
+	)
+end
+
+function SpellService.refreshPlayerLoadout(player: Player)
+	if not isPlayerActive(player) then
+		return
+	end
+
+	lastActiveCastAt[player] = nil
+	lastIntervalCastAt[player] = nil
+	notifyLoadout(player)
+end
+
+function SpellService.onPlayerDamaged(player: Player)
+	if not isPlayerActive(player) or not GamePhaseService.isInDungeon(player) then
+		return
+	end
+
+	local now = os.clock()
+	if lastOnHitPassiveAt[player] and now - lastOnHitPassiveAt[player] < ON_HIT_PASSIVE_COOLDOWN then
+		return
+	end
+	lastOnHitPassiveAt[player] = now
+
+	local spellId = PlayerDataService.getEquippedPassiveSpell(player)
+	local base = SpellConfig.getSpell(spellId)
+	if not base or base.kind ~= "Passive" or base.trigger ~= "OnHit" then
+		return
+	end
+
+	local stats = getEffectiveStats(player, spellId)
+	if spellId == "StaticWard" then
+		fireStaticWard(player, stats)
+	else
+		fireRandomProjectiles(player, stats)
+	end
+	notifyCastEffect(player, spellId, stats, "passive")
+end
+
+local function tryCastActiveSpell(player: Player): boolean
+	if not isPlayerActive(player) or not GamePhaseService.isInDungeon(player) then
+		return false
+	end
+
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or humanoid.Health <= 0 then
+		return false
+	end
+
+	local spellId = PlayerDataService.getEquippedActiveSpell(player)
+	if not PlayerDataService.isSpellUnlocked(player, spellId) then
+		return false
+	end
+
+	local stats = getEffectiveStats(player, spellId)
+	local cooldown = stats.cooldown or 2
+	local now = os.clock()
+	local lastCast = lastActiveCastAt[player] or 0
+	if now - lastCast < cooldown then
+		return false
+	end
+
+	lastActiveCastAt[player] = now
+
+	if spellId == "FrostNova" then
+		castFrostNova(player, stats)
+	else
+		fireForwardProjectiles(player, stats)
+	end
+
+	notifyCastEffect(player, spellId, stats)
+	return true
+end
+
+function SpellService.equipPlayerSpell(player: Player, spellId: string): boolean
+	if GamePhaseService.isLoadoutLocked(player) or not SpellConfig.isValid(spellId) then
+		return false
+	end
+
+	local kind = SpellConfig.getKind(spellId)
+	if kind == "Active" then
+		if not PlayerDataService.setEquippedActiveSpell(player, spellId) then
+			return false
+		end
+	elseif kind == "Passive" then
+		if not PlayerDataService.setEquippedPassiveSpell(player, spellId) then
+			return false
+		end
+	else
+		return false
+	end
+
+	notifyLoadout(player)
+	return true
+end
+
+function SpellService.upgradePlayerSpell(player: Player, spellId: string): boolean
+	if not GamePhaseService.isInLobby(player) then
+		return false
+	end
+
+	local ok = PlayerDataService.tryUpgradeSpell(player, spellId)
+	return ok
+end
+
+function SpellService.unlockPlayerSpell(player: Player, spellId: string): boolean
+	if not GamePhaseService.isInLobby(player) then
+		return false
+	end
+
+	local ok = PlayerDataService.tryUnlockSpell(player, spellId)
+	return ok
+end
+
+local function tickPassiveIntervals()
+	for _, player in Players:GetPlayers() do
+		if not isPlayerActive(player) or not GamePhaseService.isInDungeon(player) then
+			continue
+		end
+
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not humanoid or humanoid.Health <= 0 then
+			continue
+		end
+
+		local spellId = PlayerDataService.getEquippedPassiveSpell(player)
+		local base = SpellConfig.getSpell(spellId)
+		if not base or base.trigger ~= "Interval" then
+			continue
+		end
+
+		local stats = getEffectiveStats(player, spellId)
+		local interval = stats.interval or 5
+		local now = os.clock()
+		local lastCast = lastIntervalCastAt[player] or 0
+		if now - lastCast < interval then
+			continue
+		end
+
+		lastIntervalCastAt[player] = now
+		fireForwardProjectiles(player, stats)
+		notifyCastEffect(player, spellId, stats, "passive")
+	end
+end
+
+function SpellService.init()
+	getEquipSpellEvent()
+	getUpgradeSpellEvent()
+	getUnlockSpellEvent()
+	getCastSpellEvent()
+	getSpellLoadoutUpdatedEvent()
+	getSpellCastEffectEvent()
+
+	getEquipSpellEvent().OnServerEvent:Connect(function(player, spellId: string)
+		if typeof(spellId) ~= "string" then
+			return
+		end
+		SpellService.equipPlayerSpell(player, spellId)
+	end)
+
+	getUpgradeSpellEvent().OnServerEvent:Connect(function(player, spellId: string)
+		if typeof(spellId) ~= "string" then
+			return
+		end
+		SpellService.upgradePlayerSpell(player, spellId)
+	end)
+
+	getUnlockSpellEvent().OnServerEvent:Connect(function(player, spellId: string)
+		if typeof(spellId) ~= "string" then
+			return
+		end
+		SpellService.unlockPlayerSpell(player, spellId)
+	end)
+
+	getCastSpellEvent().OnServerEvent:Connect(function(player)
+		tryCastActiveSpell(player)
+	end)
+
+	for _, player in Players:GetPlayers() do
+		notifyLoadout(player)
+	end
+
+	Players.PlayerAdded:Connect(function(player)
+		task.defer(function()
+			if isPlayerActive(player) then
+				notifyLoadout(player)
+			end
+		end)
+	end)
+
+	Players.PlayerRemoving:Connect(function(player)
+		lastActiveCastAt[player] = nil
+		lastOnHitPassiveAt[player] = nil
+		lastIntervalCastAt[player] = nil
+	end)
+
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			tickPassiveIntervals()
+		end
+	end)
+end
+
+return SpellService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="36">
         <Properties>
           <string name="Name">TreasureChestService</string>
           <string name="Source"><![CDATA[local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -4095,7 +5395,7 @@ return TreasureChestService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="33">
+      <Item class="ModuleScript" referent="37">
         <Properties>
           <string name="Name">WaveService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -4124,6 +5424,7 @@ local aiRunning = false
 local walkAnimRunning = false
 local dungeonMode = false
 local monsterDiedCallbacks: { (Model) -> () } = {}
+WaveService.onPlayerDamagedCallback = nil
 
 local WOLF_SCALE = WaveConfig.WOLF_SCALE
 
@@ -4710,6 +6011,10 @@ local function tryDamagePlayerFromAttack(monster: Model, target: Model): boolean
 		local hits = workspace:GetPartBoundsInBox(hitPart.CFrame, hitPart.Size * hitScale, overlapParams)
 		if #hits > 0 then
 			targetHumanoid:TakeDamage(damage)
+			local targetPlayer = Players:GetPlayerFromCharacter(target)
+			if targetPlayer and WaveService.onPlayerDamagedCallback then
+				WaveService.onPlayerDamagedCallback(targetPlayer)
+			end
 			return true
 		end
 	end
@@ -5057,6 +6362,10 @@ function WaveService.onMonsterDied(callback: (Model) -> ())
 	table.insert(monsterDiedCallbacks, callback)
 end
 
+function WaveService.setOnPlayerDamagedCallback(callback: ((Player) -> ())?)
+	WaveService.onPlayerDamagedCallback = callback
+end
+
 function WaveService.spawnDungeonMonsters(
 	roomDepth: number,
 	ownerUserId: number,
@@ -5166,7 +6475,7 @@ return WaveService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="34">
+      <Item class="ModuleScript" referent="38">
         <Properties>
           <string name="Name">WeaponService</string>
           <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -6114,23 +7423,23 @@ return WeaponService
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="35">
+  <Item class="SoundService" referent="39">
     <Properties>
       <string name="Name">SoundService</string>
       <bool name="RespectFilteringEnabled">true</bool>
     </Properties>
   </Item>
-  <Item class="StarterPlayer" referent="36">
+  <Item class="StarterPlayer" referent="40">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <bool name="EnableMouseLockOption">true</bool>
       <bool name="UserEmotesEnabled">false</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="37">
+    <Item class="StarterPlayerScripts" referent="41">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="LocalScript" referent="38">
+      <Item class="LocalScript" referent="42">
         <Properties>
           <string name="Name">Client</string>
           <string name="Source"><![CDATA[local DungeonRunClient = require(script.DungeonRunClient)
@@ -6139,6 +7448,8 @@ local TreasureChestClient = require(script.TreasureChestClient)
 local LobbyHubClient = require(script.LobbyHubClient)
 local WeaponClient = require(script.WeaponClient)
 local WeaponMenuClient = require(script.WeaponMenuClient)
+local SpellMenuClient = require(script.SpellMenuClient)
+local SpellClient = require(script.SpellClient)
 local HealthBarUI = require(script.HealthBarUI)
 local BossHealthBarUI = require(script.BossHealthBarUI)
 local MovementClient = require(script.MovementClient)
@@ -6147,6 +7458,8 @@ WeaponClient.init()
 LobbyHubClient.init()
 BlacksmithDialogueClient.init()
 WeaponMenuClient.init()
+SpellMenuClient.init()
+SpellClient.init()
 HealthBarUI.init()
 BossHealthBarUI.init()
 MovementClient.init()
@@ -6154,7 +7467,7 @@ TreasureChestClient.init()
 DungeonRunClient.init()
 ]]></string>
         </Properties>
-        <Item class="ModuleScript" referent="39">
+        <Item class="ModuleScript" referent="43">
           <Properties>
             <string name="Name">BlacksmithDialogueClient</string>
             <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -6162,7 +7475,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local BlacksmithConfig = require(ReplicatedStorage.Shared.BlacksmithConfig)
+local BobConfig = require(ReplicatedStorage.Shared.BobConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local WeaponMenuClient = require(script.Parent.WeaponMenuClient)
 
 local BlacksmithDialogueClient = {}
 
@@ -6171,6 +7486,11 @@ local PANEL = Color3.fromRGB(24, 18, 16)
 local PANEL_LIGHT = Color3.fromRGB(42, 34, 28)
 local TEXT = Color3.fromRGB(244, 228, 196)
 local TEXT_DIM = Color3.fromRGB(170, 154, 128)
+
+type DialogueNpc = {
+	objectText: string,
+	lines: { string },
+}
 
 function BlacksmithDialogueClient.init()
 	if not LobbyConfig.USE_LOBBY then
@@ -6184,10 +7504,10 @@ function BlacksmithDialogueClient.init()
 	local currentPhase = "Lobby"
 	local dialogueOpen = false
 	local dialogueIndex = 1
-	local dialogueLines = BlacksmithConfig.getDialogueLines()
+	local activeNpc: DialogueNpc? = nil
 
 	local screenGui = Instance.new("ScreenGui")
-	screenGui.Name = "BlacksmithDialogueUI"
+	screenGui.Name = "NpcDialogueUI"
 	screenGui.ResetOnSpawn = false
 	screenGui.Enabled = false
 	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -6216,7 +7536,7 @@ function BlacksmithDialogueClient.init()
 	nameLabel.Position = UDim2.fromOffset(20, 14)
 	nameLabel.Size = UDim2.new(1, -40, 0, 28)
 	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.Text = BlacksmithConfig.PROMPT_OBJECT_TEXT
+	nameLabel.Text = ""
 	nameLabel.TextColor3 = GOLD
 	nameLabel.TextSize = 22
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -6280,23 +7600,28 @@ function BlacksmithDialogueClient.init()
 	leaveCorner.Parent = leaveButton
 
 	local function renderLine()
-		bodyLabel.Text = dialogueLines[dialogueIndex] or ""
-		progressLabel.Text = `{dialogueIndex}/{#dialogueLines}`
-		local onLastLine = dialogueIndex >= #dialogueLines
-		continueButton.Text = if onLastLine then "Done" else "Continue"
-		continueButton.Visible = true
+		if not activeNpc then
+			return
+		end
+
+		nameLabel.Text = activeNpc.objectText
+		bodyLabel.Text = activeNpc.lines[dialogueIndex] or ""
+		progressLabel.Text = `{dialogueIndex}/{#activeNpc.lines}`
+		continueButton.Text = if dialogueIndex >= #activeNpc.lines then "Done" else "Continue"
 	end
 
 	local function closeDialogue()
 		dialogueOpen = false
+		activeNpc = nil
 		screenGui.Enabled = false
 	end
 
-	local function openDialogue()
+	local function openDialogue(npc: DialogueNpc)
 		if currentPhase ~= "Lobby" then
 			return
 		end
 
+		activeNpc = npc
 		dialogueIndex = 1
 		dialogueOpen = true
 		screenGui.Enabled = true
@@ -6304,7 +7629,11 @@ function BlacksmithDialogueClient.init()
 	end
 
 	local function advanceDialogue()
-		if dialogueIndex >= #dialogueLines then
+		if not activeNpc then
+			return
+		end
+
+		if dialogueIndex >= #activeNpc.lines then
 			closeDialogue()
 			return
 		end
@@ -6337,6 +7666,30 @@ function BlacksmithDialogueClient.init()
 		end
 	end)
 
+	local function bindDialogueNpc(model: Model, npc: DialogueNpc)
+		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then
+			return
+		end
+
+		local prompt = root:FindFirstChildOfClass("ProximityPrompt")
+		if not prompt then
+			return
+		end
+
+		prompt.Triggered:Connect(function(triggerPlayer)
+			if triggerPlayer ~= player or currentPhase ~= "Lobby" then
+				return
+			end
+
+			if dialogueOpen and activeNpc == npc then
+				advanceDialogue()
+			else
+				openDialogue(npc)
+			end
+		end)
+	end
+
 	local function bindBlacksmith(model: Model)
 		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not root then
@@ -6353,13 +7706,14 @@ function BlacksmithDialogueClient.init()
 				return
 			end
 
-			if dialogueOpen then
-				advanceDialogue()
-			else
-				openDialogue()
-			end
+			WeaponMenuClient.openToTab("Upgrade")
 		end)
 	end
+
+	local bobNpc: DialogueNpc = {
+		objectText = BobConfig.PROMPT_OBJECT_TEXT,
+		lines = BobConfig.getDialogueLines(),
+	}
 
 	task.spawn(function()
 		local lobby = workspace:WaitForChild("Lobby", 30)
@@ -6367,16 +7721,23 @@ function BlacksmithDialogueClient.init()
 			return
 		end
 
-		local existing = lobby:FindFirstChild("Blacksmith")
-		if existing and existing:IsA("Model") then
-			bindBlacksmith(existing)
+		local function tryBind(child: Instance)
+			if not child:IsA("Model") then
+				return
+			end
+
+			if child.Name == "Blacksmith" then
+				bindBlacksmith(child)
+			elseif child.Name == "Bob" then
+				bindDialogueNpc(child, bobNpc)
+			end
 		end
 
-		lobby.ChildAdded:Connect(function(child)
-			if child.Name == "Blacksmith" and child:IsA("Model") then
-				bindBlacksmith(child)
-			end
-		end)
+		for _, child in lobby:GetChildren() do
+			tryBind(child)
+		end
+
+		lobby.ChildAdded:Connect(tryBind)
 	end)
 end
 
@@ -6384,7 +7745,7 @@ return BlacksmithDialogueClient
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="40">
+        <Item class="ModuleScript" referent="44">
           <Properties>
             <string name="Name">BossHealthBarUI</string>
             <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -6694,7 +8055,7 @@ return BossHealthBarUI
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="41">
+        <Item class="ModuleScript" referent="45">
           <Properties>
             <string name="Name">DungeonRunClient</string>
             <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -6924,7 +8285,7 @@ return DungeonRunClient
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="42">
+        <Item class="ModuleScript" referent="46">
           <Properties>
             <string name="Name">HealthBarUI</string>
             <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -7454,7 +8815,7 @@ return HealthBarUI
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="43">
+        <Item class="ModuleScript" referent="47">
           <Properties>
             <string name="Name">LobbyHubClient</string>
             <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -7515,8 +8876,8 @@ function LobbyHubClient.init()
 
 	local hintFrame = Instance.new("Frame")
 	hintFrame.Name = "LobbyHint"
-	hintFrame.Size = UDim2.fromOffset(420, 72)
-	hintFrame.Position = UDim2.new(0.5, -210, 1, -92)
+	hintFrame.Size = UDim2.fromOffset(460, 72)
+	hintFrame.Position = UDim2.new(0.5, -230, 1, -150)
 	hintFrame.BackgroundColor3 = PANEL
 	hintFrame.BorderSizePixel = 0
 	hintFrame.Parent = screenGui
@@ -7534,7 +8895,7 @@ function LobbyHubClient.init()
 	hintLabel.BackgroundTransparency = 1
 	hintLabel.Size = UDim2.fromScale(1, 1)
 	hintLabel.Font = Enum.Font.Gotham
-	hintLabel.Text = "Talk to Harold at the forge for dungeon tips.\nOpen Weapons to equip and upgrade. Stand on the green gate to enter."
+	hintLabel.Text = "Talk to Bob for dungeon tips.\nUpgrade weapons and spells from the lobby menus. Stand on the green gate to enter."
 	hintLabel.TextColor3 = TEXT
 	hintLabel.TextSize = 16
 	hintLabel.TextWrapped = true
@@ -7572,7 +8933,7 @@ return LobbyHubClient
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="44">
+        <Item class="ModuleScript" referent="48">
           <Properties>
             <string name="Name">MovementClient</string>
             <string name="Source"><![CDATA[local ContextActionService = game:GetService("ContextActionService")
@@ -7944,7 +9305,722 @@ return MovementClient
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="45">
+        <Item class="ModuleScript" referent="49">
+          <Properties>
+            <string name="Name">SpellClient</string>
+            <string name="Source"><![CDATA[local ContextActionService = game:GetService("ContextActionService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
+local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
+
+local SpellClient = {}
+
+local CAST_ACTION = "CastEquippedSpell"
+
+function SpellClient.init()
+	local player = Players.LocalPlayer
+	local playerGui = player:WaitForChild("PlayerGui")
+	local castSpellEvent = ReplicatedStorage:WaitForChild("CastSpell") :: RemoteEvent
+	local spellCastEffectEvent = ReplicatedStorage:WaitForChild("SpellCastEffect") :: RemoteEvent
+	local spellLoadoutUpdatedEvent = ReplicatedStorage:WaitForChild("SpellLoadoutUpdated") :: RemoteEvent
+	local profileStateEvent = ReplicatedStorage:WaitForChild("PlayerProfileState") :: RemoteEvent
+	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
+
+	local inDungeon = false
+	local castBound = false
+	local equippedActiveSpell = SpellConfig.DEFAULT_ACTIVE
+	local equippedPassiveSpell = SpellConfig.DEFAULT_PASSIVE
+	local spellLevels: { [string]: number } = {}
+
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "SpellCombatUI"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = playerGui
+
+	local castHud = Instance.new("Frame")
+	castHud.Name = "CastHud"
+	castHud.AnchorPoint = Vector2.new(0, 1)
+	castHud.Position = UDim2.new(0, 16, 1, -78)
+	castHud.Size = UDim2.fromOffset(250, 58)
+	castHud.BackgroundColor3 = Color3.fromRGB(24, 18, 34)
+	castHud.BackgroundTransparency = 0.12
+	castHud.BorderSizePixel = 0
+	castHud.Visible = false
+	castHud.Parent = screenGui
+
+	local castHudCorner = Instance.new("UICorner")
+	castHudCorner.CornerRadius = UDim.new(0, 10)
+	castHudCorner.Parent = castHud
+
+	local castHudStroke = Instance.new("UIStroke")
+	castHudStroke.Color = Color3.fromRGB(160, 96, 255)
+	castHudStroke.Thickness = 2
+	castHudStroke.Parent = castHud
+
+	local castNameLabel = Instance.new("TextLabel")
+	castNameLabel.BackgroundTransparency = 1
+	castNameLabel.Position = UDim2.fromOffset(12, 8)
+	castNameLabel.Size = UDim2.new(1, -24, 0, 22)
+	castNameLabel.Font = Enum.Font.GothamBold
+	castNameLabel.Text = "Firebolt"
+	castNameLabel.TextColor3 = Color3.fromRGB(255, 220, 160)
+	castNameLabel.TextSize = 18
+	castNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	castNameLabel.Parent = castHud
+
+	local castHintLabel = Instance.new("TextLabel")
+	castHintLabel.BackgroundTransparency = 1
+	castHintLabel.Position = UDim2.fromOffset(12, 30)
+	castHintLabel.Size = UDim2.new(1, -24, 0, 18)
+	castHintLabel.Font = Enum.Font.Gotham
+	castHintLabel.Text = "Press E to cast active spell"
+	castHintLabel.TextColor3 = Color3.fromRGB(196, 180, 220)
+	castHintLabel.TextSize = 14
+	castHintLabel.TextXAlignment = Enum.TextXAlignment.Left
+	castHintLabel.Parent = castHud
+
+	local procBanner = Instance.new("TextLabel")
+	procBanner.Name = "PassiveProcBanner"
+	procBanner.AnchorPoint = Vector2.new(1, 1)
+	procBanner.Position = UDim2.new(1, -16, 1, -78)
+	procBanner.Size = UDim2.fromOffset(280, 42)
+	procBanner.BackgroundColor3 = Color3.fromRGB(28, 22, 18)
+	procBanner.BackgroundTransparency = 0.18
+	procBanner.BorderSizePixel = 0
+	procBanner.Font = Enum.Font.GothamBold
+	procBanner.Text = ""
+	procBanner.TextColor3 = Color3.fromRGB(255, 240, 180)
+	procBanner.TextSize = 16
+	procBanner.TextTransparency = 1
+	procBanner.Visible = false
+	procBanner.Parent = screenGui
+
+	local procCorner = Instance.new("UICorner")
+	procCorner.CornerRadius = UDim.new(0, 10)
+	procCorner.Parent = procBanner
+
+	local procStroke = Instance.new("UIStroke")
+	procStroke.Color = Color3.fromRGB(214, 176, 72)
+	procStroke.Thickness = 2
+	procStroke.Transparency = 1
+	procStroke.Parent = procBanner
+
+	local function updateCastHud()
+		local level = spellLevels[equippedActiveSpell] or 1
+		local stats = SpellUpgradeConfig.getEffectiveStats(equippedActiveSpell, level)
+		castNameLabel.Text = stats.resolvedName
+		castHudStroke.Color = stats.projectileColor
+		castHud.Visible = inDungeon
+	end
+
+	local function showCastFlash(color: Color3, kind: string?)
+		local flash = Instance.new("Frame")
+		flash.Name = "SpellCastFlash"
+		flash.BackgroundColor3 = color
+		flash.BackgroundTransparency = if kind == "passive" then 0.9 else 0.78
+		flash.BorderSizePixel = 0
+		flash.Size = UDim2.fromScale(1, 1)
+		flash.ZIndex = 20
+		flash.Parent = screenGui
+
+		local ring = Instance.new("Frame")
+		ring.AnchorPoint = Vector2.new(0.5, 0.5)
+		ring.Position = UDim2.fromScale(0.5, 0.55)
+		ring.Size = UDim2.fromOffset(if kind == "passive" then 120 else 220, if kind == "passive" then 120 else 220)
+		ring.BackgroundTransparency = 1
+		ring.ZIndex = 21
+		ring.Parent = flash
+
+		local ringStroke = Instance.new("UIStroke")
+		ringStroke.Color = color
+		ringStroke.Thickness = if kind == "passive" then 4 else 8
+		ringStroke.Transparency = 0.15
+		ringStroke.Parent = ring
+
+		local ringCorner = Instance.new("UICorner")
+		ringCorner.CornerRadius = UDim.new(1, 0)
+		ringCorner.Parent = ring
+
+		TweenService:Create(ring, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.fromOffset(if kind == "passive" then 220 else 420, if kind == "passive" then 220 else 420),
+		}):Play()
+		TweenService:Create(ringStroke, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Transparency = 1,
+		}):Play()
+		TweenService:Create(flash, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 1,
+		}):Play()
+
+		task.delay(0.3, function()
+			flash:Destroy()
+		end)
+	end
+
+	local function showCharacterCastBurst(color: Color3, kind: string?)
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then
+			return
+		end
+
+		local anchor = Instance.new("Part")
+		anchor.Name = "SpellCastAnchor"
+		anchor.Anchored = true
+		anchor.CanCollide = false
+		anchor.CanQuery = false
+		anchor.CanTouch = false
+		anchor.Transparency = 1
+		anchor.Size = Vector3.new(1, 1, 1)
+		anchor.CFrame = root.CFrame * CFrame.new(0, 1.2, -1.5)
+		anchor.Parent = workspace
+
+		local core = Instance.new("Part")
+		core.Name = "SpellCastCore"
+		core.Anchored = true
+		core.CanCollide = false
+		core.CanQuery = false
+		core.CanTouch = false
+		core.Material = Enum.Material.Neon
+		core.Color = color
+		core.Size = Vector3.new(if kind == "passive" then 2.2 else 3.6, if kind == "passive" then 2.2 else 3.6, if kind == "passive" then 2.2 else 3.6)
+		core.Transparency = 0.2
+		core.CFrame = anchor.CFrame
+		core.Parent = anchor
+
+		local light = Instance.new("PointLight")
+		light.Color = color
+		light.Brightness = if kind == "passive" then 4 else 7
+		light.Range = if kind == "passive" then 14 else 22
+		light.Parent = core
+
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+		emitter.LightEmission = 1
+		emitter.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.8),
+			NumberSequenceKeypoint.new(1, 0),
+		})
+		emitter.Lifetime = NumberRange.new(0.25, 0.55)
+		emitter.Speed = NumberRange.new(8, 18)
+		emitter.SpreadAngle = Vector2.new(180, 180)
+		emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		emitter.Parent = core
+		emitter:Emit(if kind == "passive" then 24 else 48)
+
+		task.delay(0.45, function()
+			anchor:Destroy()
+		end)
+	end
+
+	local function showPassiveBanner(spellName: string, color: Color3)
+		procBanner.Text = `{spellName} triggered!`
+		procBanner.TextColor3 = color:Lerp(Color3.new(1, 1, 1), 0.35)
+		procBanner.Visible = true
+		procBanner.TextTransparency = 0
+		procStroke.Color = color
+		procStroke.Transparency = 0.1
+
+		task.delay(0.9, function()
+			TweenService:Create(procBanner, TweenInfo.new(0.25), { TextTransparency = 1 }):Play()
+			TweenService:Create(procStroke, TweenInfo.new(0.25), { Transparency = 1 }):Play()
+			task.delay(0.25, function()
+				procBanner.Visible = false
+			end)
+		end)
+	end
+
+	local function onCastAction(_actionName: string, inputState: Enum.UserInputState)
+		if inputState ~= Enum.UserInputState.Begin or not inDungeon then
+			return Enum.ContextActionResult.Pass
+		end
+
+		castSpellEvent:FireServer()
+		return Enum.ContextActionResult.Sink
+	end
+
+	local function setCastBinding(enabled: boolean)
+		if enabled and not castBound then
+			ContextActionService:BindAction(CAST_ACTION, onCastAction, false, Enum.KeyCode.E)
+			castBound = true
+		elseif not enabled and castBound then
+			ContextActionService:UnbindAction(CAST_ACTION)
+			castBound = false
+		end
+	end
+
+	spellLoadoutUpdatedEvent.OnClientEvent:Connect(function(activeSpellId: string, passiveSpellId: string)
+		if typeof(activeSpellId) == "string" then
+			equippedActiveSpell = activeSpellId
+		end
+		if typeof(passiveSpellId) == "string" then
+			equippedPassiveSpell = passiveSpellId
+		end
+		updateCastHud()
+	end)
+
+	phaseStateEvent.OnClientEvent:Connect(function(phase: string)
+		inDungeon = phase == "Dungeon"
+		setCastBinding(inDungeon)
+		updateCastHud()
+	end)
+
+	spellCastEffectEvent.OnClientEvent:Connect(function(_spellId: string, spellName: string, color: Color3, kind: string?)
+		if typeof(color) ~= "Color3" then
+			return
+		end
+
+		local effectKind = if typeof(kind) == "string" then kind else "cast"
+		showCastFlash(color, effectKind)
+		showCharacterCastBurst(color, effectKind)
+		if effectKind == "passive" and typeof(spellName) == "string" then
+			showPassiveBanner(spellName, color)
+		end
+	end)
+
+	player:GetAttributeChangedSignal("GamePhase"):Connect(function()
+		local phase = player:GetAttribute("GamePhase")
+		inDungeon = phase == "Dungeon"
+		setCastBinding(inDungeon)
+		updateCastHud()
+	end)
+
+	local initialPhase = player:GetAttribute("GamePhase")
+	if initialPhase == "Dungeon" then
+		inDungeon = true
+		setCastBinding(true)
+	end
+
+	updateCastHud()
+end
+
+return SpellClient
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="50">
+          <Properties>
+            <string name="Name">SpellMenuClient</string>
+            <string name="Source"><![CDATA[local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
+local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
+
+local SpellMenuClient = {}
+
+local GOLD = Color3.fromRGB(214, 176, 72)
+local GOLD_DIM = Color3.fromRGB(140, 108, 42)
+local PANEL = Color3.fromRGB(24, 20, 34)
+local PANEL_LIGHT = Color3.fromRGB(42, 34, 52)
+local TEXT = Color3.fromRGB(244, 228, 196)
+local TEXT_DIM = Color3.fromRGB(170, 154, 128)
+local LOCKED = Color3.fromRGB(110, 110, 110)
+local ACCENT = Color3.fromRGB(96, 58, 148)
+local ACTIVE_BADGE = Color3.fromRGB(255, 120, 48)
+local PASSIVE_BADGE = Color3.fromRGB(120, 180, 255)
+
+function SpellMenuClient.init()
+	local player = Players.LocalPlayer
+	local playerGui = player:WaitForChild("PlayerGui")
+
+	local equipSpellEvent = ReplicatedStorage:WaitForChild("EquipSpell") :: RemoteEvent
+	local upgradeSpellEvent = ReplicatedStorage:WaitForChild("UpgradeSpell") :: RemoteEvent
+	local unlockSpellEvent = ReplicatedStorage:WaitForChild("UnlockSpell") :: RemoteEvent
+	local spellLoadoutUpdatedEvent = ReplicatedStorage:WaitForChild("SpellLoadoutUpdated") :: RemoteEvent
+	local profileStateEvent = ReplicatedStorage:WaitForChild("PlayerProfileState") :: RemoteEvent
+	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
+
+	local equippedActiveSpell = SpellConfig.DEFAULT_ACTIVE
+	local equippedPassiveSpell = SpellConfig.DEFAULT_PASSIVE
+	local loadoutLocked = false
+	local menuOpen = false
+	local activeTab = "Equip"
+	local walletGold = LobbyConfig.STARTER_GOLD
+	local spellLevels: { [string]: number } = {}
+	local unlockedSpells: { [string]: boolean } = {
+		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
+		[LobbyConfig.STARTER_PASSIVE_SPELL] = true,
+	}
+	local currentPhase = "Lobby"
+
+	for _, spell in SpellConfig.getSpellList() do
+		spellLevels[spell.id] = 1
+	end
+
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "SpellMenuUI"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = playerGui
+
+	local menuButton = Instance.new("TextButton")
+	menuButton.Name = "SpellsButton"
+	menuButton.AnchorPoint = Vector2.new(0, 1)
+	menuButton.Size = UDim2.fromOffset(220, 52)
+	menuButton.Position = UDim2.new(0.5, 6, 1, -12)
+	menuButton.BackgroundColor3 = ACCENT
+	menuButton.BorderSizePixel = 0
+	menuButton.Font = Enum.Font.GothamBold
+	menuButton.Text = "Spells"
+	menuButton.TextColor3 = Color3.new(1, 1, 1)
+	menuButton.TextSize = 22
+	menuButton.Parent = screenGui
+
+	local menuCorner = Instance.new("UICorner")
+	menuCorner.CornerRadius = UDim.new(0, 10)
+	menuCorner.Parent = menuButton
+
+	local panel = Instance.new("Frame")
+	panel.Name = "SpellPanel"
+	panel.AnchorPoint = Vector2.new(0.5, 1)
+	panel.Position = UDim2.new(0.5, 0, 1, -70)
+	panel.Size = UDim2.fromOffset(360, 360)
+	panel.BackgroundColor3 = PANEL
+	panel.BorderSizePixel = 0
+	panel.Visible = false
+	panel.Parent = screenGui
+
+	local panelCorner = Instance.new("UICorner")
+	panelCorner.CornerRadius = UDim.new(0, 12)
+	panelCorner.Parent = panel
+
+	local title = Instance.new("TextLabel")
+	title.BackgroundTransparency = 1
+	title.Position = UDim2.fromOffset(16, 12)
+	title.Size = UDim2.new(1, -32, 0, 28)
+	title.Font = Enum.Font.GothamBold
+	title.Text = "Spellbook"
+	title.TextColor3 = GOLD
+	title.TextSize = 22
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Parent = panel
+
+	local statusLabel = Instance.new("TextLabel")
+	statusLabel.BackgroundTransparency = 1
+	statusLabel.Position = UDim2.fromOffset(16, 40)
+	statusLabel.Size = UDim2.new(1, -32, 0, 48)
+	statusLabel.Font = Enum.Font.Gotham
+	statusLabel.Text = "Equip and upgrade spells in the lobby."
+	statusLabel.TextColor3 = TEXT
+	statusLabel.TextSize = 14
+	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+	statusLabel.TextWrapped = true
+	statusLabel.Parent = panel
+
+	local tabBar = Instance.new("Frame")
+	tabBar.BackgroundTransparency = 1
+	tabBar.Position = UDim2.fromOffset(16, 90)
+	tabBar.Size = UDim2.new(1, -32, 0, 34)
+	tabBar.Parent = panel
+
+	local tabLayout = Instance.new("UIListLayout")
+	tabLayout.FillDirection = Enum.FillDirection.Horizontal
+	tabLayout.Padding = UDim.new(0, 8)
+	tabLayout.Parent = tabBar
+
+	local equipTab = Instance.new("TextButton")
+	equipTab.Size = UDim2.fromOffset(120, 32)
+	equipTab.BackgroundColor3 = GOLD_DIM
+	equipTab.BorderSizePixel = 0
+	equipTab.Font = Enum.Font.GothamBold
+	equipTab.Text = "Equip"
+	equipTab.TextColor3 = TEXT
+	equipTab.TextSize = 15
+	equipTab.Parent = tabBar
+
+	local upgradeTab = Instance.new("TextButton")
+	upgradeTab.Size = UDim2.fromOffset(120, 32)
+	upgradeTab.BackgroundColor3 = PANEL_LIGHT
+	upgradeTab.BorderSizePixel = 0
+	upgradeTab.Font = Enum.Font.GothamBold
+	upgradeTab.Text = "Upgrade"
+	upgradeTab.TextColor3 = TEXT
+	upgradeTab.TextSize = 15
+	upgradeTab.Parent = tabBar
+
+	for _, tab in { equipTab, upgradeTab } do
+		local tabCorner = Instance.new("UICorner")
+		tabCorner.CornerRadius = UDim.new(0, 8)
+		tabCorner.Parent = tab
+	end
+
+	local list = Instance.new("ScrollingFrame")
+	list.Name = "SpellList"
+	list.BackgroundTransparency = 1
+	list.BorderSizePixel = 0
+	list.Position = UDim2.fromOffset(16, 132)
+	list.Size = UDim2.new(1, -32, 1, -148)
+	list.CanvasSize = UDim2.fromOffset(0, 0)
+	list.ScrollBarThickness = 6
+	list.Parent = panel
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 10)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = list
+
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 8)
+	end)
+
+	local spellButtons: { [string]: TextButton } = {}
+
+	local function getEffectiveDisplayStats(spellId: string)
+		local level = spellLevels[spellId] or 1
+		return SpellUpgradeConfig.getEffectiveStats(spellId, level)
+	end
+
+	local function getKindLabel(spellId: string): string
+		local kind = SpellConfig.getKind(spellId)
+		return if kind == "Active" then "[Active - E]" else "[Passive]"
+	end
+
+	local function updateSpellButtons()
+		for spellId, button in spellButtons do
+			local stats = getEffectiveDisplayStats(spellId)
+			local level = spellLevels[spellId] or 1
+			local unlocked = unlockedSpells[spellId] == true
+			local isActive = SpellConfig.getKind(spellId) == "Active"
+			local equipped = if isActive
+				then spellId == equippedActiveSpell
+				else spellId == equippedPassiveSpell
+			local ultimateTag = if stats.isUltimate then "  ULT" else ""
+			local kindLabel = getKindLabel(spellId)
+
+			if activeTab == "Equip" then
+				if unlocked then
+					local detail = if stats.cooldown
+						then `{stats.damageMin}-{stats.damageMax} dmg  |  {stats.cooldown}s`
+						elseif stats.interval then `{stats.damageMin}-{stats.damageMax} dmg  |  every {stats.interval}s`
+						else `{stats.damageMin}-{stats.damageMax} dmg`
+					button.Text =
+						`{stats.resolvedName}{ultimateTag}  Lv {level}\n{kindLabel}  {detail}`
+					button.BackgroundColor3 = if equipped then GOLD_DIM else PANEL_LIGHT
+					button.TextColor3 = if loadoutLocked then LOCKED else TEXT
+					button.AutoButtonColor = not loadoutLocked
+				else
+					local cost = SpellUpgradeConfig.getUnlockCost(spellId)
+					button.Text = `{stats.displayName}  LOCKED\n{kindLabel}  Unlock for {cost} gold`
+					button.BackgroundColor3 = PANEL_LIGHT
+					button.TextColor3 = if walletGold >= cost and not loadoutLocked then GOLD else LOCKED
+					button.AutoButtonColor = walletGold >= cost and not loadoutLocked
+				end
+			else
+				if unlocked then
+					local cost = SpellUpgradeConfig.getUpgradeCost(spellId, level)
+					if level >= SpellUpgradeConfig.MAX_LEVEL then
+						button.Text =
+							`{stats.resolvedName}{ultimateTag}  Lv {level} MAX\n{kindLabel}  {stats.damageMin}-{stats.damageMax} dmg`
+						button.BackgroundColor3 = GOLD_DIM
+						button.TextColor3 = TEXT
+						button.AutoButtonColor = false
+					elseif level >= SpellUpgradeConfig.ULTIMATE_LEVEL - 1 and level < SpellUpgradeConfig.ULTIMATE_LEVEL then
+						button.Text =
+							`{stats.displayName}  Lv {level} -> ULTIMATE\nUpgrade for {cost} gold`
+						button.BackgroundColor3 = PANEL_LIGHT
+						button.TextColor3 = if walletGold >= cost and not loadoutLocked then GOLD else LOCKED
+						button.AutoButtonColor = walletGold >= cost and not loadoutLocked
+					else
+						button.Text = `{stats.displayName}  Lv {level} -> {level + 1}\nUpgrade for {cost} gold`
+						button.BackgroundColor3 = PANEL_LIGHT
+						button.TextColor3 = if walletGold >= cost and not loadoutLocked then TEXT else LOCKED
+						button.AutoButtonColor = walletGold >= cost and not loadoutLocked
+					end
+				else
+					local cost = SpellUpgradeConfig.getUnlockCost(spellId)
+					button.Text = `{stats.displayName}  LOCKED\nUnlock for {cost} gold`
+					button.BackgroundColor3 = PANEL_LIGHT
+					button.TextColor3 = if walletGold >= cost and not loadoutLocked then GOLD else LOCKED
+					button.AutoButtonColor = walletGold >= cost and not loadoutLocked
+				end
+			end
+		end
+	end
+
+	local function updateMenuState()
+		local inLobby = currentPhase == "Lobby"
+		menuButton.Visible = inLobby or not LobbyConfig.USE_LOBBY
+		menuButton.BackgroundColor3 = if loadoutLocked or not inLobby then LOCKED else ACCENT
+		menuButton.AutoButtonColor = not loadoutLocked and inLobby
+
+		equipTab.BackgroundColor3 = if activeTab == "Equip" then GOLD_DIM else PANEL_LIGHT
+		upgradeTab.BackgroundColor3 = if activeTab == "Upgrade" then GOLD_DIM else PANEL_LIGHT
+
+		local activeStats = getEffectiveDisplayStats(equippedActiveSpell)
+		local passiveStats = getEffectiveDisplayStats(equippedPassiveSpell)
+
+		if loadoutLocked or not inLobby then
+			statusLabel.Text = "Spell loadout locked during a dungeon run."
+		elseif activeTab == "Equip" then
+			statusLabel.Text =
+				`Active: {activeStats.resolvedName} (E)  |  Passive: {passiveStats.resolvedName}\nGold: {walletGold}`
+		else
+			statusLabel.Text =
+				`Ultimates unlock at level {SpellUpgradeConfig.ULTIMATE_LEVEL}. Wallet: {walletGold}`
+		end
+
+		updateSpellButtons()
+	end
+
+	for index, stats in SpellConfig.getSpellList() do
+		local button = Instance.new("TextButton")
+		button.Size = UDim2.new(1, -4, 0, 78)
+		button.BackgroundColor3 = PANEL_LIGHT
+		button.BorderSizePixel = 0
+		button.Font = Enum.Font.GothamBold
+		button.TextSize = 15
+		button.TextWrapped = true
+		button.LayoutOrder = index
+		button.Parent = list
+
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 8)
+		corner.Parent = button
+
+		local badge = Instance.new("Frame")
+		badge.Size = UDim2.fromOffset(6, 78)
+		badge.BorderSizePixel = 0
+		badge.BackgroundColor3 = if stats.kind == "Active" then ACTIVE_BADGE else PASSIVE_BADGE
+		badge.Parent = button
+
+		local badgeCorner = Instance.new("UICorner")
+		badgeCorner.CornerRadius = UDim.new(0, 8)
+		badgeCorner.Parent = badge
+
+		button.MouseButton1Click:Connect(function()
+			if loadoutLocked or currentPhase ~= "Lobby" then
+				return
+			end
+
+			local unlocked = unlockedSpells[stats.id] == true
+			if activeTab == "Equip" then
+				if unlocked then
+					equipSpellEvent:FireServer(stats.id)
+				else
+					unlockSpellEvent:FireServer(stats.id)
+				end
+			else
+				if unlocked then
+					upgradeSpellEvent:FireServer(stats.id)
+				else
+					unlockSpellEvent:FireServer(stats.id)
+				end
+			end
+		end)
+
+		spellButtons[stats.id] = button
+	end
+
+	equipTab.MouseButton1Click:Connect(function()
+		activeTab = "Equip"
+		updateMenuState()
+	end)
+
+	upgradeTab.MouseButton1Click:Connect(function()
+		activeTab = "Upgrade"
+		updateMenuState()
+	end)
+
+	menuButton.MouseButton1Click:Connect(function()
+		if loadoutLocked or currentPhase ~= "Lobby" then
+			menuOpen = false
+			panel.Visible = false
+			return
+		end
+
+		menuOpen = not menuOpen
+		panel.Visible = menuOpen
+	end)
+
+	spellLoadoutUpdatedEvent.OnClientEvent:Connect(function(activeSpellId: string, passiveSpellId: string, locked: boolean)
+		if typeof(activeSpellId) == "string" then
+			equippedActiveSpell = activeSpellId
+		end
+		if typeof(passiveSpellId) == "string" then
+			equippedPassiveSpell = passiveSpellId
+		end
+		loadoutLocked = locked == true
+		if locked then
+			menuOpen = false
+			panel.Visible = false
+		end
+		updateMenuState()
+	end)
+
+	profileStateEvent.OnClientEvent:Connect(function(snapshot)
+		if typeof(snapshot) ~= "table" then
+			return
+		end
+
+		if typeof(snapshot.gold) == "number" then
+			walletGold = snapshot.gold
+		end
+		if typeof(snapshot.equippedActiveSpell) == "string" then
+			equippedActiveSpell = snapshot.equippedActiveSpell
+		end
+		if typeof(snapshot.equippedPassiveSpell) == "string" then
+			equippedPassiveSpell = snapshot.equippedPassiveSpell
+		end
+		if typeof(snapshot.spellLevels) == "table" then
+			for spellId, level in snapshot.spellLevels do
+				if typeof(level) == "number" then
+					spellLevels[spellId] = level
+				end
+			end
+		end
+		if typeof(snapshot.unlockedSpells) == "table" then
+			for spellId, unlocked in snapshot.unlockedSpells do
+				if typeof(unlocked) == "boolean" then
+					unlockedSpells[spellId] = unlocked
+				end
+			end
+		end
+
+		updateMenuState()
+	end)
+
+	phaseStateEvent.OnClientEvent:Connect(function(phase: string)
+		if phase == "Lobby" or phase == "Dungeon" then
+			currentPhase = phase
+			if phase == "Dungeon" then
+				menuOpen = false
+				panel.Visible = false
+			end
+			updateMenuState()
+		end
+	end)
+
+	SpellMenuClient._openToTab = function(tab: string)
+		if loadoutLocked or currentPhase ~= "Lobby" then
+			return
+		end
+
+		if tab == "Equip" or tab == "Upgrade" then
+			activeTab = tab
+		end
+
+		menuOpen = true
+		panel.Visible = true
+		updateMenuState()
+	end
+
+	updateMenuState()
+end
+
+function SpellMenuClient.openToTab(tab: string)
+	if SpellMenuClient._openToTab then
+		SpellMenuClient._openToTab(tab)
+	end
+end
+
+return SpellMenuClient
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="51">
           <Properties>
             <string name="Name">TreasureChestClient</string>
             <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -8251,7 +10327,7 @@ return TreasureChestClient
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="46">
+        <Item class="ModuleScript" referent="52">
           <Properties>
             <string name="Name">TreasureChestPreview</string>
             <string name="Source"><![CDATA[local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8354,7 +10430,7 @@ return TreasureChestPreview
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="47">
+        <Item class="ModuleScript" referent="53">
           <Properties>
             <string name="Name">WeaponClient</string>
             <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -8665,7 +10741,7 @@ return WeaponClient
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="48">
+        <Item class="ModuleScript" referent="54">
           <Properties>
             <string name="Name">WeaponMenuClient</string>
             <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -8731,8 +10807,9 @@ function WeaponMenuClient.init()
 
 	local menuButton = Instance.new("TextButton")
 	menuButton.Name = "WeaponsButton"
+	menuButton.AnchorPoint = Vector2.new(1, 1)
 	menuButton.Size = UDim2.fromOffset(220, 52)
-	menuButton.Position = UDim2.new(0.5, -110, 0, 76)
+	menuButton.Position = UDim2.new(0.5, -6, 1, -12)
 	menuButton.BackgroundColor3 = ACCENT
 	menuButton.BorderSizePixel = 0
 	menuButton.Font = Enum.Font.GothamBold
@@ -8747,8 +10824,8 @@ function WeaponMenuClient.init()
 
 	local panel = Instance.new("Frame")
 	panel.Name = "WeaponPanel"
-	panel.AnchorPoint = Vector2.new(0.5, 0)
-	panel.Position = UDim2.new(0.5, 0, 0, 136)
+	panel.AnchorPoint = Vector2.new(0.5, 1)
+	panel.Position = UDim2.new(0.5, 0, 1, -70)
 	panel.Size = UDim2.fromOffset(360, 360)
 	panel.BackgroundColor3 = PANEL
 	panel.BorderSizePixel = 0
@@ -9190,7 +11267,27 @@ function WeaponMenuClient.init()
 		updateMenuState()
 	end)
 
+	WeaponMenuClient._openToTab = function(tab: string)
+		if loadoutLocked or currentPhase ~= "Lobby" then
+			return
+		end
+
+		if tab == "Equip" or tab == "Upgrade" or tab == "Chests" then
+			activeTab = tab
+		end
+
+		menuOpen = true
+		panel.Visible = true
+		updateMenuState()
+	end
+
 	updateMenuState()
+end
+
+function WeaponMenuClient.openToTab(tab: string)
+	if WeaponMenuClient._openToTab then
+		WeaponMenuClient._openToTab(tab)
+	end
 end
 
 return WeaponMenuClient
@@ -9200,13 +11297,13 @@ return WeaponMenuClient
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="49">
+  <Item class="Workspace" referent="55">
     <Properties>
       <string name="Name">Workspace</string>
       <bool name="FilteringEnabled">true</bool>
       <bool name="NeedsPivotMigration">false</bool>
     </Properties>
-    <Item class="Part" referent="50">
+    <Item class="Part" referent="56">
       <Properties>
         <string name="Name">Baseplate</string>
         <bool name="Anchored">true</bool>
@@ -9224,7 +11321,7 @@ return WeaponMenuClient
           <Z>512</Z>
         </Vector3>
       </Properties>
-      <Item class="Texture" referent="51">
+      <Item class="Texture" referent="57">
         <Properties>
           <string name="Name">LavaTop</string>
           <token name="Face">1</token>

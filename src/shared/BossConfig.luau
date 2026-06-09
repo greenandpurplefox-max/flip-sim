@@ -10,6 +10,7 @@ BossConfig.WALK_SPEED = 15
 BossConfig.ATTACK_RANGE = 8
 BossConfig.ATTACK_COOLDOWN = 2.75
 BossConfig.SCALE = 2.65
+BossConfig.HIP_HEIGHT = 2.45
 
 BossConfig.ATTACKS = {
 	GroundSlam = {
@@ -51,6 +52,10 @@ end
 
 function BossConfig.getBossDepthIndex(room: number, bossEveryN: number): number
 	return math.max(1, math.floor(room / bossEveryN))
+end
+
+function BossConfig.getHipHeight(scale: number): number
+	return BossConfig.HIP_HEIGHT * (scale / BossConfig.SCALE)
 end
 
 return BossConfig

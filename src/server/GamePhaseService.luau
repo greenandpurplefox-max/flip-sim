@@ -14,6 +14,7 @@ local enterDungeonEvent: RemoteEvent
 local DungeonRunServiceModule = nil
 local PlayerDataServiceModule = nil
 local WeaponServiceModule = nil
+local SpellServiceModule = nil
 local portalPromptConnection: RBXScriptConnection? = nil
 local lastPortalEnterAt: { [Player]: number } = {}
 
@@ -153,6 +154,9 @@ function GamePhaseService.returnToLobby(player: Player, runGold: number?)
 	if WeaponServiceModule then
 		WeaponServiceModule.refreshPlayerLoadout(player)
 	end
+	if SpellServiceModule then
+		SpellServiceModule.refreshPlayerLoadout(player)
+	end
 end
 
 function GamePhaseService.enterDungeon(player: Player): boolean
@@ -185,6 +189,9 @@ function GamePhaseService.enterDungeon(player: Player): boolean
 
 	if WeaponServiceModule then
 		WeaponServiceModule.refreshPlayerLoadout(player)
+	end
+	if SpellServiceModule then
+		SpellServiceModule.refreshPlayerLoadout(player)
 	end
 
 	if DungeonRunServiceModule then
@@ -244,6 +251,9 @@ function GamePhaseService.onPlayerReady(player: Player)
 
 	if WeaponServiceModule then
 		WeaponServiceModule.refreshPlayerLoadout(player)
+	end
+	if SpellServiceModule then
+		SpellServiceModule.refreshPlayerLoadout(player)
 	end
 end
 
@@ -311,6 +321,7 @@ function GamePhaseService.init(deps: {
 	dungeonRunService: any,
 	playerDataService: any,
 	weaponService: any,
+	spellService: any?,
 })
 	if not LobbyConfig.USE_LOBBY then
 		return
@@ -319,6 +330,7 @@ function GamePhaseService.init(deps: {
 	DungeonRunServiceModule = deps.dungeonRunService
 	PlayerDataServiceModule = deps.playerDataService
 	WeaponServiceModule = deps.weaponService
+	SpellServiceModule = deps.spellService
 
 	getPhaseStateEvent()
 	getEnterDungeonEvent()
@@ -342,6 +354,9 @@ function GamePhaseService.init(deps: {
 
 				if WeaponServiceModule then
 					WeaponServiceModule.refreshPlayerLoadout(player)
+				end
+				if SpellServiceModule then
+					SpellServiceModule.refreshPlayerLoadout(player)
 				end
 			end)
 		end)

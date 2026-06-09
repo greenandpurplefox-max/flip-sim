@@ -24,6 +24,7 @@ local aiRunning = false
 local walkAnimRunning = false
 local dungeonMode = false
 local monsterDiedCallbacks: { (Model) -> () } = {}
+WaveService.onPlayerDamagedCallback = nil
 
 local WOLF_SCALE = WaveConfig.WOLF_SCALE
 
@@ -610,6 +611,10 @@ local function tryDamagePlayerFromAttack(monster: Model, target: Model): boolean
 		local hits = workspace:GetPartBoundsInBox(hitPart.CFrame, hitPart.Size * hitScale, overlapParams)
 		if #hits > 0 then
 			targetHumanoid:TakeDamage(damage)
+			local targetPlayer = Players:GetPlayerFromCharacter(target)
+			if targetPlayer and WaveService.onPlayerDamagedCallback then
+				WaveService.onPlayerDamagedCallback(targetPlayer)
+			end
 			return true
 		end
 	end
@@ -955,6 +960,10 @@ end
 
 function WaveService.onMonsterDied(callback: (Model) -> ())
 	table.insert(monsterDiedCallbacks, callback)
+end
+
+function WaveService.setOnPlayerDamagedCallback(callback: ((Player) -> ())?)
+	WaveService.onPlayerDamagedCallback = callback
 end
 
 function WaveService.spawnDungeonMonsters(

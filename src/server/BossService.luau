@@ -2,7 +2,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossConfig = require(ReplicatedStorage.Shared.BossConfig)
 local DungeonConfig = require(ReplicatedStorage.Shared.DungeonConfig)
-local WaveConfig = require(ReplicatedStorage.Shared.WaveConfig)
 
 local BossService = {}
 
@@ -22,6 +21,7 @@ type BossRuntime = {
 
 local bossRuntimes: { [Model]: BossRuntime } = {}
 local attackingBosses: { [Model]: boolean } = {}
+BossService.onPlayerDamagedCallback = nil
 
 local function weld(part0: BasePart, part1: BasePart)
 	local constraint = Instance.new("WeldConstraint")
@@ -110,6 +110,9 @@ local function damagePlayersInRadius(origin: Vector3, radius: number, damage: nu
 			local distance = (humanoidRootPart.Position - origin).Magnitude
 			if distance <= radius then
 				humanoid:TakeDamage(damage)
+				if BossService.onPlayerDamagedCallback then
+					BossService.onPlayerDamagedCallback(player)
+				end
 			end
 		end
 	end
@@ -360,6 +363,19 @@ function BossService.updateBoss(monster: Model, target: Model)
 	end
 end
 
+local function snapBossToGround(position: Vector3, hipHeight: number, ignore: { Instance }): Vector3
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+	rayParams.FilterDescendantsInstances = ignore
+
+	local result = workspace:Raycast(position + Vector3.new(0, 40, 0), Vector3.new(0, -120, 0), rayParams)
+	if result then
+		return Vector3.new(position.X, result.Position.Y + hipHeight, position.Z)
+	end
+
+	return position
+end
+
 function BossService.createBoss(
 	spawnPosition: Vector3,
 	roomDepth: number,
@@ -416,8 +432,12 @@ function BossService.createBoss(
 	local frontRightLeg = createPart("FrontRightLeg", s(Vector3.new(0.28, 0.88, 0.28)), darkFur, model, { canCollide = true })
 	local backLeftLeg = createPart("BackLeftLeg", s(Vector3.new(0.28, 0.92, 0.3)), darkFur, model, { canCollide = true })
 	local backRightLeg = createPart("BackRightLeg", s(Vector3.new(0.28, 0.92, 0.3)), darkFur, model, { canCollide = true })
+	local frontLeftPaw = createPart("FrontLeftPaw", s(Vector3.new(0.32, 0.12, 0.36)), darkFur, model, { massless = true, canCollide = true })
+	local frontRightPaw = createPart("FrontRightPaw", s(Vector3.new(0.32, 0.12, 0.36)), darkFur, model, { massless = true, canCollide = true })
+	local backLeftPaw = createPart("BackLeftPaw", s(Vector3.new(0.34, 0.12, 0.38)), darkFur, model, { massless = true, canCollide = true })
+	local backRightPaw = createPart("BackRightPaw", s(Vector3.new(0.34, 0.12, 0.38)), darkFur, model, { massless = true, canCollide = true })
 
-	local rootCFrame = CFrame.new(spawnPosition)
+	local rootCFrame = CFrame.new(snapBossToGround(spawnPosition, BossConfig.getHipHeight(scale), { monstersFolder }))
 	humanoidRootPart.CFrame = rootCFrame
 	body.CFrame = rootCFrame
 	chest.CFrame = rootCFrame * sOffset(CFrame.new(0, 0.08, -0.72))
@@ -433,6 +453,10 @@ function BossService.createBoss(
 	frontRightLeg.CFrame = rootCFrame * sOffset(CFrame.new(0.38, -0.42, -0.68))
 	backLeftLeg.CFrame = rootCFrame * sOffset(CFrame.new(-0.34, -0.42, 0.72))
 	backRightLeg.CFrame = rootCFrame * sOffset(CFrame.new(0.34, -0.42, 0.72))
+	frontLeftPaw.CFrame = frontLeftLeg.CFrame * sOffset(CFrame.new(0, -0.48, -0.04))
+	frontRightPaw.CFrame = frontRightLeg.CFrame * sOffset(CFrame.new(0, -0.48, -0.04))
+	backLeftPaw.CFrame = backLeftLeg.CFrame * sOffset(CFrame.new(0, -0.5, 0.02))
+	backRightPaw.CFrame = backRightLeg.CFrame * sOffset(CFrame.new(0, -0.5, 0.02))
 
 	weld(humanoidRootPart, body)
 	weld(body, chest)
@@ -451,6 +475,11 @@ function BossService.createBoss(
 	local backLeftLegRest = sOffset(CFrame.new(-0.34, -0.42, 0.72))
 	local backRightLegRest = sOffset(CFrame.new(0.34, -0.42, 0.72))
 
+	weld(frontLeftLeg, frontLeftPaw)
+	weld(frontRightLeg, frontRightPaw)
+	weld(backLeftLeg, backLeftPaw)
+	weld(backRightLeg, backRightPaw)
+
 	local neckMotor = attachMotor(body, head, "NeckMotor", neckRest)
 	local tailMotor = attachMotor(body, tail, "TailMotor", tailRest)
 	local frontLeftLegMotor = attachMotor(humanoidRootPart, frontLeftLeg, "FrontLeftLegMotor", frontLeftLegRest)
@@ -460,7 +489,7 @@ function BossService.createBoss(
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.WalkSpeed = BossConfig.WALK_SPEED
-	humanoid.HipHeight = WaveConfig.MONSTER_HIP_HEIGHT * scale
+	humanoid.HipHeight = BossConfig.getHipHeight(scale)
 	humanoid.MaxHealth = maxHealth
 	humanoid.Health = maxHealth
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
@@ -540,6 +569,10 @@ function BossService.createBoss(
 	}
 
 	return model
+end
+
+function BossService.setOnPlayerDamagedCallback(callback: ((Player) -> ())?)
+	BossService.onPlayerDamagedCallback = callback
 end
 
 return BossService
