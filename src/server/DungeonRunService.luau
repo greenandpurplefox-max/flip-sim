@@ -199,6 +199,14 @@ local function onRoomCleared(player: Player)
 	continueAfterRoomClear(player)
 end
 
+local function healPlayerToFull(player: Player)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health > 0 then
+		humanoid.Health = humanoid.MaxHealth
+	end
+end
+
 local function onMonsterDeath(monster: Model)
 	local ownerUserId = monster:GetAttribute("DungeonOwner")
 	if typeof(ownerUserId) ~= "number" then
@@ -213,6 +221,10 @@ local function onMonsterDeath(monster: Model)
 	local run = getRun(player)
 	if not run or run.status ~= "fighting" then
 		return
+	end
+
+	if monster:GetAttribute("IsBoss") == true then
+		healPlayerToFull(player)
 	end
 
 	run.monstersRemaining = math.max(0, run.monstersRemaining - 1)
