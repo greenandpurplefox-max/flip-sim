@@ -10,7 +10,6 @@ SpellUpgradeConfig.MIN_COOLDOWN_MULT = 0.7
 
 SpellUpgradeConfig.UNLOCK_COSTS = {
 	Firebolt = 0,
-	FrostNova = 140,
 }
 
 SpellUpgradeConfig.BASE_UPGRADE_COST = 30

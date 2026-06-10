@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
+local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 
 local SpellMenuClient = {}
 
@@ -22,12 +23,13 @@ function SpellMenuClient.init()
 	local playerGui = player:WaitForChild("PlayerGui")
 
 	local upgradeSpellEvent = ReplicatedStorage:WaitForChild("UpgradeSpell") :: RemoteEvent
-	local unlockSpellEvent = ReplicatedStorage:WaitForChild("UnlockSpell") :: RemoteEvent
 	local spellLoadoutUpdatedEvent = ReplicatedStorage:WaitForChild("SpellLoadoutUpdated") :: RemoteEvent
 	local profileStateEvent = ReplicatedStorage:WaitForChild("PlayerProfileState") :: RemoteEvent
 	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
 
 	local infusedSpellId = ""
+	local equippedWeapon = LobbyConfig.STARTER_WEAPON
+	local weaponInfusions: { [string]: string } = {}
 	local loadoutLocked = false
 	local menuOpen = false
 	local activeTab = "Collection"
@@ -94,7 +96,7 @@ function SpellMenuClient.init()
 	statusLabel.Position = UDim2.fromOffset(16, 40)
 	statusLabel.Size = UDim2.new(1, -32, 0, 48)
 	statusLabel.Font = Enum.Font.Gotham
-	statusLabel.Text = "Equip and upgrade spells in the lobby."
+	statusLabel.Text = "Learn spells from grimoires, then upgrade them here."
 	statusLabel.TextColor3 = TEXT
 	statusLabel.TextSize = 14
 	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -157,6 +159,19 @@ function SpellMenuClient.init()
 		list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 8)
 	end)
 
+	local emptyLabel = Instance.new("TextLabel")
+	emptyLabel.Name = "EmptySpells"
+	emptyLabel.BackgroundTransparency = 1
+	emptyLabel.Size = UDim2.new(1, -32, 0, 96)
+	emptyLabel.Position = UDim2.fromOffset(16, 148)
+	emptyLabel.Font = Enum.Font.Gotham
+	emptyLabel.Text = "No spells discovered yet.\nUse grimoires from the chest menu to learn new spells."
+	emptyLabel.TextColor3 = TEXT_DIM
+	emptyLabel.TextSize = 15
+	emptyLabel.TextWrapped = true
+	emptyLabel.Visible = false
+	emptyLabel.Parent = panel
+
 	local spellButtons: { [string]: TextButton } = {}
 
 	local function getEffectiveDisplayStats(spellId: string)
@@ -165,63 +180,58 @@ function SpellMenuClient.init()
 	end
 
 	local function updateSpellButtons()
+		local ownedCount = 0
+
 		for spellId, button in spellButtons do
 			local stats = getEffectiveDisplayStats(spellId)
 			local level = spellLevels[spellId] or 1
 			local owned = ownedSpells[spellId] == true
-			local infused = spellId == infusedSpellId
+			button.Visible = owned
+			if not owned then
+				continue
+			end
+
+			ownedCount += 1
+			local infused = spellId == (weaponInfusions[equippedWeapon] or infusedSpellId)
 			local ultimateTag = if stats.isUltimate then "  ULT" else ""
 
 			if activeTab == "Collection" then
-				if owned then
-					if infused then
-						button.Text =
-							`{stats.resolvedName}{ultimateTag}  INFUSED  Lv {level}\n[Press E]  {stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
-						button.BackgroundColor3 = GOLD_DIM
-					else
-						button.Text =
-							`{stats.resolvedName}{ultimateTag}  Lv {level}\nInfuse at Mira, then press E in dungeons`
-						button.BackgroundColor3 = PANEL_LIGHT
-					end
+				if infused then
+					button.Text =
+						`{stats.resolvedName}{ultimateTag}  INFUSED  Lv {level}\n[Press E]  {stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
+					button.BackgroundColor3 = GOLD_DIM
+				else
+					button.Text =
+						`{stats.resolvedName}{ultimateTag}  Lv {level}\nInfuse at Mira onto a weapon, then press E`
+					button.BackgroundColor3 = PANEL_LIGHT
+				end
+				button.TextColor3 = TEXT
+				button.AutoButtonColor = false
+			else
+				local cost = SpellUpgradeConfig.getUpgradeCost(spellId, level)
+				if level >= SpellUpgradeConfig.MAX_LEVEL then
+					button.Text =
+						`{stats.resolvedName}{ultimateTag}  Lv {level} MAX\n{stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
+					button.BackgroundColor3 = GOLD_DIM
 					button.TextColor3 = TEXT
 					button.AutoButtonColor = false
-				else
-					local cost = SpellUpgradeConfig.getUnlockCost(spellId)
-					button.Text = `{stats.displayName}  LOCKED\nUnlock for {cost} gold`
+				elseif level >= SpellUpgradeConfig.ULTIMATE_LEVEL - 1 and level < SpellUpgradeConfig.ULTIMATE_LEVEL then
+					button.Text =
+						`{stats.displayName}  Lv {level} -> ULTIMATE\nUpgrade for {cost} gold`
 					button.BackgroundColor3 = PANEL_LIGHT
 					button.TextColor3 = if walletGold >= cost and not loadoutLocked then GOLD else LOCKED
 					button.AutoButtonColor = walletGold >= cost and not loadoutLocked
-				end
-			else
-				if owned then
-					local cost = SpellUpgradeConfig.getUpgradeCost(spellId, level)
-					if level >= SpellUpgradeConfig.MAX_LEVEL then
-						button.Text =
-							`{stats.resolvedName}{ultimateTag}  Lv {level} MAX\n{stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
-						button.BackgroundColor3 = GOLD_DIM
-						button.TextColor3 = TEXT
-						button.AutoButtonColor = false
-					elseif level >= SpellUpgradeConfig.ULTIMATE_LEVEL - 1 and level < SpellUpgradeConfig.ULTIMATE_LEVEL then
-						button.Text =
-							`{stats.displayName}  Lv {level} -> ULTIMATE\nUpgrade for {cost} gold`
-						button.BackgroundColor3 = PANEL_LIGHT
-						button.TextColor3 = if walletGold >= cost and not loadoutLocked then GOLD else LOCKED
-						button.AutoButtonColor = walletGold >= cost and not loadoutLocked
-					else
-						button.Text = `{stats.displayName}  Lv {level} -> {level + 1}\nUpgrade for {cost} gold`
-						button.BackgroundColor3 = PANEL_LIGHT
-						button.TextColor3 = if walletGold >= cost and not loadoutLocked then TEXT else LOCKED
-						button.AutoButtonColor = walletGold >= cost and not loadoutLocked
-					end
 				else
-					local cost = SpellUpgradeConfig.getUnlockCost(spellId)
-					button.Text = `{stats.displayName}  LOCKED\nUnlock for {cost} gold`
+					button.Text = `{stats.displayName}  Lv {level} -> {level + 1}\nUpgrade for {cost} gold`
 					button.BackgroundColor3 = PANEL_LIGHT
-					button.TextColor3 = if walletGold >= cost and not loadoutLocked then GOLD else LOCKED
+					button.TextColor3 = if walletGold >= cost and not loadoutLocked then TEXT else LOCKED
 					button.AutoButtonColor = walletGold >= cost and not loadoutLocked
 				end
 			end
 		end
+
+		emptyLabel.Visible = ownedCount == 0
+		list.Visible = ownedCount > 0
 	end
 
 	local function updateMenuState()
@@ -233,18 +243,20 @@ function SpellMenuClient.init()
 		equipTab.BackgroundColor3 = if activeTab == "Collection" then GOLD_DIM else PANEL_LIGHT
 		upgradeTab.BackgroundColor3 = if activeTab == "Upgrade" then GOLD_DIM else PANEL_LIGHT
 
-		local infusedName = if infusedSpellId ~= ""
-			then getEffectiveDisplayStats(infusedSpellId).resolvedName
+		local equippedInfusion = weaponInfusions[equippedWeapon] or infusedSpellId
+		local weaponName = WeaponConfig.getWeapon(equippedWeapon).displayName
+		local infusedName = if equippedInfusion ~= ""
+			then getEffectiveDisplayStats(equippedInfusion).resolvedName
 			else "None"
 
 		if loadoutLocked or not inLobby then
 			statusLabel.Text = "Spell loadout locked during a dungeon run."
 		elseif activeTab == "Collection" then
 			statusLabel.Text =
-				`Infused spell: {infusedName}  |  Press E in dungeons to cast.\nGold: {walletGold}`
+				`{weaponName} infusion: {infusedName}  |  Press E while wielding it.\nGold: {walletGold}`
 		else
 			statusLabel.Text =
-				`Ultimates unlock at level {SpellUpgradeConfig.ULTIMATE_LEVEL}. Wallet: {walletGold}`
+				`Upgrade discovered spells. Ultimates unlock at level {SpellUpgradeConfig.ULTIMATE_LEVEL}. Wallet: {walletGold}`
 		end
 
 		updateSpellButtons()
@@ -276,21 +288,12 @@ function SpellMenuClient.init()
 		badgeCorner.Parent = badge
 
 		button.MouseButton1Click:Connect(function()
-			if loadoutLocked or currentPhase ~= "Lobby" then
+			if loadoutLocked or currentPhase ~= "Lobby" or ownedSpells[stats.id] ~= true then
 				return
 			end
 
-			local owned = ownedSpells[stats.id] == true
-			if activeTab == "Collection" then
-				if not owned then
-					unlockSpellEvent:FireServer(stats.id)
-				end
-			else
-				if owned then
-					upgradeSpellEvent:FireServer(stats.id)
-				else
-					unlockSpellEvent:FireServer(stats.id)
-				end
+			if activeTab == "Upgrade" then
+				upgradeSpellEvent:FireServer(stats.id)
 			end
 		end)
 
@@ -337,6 +340,17 @@ function SpellMenuClient.init()
 
 		if typeof(snapshot.gold) == "number" then
 			walletGold = snapshot.gold
+		end
+		if typeof(snapshot.equippedWeapon) == "string" then
+			equippedWeapon = snapshot.equippedWeapon
+		end
+		if typeof(snapshot.weaponInfusions) == "table" then
+			weaponInfusions = {}
+			for weaponId, spellId in snapshot.weaponInfusions do
+				if typeof(spellId) == "string" and spellId ~= "" then
+					weaponInfusions[weaponId] = spellId
+				end
+			end
 		end
 		if typeof(snapshot.infusedSpellId) == "string" then
 			infusedSpellId = snapshot.infusedSpellId

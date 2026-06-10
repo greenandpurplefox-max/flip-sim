@@ -10,4 +10,7 @@ InfuserConfig.PROMPT_DISTANCE = 14
 InfuserConfig.POSITION = LobbyConfig.FORGE_POSITION + Vector3.new(-14, 0, -4)
 InfuserConfig.LOOK_AT = LobbyConfig.LOBBY_CENTER + Vector3.new(0, 5, 0)
 
+InfuserConfig.PURGE_COST = 300
+InfuserConfig.INFUSION_GRIMOIRE_COST = 1
+
 return InfuserConfig

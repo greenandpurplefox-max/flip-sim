@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GrimoireConfig = require(ReplicatedStorage.Shared.GrimoireConfig)
+local InfuserConfig = require(ReplicatedStorage.Shared.InfuserConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
@@ -24,7 +25,7 @@ export type PlayerProfile = {
 	weaponLevels: { [string]: number },
 	unlockedWeapons: { [string]: boolean },
 	ownedSpells: { [string]: boolean },
-	infusedSpellId: string,
+	weaponInfusions: { [string]: string },
 	spellLevels: { [string]: number },
 	unlockedSpells: { [string]: boolean },
 	grimoireCount: number,
@@ -76,7 +77,7 @@ local function getDefaultProfile(): PlayerProfile
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
 		ownedSpells = ownedSpells,
-		infusedSpellId = "",
+		weaponInfusions = {},
 		spellLevels = spellLevels,
 		unlockedSpells = unlockedSpells,
 		grimoireCount = 0,
@@ -141,11 +142,29 @@ local function sanitizeProfile(data: any): PlayerProfile
 		profile.equippedWeapon = LobbyConfig.STARTER_WEAPON
 	end
 
-	profile.infusedSpellId = ""
+	profile.weaponInfusions = {}
+	if typeof(data.weaponInfusions) == "table" then
+		for weaponId, spellId in data.weaponInfusions do
+			if WeaponConfig.isValid(weaponId) and typeof(spellId) == "string" and SpellConfig.isValid(spellId) then
+				profile.weaponInfusions[weaponId] = spellId
+			end
+		end
+	end
+
 	if typeof(data.infusedSpellId) == "string" and SpellConfig.isValid(data.infusedSpellId) then
-		profile.infusedSpellId = data.infusedSpellId
+		if profile.weaponInfusions[profile.equippedWeapon] == nil then
+			profile.weaponInfusions[profile.equippedWeapon] = data.infusedSpellId
+		end
 	elseif typeof(data.equippedActiveSpell) == "string" and SpellConfig.isValid(data.equippedActiveSpell) then
-		profile.infusedSpellId = data.equippedActiveSpell
+		if profile.weaponInfusions[profile.equippedWeapon] == nil then
+			profile.weaponInfusions[profile.equippedWeapon] = data.equippedActiveSpell
+		end
+	end
+
+	for weaponId, spellId in profile.weaponInfusions do
+		if not profile.ownedSpells[spellId] then
+			profile.weaponInfusions[weaponId] = nil
+		end
 	end
 
 	profile.grimoireCount = if typeof(data.grimoireCount) == "number"
@@ -185,10 +204,6 @@ local function sanitizeProfile(data: any): PlayerProfile
 		end
 	end
 
-	if profile.infusedSpellId ~= "" and not profile.ownedSpells[profile.infusedSpellId] then
-		profile.infusedSpellId = ""
-	end
-
 	profile.lobbyChests = sanitizeLobbyChests(data.lobbyChests)
 
 	return profile
@@ -226,13 +241,24 @@ local function buildSnapshot(profile: PlayerProfile)
 		ownedSpells[spell.id] = profile.ownedSpells[spell.id] == true
 	end
 
+	local weaponInfusions: { [string]: string } = {}
+	for _, weapon in WeaponConfig.getWeaponList() do
+		local spellId = profile.weaponInfusions[weapon.id]
+		if typeof(spellId) == "string" and spellId ~= "" then
+			weaponInfusions[weapon.id] = spellId
+		end
+	end
+
+	local equippedInfusion = weaponInfusions[profile.equippedWeapon] or ""
+
 	return {
 		gold = profile.gold,
 		equippedWeapon = profile.equippedWeapon,
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
 		ownedSpells = ownedSpells,
-		infusedSpellId = profile.infusedSpellId,
+		weaponInfusions = weaponInfusions,
+		infusedSpellId = equippedInfusion,
 		spellLevels = spellLevels,
 		unlockedSpells = unlockedSpells,
 		grimoireCount = profile.grimoireCount,
@@ -376,7 +402,20 @@ end
 
 function PlayerDataService.getInfusedSpell(player: Player): string
 	local profile = profiles[player]
-	return if profile then profile.infusedSpellId else ""
+	if not profile then
+		return ""
+	end
+
+	return profile.weaponInfusions[profile.equippedWeapon] or ""
+end
+
+function PlayerDataService.getWeaponInfusion(player: Player, weaponId: string): string
+	local profile = profiles[player]
+	if not profile or not WeaponConfig.isValid(weaponId) then
+		return ""
+	end
+
+	return profile.weaponInfusions[weaponId] or ""
 end
 
 function PlayerDataService.ownsSpell(player: Player, spellId: string): boolean
@@ -384,16 +423,61 @@ function PlayerDataService.ownsSpell(player: Player, spellId: string): boolean
 	return profile ~= nil and profile.ownedSpells[spellId] == true
 end
 
-function PlayerDataService.setInfusedSpell(player: Player, spellId: string): boolean
+function PlayerDataService.tryInfuseWeapon(player: Player, weaponId: string, spellId: string): (boolean, string?)
 	local profile = profiles[player]
-	if not profile or not SpellConfig.isValid(spellId) or not profile.ownedSpells[spellId] then
-		return false
+	if not profile then
+		return false, "Profile unavailable."
+	end
+	if not WeaponConfig.isValid(weaponId) then
+		return false, "Invalid weapon."
+	end
+	if not profile.unlockedWeapons[weaponId] then
+		return false, "Weapon locked."
+	end
+	if not SpellConfig.isValid(spellId) or not profile.ownedSpells[spellId] then
+		return false, "Spell not owned."
 	end
 
-	profile.infusedSpellId = spellId
+	local existing = profile.weaponInfusions[weaponId]
+	if typeof(existing) == "string" and existing ~= "" then
+		return false, "That weapon already has an infused spell."
+	end
+
+	if profile.grimoireCount < InfuserConfig.INFUSION_GRIMOIRE_COST then
+		return false, "Need a grimoire to infuse a weapon."
+	end
+
+	profile.grimoireCount -= InfuserConfig.INFUSION_GRIMOIRE_COST
+	profile.weaponInfusions[weaponId] = spellId
 	PlayerDataService.sendProfile(player)
 	scheduleSave(player)
-	return true
+	return true, nil
+end
+
+function PlayerDataService.tryPurgeWeaponInfusion(player: Player, weaponId: string): (boolean, string?)
+	local profile = profiles[player]
+	if not profile then
+		return false, "Profile unavailable."
+	end
+	if not WeaponConfig.isValid(weaponId) then
+		return false, "Invalid weapon."
+	end
+
+	local existing = profile.weaponInfusions[weaponId]
+	if typeof(existing) ~= "string" or existing == "" then
+		return false, "That weapon has no infusion to remove."
+	end
+
+	local cost = InfuserConfig.PURGE_COST
+	if profile.gold < cost then
+		return false, `Need {cost} gold to purge.`
+	end
+
+	profile.gold -= cost
+	profile.weaponInfusions[weaponId] = nil
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+	return true, nil
 end
 
 function PlayerDataService.getGrimoireCount(player: Player): number
@@ -434,8 +518,21 @@ function PlayerDataService.tryUseGrimoire(player: Player): (boolean, string?, st
 
 	profile.grimoireCount -= 1
 
-	local spellList = SpellConfig.getSpellList()
-	local spellId = spellList[math.random(1, #spellList)].id
+	local unownedIds: { string } = {}
+	for _, spell in SpellConfig.getSpellList() do
+		if profile.ownedSpells[spell.id] ~= true then
+			table.insert(unownedIds, spell.id)
+		end
+	end
+
+	local spellId: string
+	if #unownedIds > 0 then
+		spellId = unownedIds[math.random(1, #unownedIds)]
+	else
+		local spellList = SpellConfig.getSpellList()
+		spellId = spellList[math.random(1, #spellList)].id
+	end
+
 	local isNew = PlayerDataService.grantOwnedSpell(player, spellId)
 
 	if not isNew then

@@ -540,9 +540,9 @@ return DungeonConfig
           <string name="Source"><![CDATA[local GrimoireConfig = {}
 
 GrimoireConfig.TIER_DROP_CHANCE = {
-	Common = 0.04,
-	Rare = 0.12,
-	Epic = 0.28,
+	Common = 0.10,
+	Rare = 0.24,
+	Epic = 0.42,
 }
 
 GrimoireConfig.DUPLICATE_GOLD = 30
@@ -701,6 +701,9 @@ InfuserConfig.PROMPT_DISTANCE = 14
 
 InfuserConfig.POSITION = LobbyConfig.FORGE_POSITION + Vector3.new(-14, 0, -4)
 InfuserConfig.LOOK_AT = LobbyConfig.LOBBY_CENTER + Vector3.new(0, 5, 0)
+
+InfuserConfig.PURGE_COST = 300
+InfuserConfig.INFUSION_GRIMOIRE_COST = 1
 
 return InfuserConfig
 ]]></string>
@@ -1028,6 +1031,246 @@ SpellConfig.Spells = {
 		staminaCost = 45,
 		aoeRadius = 10,
 	},
+	ArcaneVolley = {
+		id = "ArcaneVolley",
+		displayName = "Arcane Volley",
+		ultimateDisplayName = "Arcane Barrage",
+		description = "Press E to fire a quick arcane bolt.",
+		ultimateDescription = "Press E to unleash a rapid arcane barrage.",
+		damageMin = 6,
+		damageMax = 11,
+		projectileSpeed = 110,
+		projectileSize = Vector3.new(0.7, 0.7, 2.8),
+		projectileColor = Color3.fromRGB(168, 96, 255),
+		cooldown = 1.8,
+		staminaCost = 22,
+		aoeRadius = 0,
+	},
+	LightningSpear = {
+		id = "LightningSpear",
+		displayName = "Lightning Spear",
+		ultimateDisplayName = "Storm Lance",
+		description = "Press E to hurl a crackling lightning spear.",
+		ultimateDescription = "Press E to call down a storm lance.",
+		damageMin = 11,
+		damageMax = 19,
+		projectileSpeed = 128,
+		projectileSize = Vector3.new(0.65, 0.65, 3.6),
+		projectileColor = Color3.fromRGB(255, 236, 96),
+		cooldown = 2.8,
+		staminaCost = 34,
+		aoeRadius = 0,
+	},
+	IceShard = {
+		id = "IceShard",
+		displayName = "Ice Shard",
+		ultimateDisplayName = "Glacier Spike",
+		description = "Press E to fling a sharp shard of ice.",
+		ultimateDescription = "Press E to launch a massive glacier spike.",
+		damageMin = 7,
+		damageMax = 12,
+		projectileSpeed = 118,
+		projectileSize = Vector3.new(0.55, 0.55, 2.4),
+		projectileColor = Color3.fromRGB(170, 230, 255),
+		cooldown = 1.6,
+		staminaCost = 20,
+		aoeRadius = 0,
+	},
+	VenomSpray = {
+		id = "VenomSpray",
+		displayName = "Venom Spray",
+		ultimateDisplayName = "Toxic Deluge",
+		description = "Press E to spray toxic mist ahead.",
+		ultimateDescription = "Press E to flood the area with poison.",
+		damageMin = 5,
+		damageMax = 9,
+		projectileSpeed = 78,
+		projectileSize = Vector3.new(1.1, 1.1, 2.2),
+		projectileColor = Color3.fromRGB(96, 210, 72),
+		cooldown = 1.4,
+		staminaCost = 18,
+		aoeRadius = 0,
+	},
+	ShadowDart = {
+		id = "ShadowDart",
+		displayName = "Shadow Dart",
+		ultimateDisplayName = "Night Rend",
+		description = "Press E to throw a dart of shadow.",
+		ultimateDescription = "Press E to tear forward with void energy.",
+		damageMin = 9,
+		damageMax = 15,
+		projectileSpeed = 136,
+		projectileSize = Vector3.new(0.5, 0.5, 2.2),
+		projectileColor = Color3.fromRGB(92, 58, 148),
+		cooldown = 2.1,
+		staminaCost = 26,
+		aoeRadius = 0,
+	},
+	HolySmite = {
+		id = "HolySmite",
+		displayName = "Holy Smite",
+		ultimateDisplayName = "Radiant Judgment",
+		description = "Press E to call down a bolt of light.",
+		ultimateDescription = "Press E to smite with radiant judgment.",
+		damageMin = 12,
+		damageMax = 20,
+		projectileSpeed = 88,
+		projectileSize = Vector3.new(0.9, 0.9, 3.4),
+		projectileColor = Color3.fromRGB(255, 244, 168),
+		cooldown = 3.4,
+		staminaCost = 38,
+		aoeRadius = 0,
+	},
+	WindSlice = {
+		id = "WindSlice",
+		displayName = "Wind Slice",
+		ultimateDisplayName = "Cyclone Cut",
+		description = "Press E to slice the air with wind.",
+		ultimateDescription = "Press E to unleash a cyclone cut.",
+		damageMin = 5,
+		damageMax = 9,
+		projectileSpeed = 142,
+		projectileSize = Vector3.new(0.45, 1.2, 2.8),
+		projectileColor = Color3.fromRGB(160, 240, 220),
+		cooldown = 1.2,
+		staminaCost = 16,
+		aoeRadius = 0,
+	},
+	MeteorShard = {
+		id = "MeteorShard",
+		displayName = "Meteor Shard",
+		ultimateDisplayName = "Meteor Rain",
+		description = "Press E to lob a burning meteor shard.",
+		ultimateDescription = "Press E to rain meteors ahead.",
+		damageMin = 14,
+		damageMax = 24,
+		projectileSpeed = 72,
+		projectileSize = Vector3.new(1.4, 1.4, 1.4),
+		projectileColor = Color3.fromRGB(255, 88, 36),
+		cooldown = 3.8,
+		staminaCost = 42,
+		aoeRadius = 0,
+	},
+	PlasmaOrb = {
+		id = "PlasmaOrb",
+		displayName = "Plasma Orb",
+		ultimateDisplayName = "Fusion Sphere",
+		description = "Press E to launch a volatile plasma orb.",
+		ultimateDescription = "Press E to hurl a fusion sphere.",
+		damageMin = 10,
+		damageMax = 17,
+		projectileSpeed = 84,
+		projectileSize = Vector3.new(1.2, 1.2, 1.2),
+		projectileColor = Color3.fromRGB(255, 96, 196),
+		cooldown = 2.6,
+		staminaCost = 32,
+		aoeRadius = 0,
+	},
+	InfernoWave = {
+		id = "InfernoWave",
+		displayName = "Inferno Wave",
+		ultimateDisplayName = "Hellfire Ring",
+		description = "Press E to erupt flames in front of you.",
+		ultimateDescription = "Press E to unleash a ring of hellfire.",
+		damageMin = 9,
+		damageMax = 16,
+		projectileSpeed = 0,
+		projectileSize = Vector3.new(2, 2, 2),
+		projectileColor = Color3.fromRGB(255, 72, 32),
+		cooldown = 3.6,
+		staminaCost = 40,
+		aoeRadius = 8,
+	},
+	ThunderClap = {
+		id = "ThunderClap",
+		displayName = "Thunder Clap",
+		ultimateDisplayName = "Stormburst",
+		description = "Press E to detonate thunder ahead.",
+		ultimateDescription = "Press E to burst a storm in front of you.",
+		damageMin = 11,
+		damageMax = 18,
+		projectileSpeed = 0,
+		projectileSize = Vector3.new(1.6, 1.6, 1.6),
+		projectileColor = Color3.fromRGB(255, 220, 72),
+		cooldown = 3.2,
+		staminaCost = 36,
+		aoeRadius = 9,
+	},
+	PoisonCloud = {
+		id = "PoisonCloud",
+		displayName = "Poison Cloud",
+		ultimateDisplayName = "Plague Mist",
+		description = "Press E to release a toxic cloud.",
+		ultimateDescription = "Press E to spread plague mist.",
+		damageMin = 7,
+		damageMax = 13,
+		projectileSpeed = 0,
+		projectileSize = Vector3.new(1.8, 1.8, 1.8),
+		projectileColor = Color3.fromRGB(72, 180, 64),
+		cooldown = 3.5,
+		staminaCost = 34,
+		aoeRadius = 8.5,
+	},
+	ShadowPulse = {
+		id = "ShadowPulse",
+		displayName = "Shadow Pulse",
+		ultimateDisplayName = "Void Collapse",
+		description = "Press E to pulse void energy outward.",
+		ultimateDescription = "Press E to collapse a void sphere ahead.",
+		damageMin = 10,
+		damageMax = 17,
+		projectileSpeed = 0,
+		projectileSize = Vector3.new(1.5, 1.5, 1.5),
+		projectileColor = Color3.fromRGB(72, 48, 108),
+		cooldown = 3.9,
+		staminaCost = 38,
+		aoeRadius = 9.5,
+	},
+	SoulDrain = {
+		id = "SoulDrain",
+		displayName = "Soul Drain",
+		ultimateDisplayName = "Soul Reap",
+		description = "Press E to drain life from nearby foes.",
+		ultimateDescription = "Press E to reap souls in a wide arc.",
+		damageMin = 8,
+		damageMax = 14,
+		projectileSpeed = 0,
+		projectileSize = Vector3.new(1.4, 1.4, 1.4),
+		projectileColor = Color3.fromRGB(148, 72, 210),
+		cooldown = 4.0,
+		staminaCost = 40,
+		aoeRadius = 7.5,
+	},
+	ChainSpark = {
+		id = "ChainSpark",
+		displayName = "Chain Spark",
+		ultimateDisplayName = "Voltage Storm",
+		description = "Press E to fire a sparking bolt.",
+		ultimateDescription = "Press E to unleash a voltage storm bolt.",
+		damageMin = 6,
+		damageMax = 11,
+		projectileSpeed = 124,
+		projectileSize = Vector3.new(0.6, 0.6, 2.6),
+		projectileColor = Color3.fromRGB(120, 200, 255),
+		cooldown = 1.5,
+		staminaCost = 19,
+		aoeRadius = 0,
+	},
+	ChaosBolt = {
+		id = "ChaosBolt",
+		displayName = "Chaos Bolt",
+		ultimateDisplayName = "Entropy Lance",
+		description = "Press E to fire an unstable chaos bolt.",
+		ultimateDescription = "Press E to hurl an entropy lance.",
+		damageMin = 13,
+		damageMax = 22,
+		projectileSpeed = 96,
+		projectileSize = Vector3.new(0.95, 0.95, 3.0),
+		projectileColor = Color3.fromRGB(255, 72, 180),
+		cooldown = 3.0,
+		staminaCost = 35,
+		aoeRadius = 0,
+	},
 }
 
 function SpellConfig.getSpell(id: string): SpellStats?
@@ -1068,7 +1311,6 @@ SpellUpgradeConfig.MIN_COOLDOWN_MULT = 0.7
 
 SpellUpgradeConfig.UNLOCK_COSTS = {
 	Firebolt = 0,
-	FrostNova = 140,
 }
 
 SpellUpgradeConfig.BASE_UPGRADE_COST = 30
@@ -3919,6 +4161,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GrimoireConfig = require(ReplicatedStorage.Shared.GrimoireConfig)
+local InfuserConfig = require(ReplicatedStorage.Shared.InfuserConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
@@ -3939,7 +4182,7 @@ export type PlayerProfile = {
 	weaponLevels: { [string]: number },
 	unlockedWeapons: { [string]: boolean },
 	ownedSpells: { [string]: boolean },
-	infusedSpellId: string,
+	weaponInfusions: { [string]: string },
 	spellLevels: { [string]: number },
 	unlockedSpells: { [string]: boolean },
 	grimoireCount: number,
@@ -3991,7 +4234,7 @@ local function getDefaultProfile(): PlayerProfile
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
 		ownedSpells = ownedSpells,
-		infusedSpellId = "",
+		weaponInfusions = {},
 		spellLevels = spellLevels,
 		unlockedSpells = unlockedSpells,
 		grimoireCount = 0,
@@ -4056,11 +4299,29 @@ local function sanitizeProfile(data: any): PlayerProfile
 		profile.equippedWeapon = LobbyConfig.STARTER_WEAPON
 	end
 
-	profile.infusedSpellId = ""
+	profile.weaponInfusions = {}
+	if typeof(data.weaponInfusions) == "table" then
+		for weaponId, spellId in data.weaponInfusions do
+			if WeaponConfig.isValid(weaponId) and typeof(spellId) == "string" and SpellConfig.isValid(spellId) then
+				profile.weaponInfusions[weaponId] = spellId
+			end
+		end
+	end
+
 	if typeof(data.infusedSpellId) == "string" and SpellConfig.isValid(data.infusedSpellId) then
-		profile.infusedSpellId = data.infusedSpellId
+		if profile.weaponInfusions[profile.equippedWeapon] == nil then
+			profile.weaponInfusions[profile.equippedWeapon] = data.infusedSpellId
+		end
 	elseif typeof(data.equippedActiveSpell) == "string" and SpellConfig.isValid(data.equippedActiveSpell) then
-		profile.infusedSpellId = data.equippedActiveSpell
+		if profile.weaponInfusions[profile.equippedWeapon] == nil then
+			profile.weaponInfusions[profile.equippedWeapon] = data.equippedActiveSpell
+		end
+	end
+
+	for weaponId, spellId in profile.weaponInfusions do
+		if not profile.ownedSpells[spellId] then
+			profile.weaponInfusions[weaponId] = nil
+		end
 	end
 
 	profile.grimoireCount = if typeof(data.grimoireCount) == "number"
@@ -4100,10 +4361,6 @@ local function sanitizeProfile(data: any): PlayerProfile
 		end
 	end
 
-	if profile.infusedSpellId ~= "" and not profile.ownedSpells[profile.infusedSpellId] then
-		profile.infusedSpellId = ""
-	end
-
 	profile.lobbyChests = sanitizeLobbyChests(data.lobbyChests)
 
 	return profile
@@ -4141,13 +4398,24 @@ local function buildSnapshot(profile: PlayerProfile)
 		ownedSpells[spell.id] = profile.ownedSpells[spell.id] == true
 	end
 
+	local weaponInfusions: { [string]: string } = {}
+	for _, weapon in WeaponConfig.getWeaponList() do
+		local spellId = profile.weaponInfusions[weapon.id]
+		if typeof(spellId) == "string" and spellId ~= "" then
+			weaponInfusions[weapon.id] = spellId
+		end
+	end
+
+	local equippedInfusion = weaponInfusions[profile.equippedWeapon] or ""
+
 	return {
 		gold = profile.gold,
 		equippedWeapon = profile.equippedWeapon,
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
 		ownedSpells = ownedSpells,
-		infusedSpellId = profile.infusedSpellId,
+		weaponInfusions = weaponInfusions,
+		infusedSpellId = equippedInfusion,
 		spellLevels = spellLevels,
 		unlockedSpells = unlockedSpells,
 		grimoireCount = profile.grimoireCount,
@@ -4291,7 +4559,20 @@ end
 
 function PlayerDataService.getInfusedSpell(player: Player): string
 	local profile = profiles[player]
-	return if profile then profile.infusedSpellId else ""
+	if not profile then
+		return ""
+	end
+
+	return profile.weaponInfusions[profile.equippedWeapon] or ""
+end
+
+function PlayerDataService.getWeaponInfusion(player: Player, weaponId: string): string
+	local profile = profiles[player]
+	if not profile or not WeaponConfig.isValid(weaponId) then
+		return ""
+	end
+
+	return profile.weaponInfusions[weaponId] or ""
 end
 
 function PlayerDataService.ownsSpell(player: Player, spellId: string): boolean
@@ -4299,16 +4580,61 @@ function PlayerDataService.ownsSpell(player: Player, spellId: string): boolean
 	return profile ~= nil and profile.ownedSpells[spellId] == true
 end
 
-function PlayerDataService.setInfusedSpell(player: Player, spellId: string): boolean
+function PlayerDataService.tryInfuseWeapon(player: Player, weaponId: string, spellId: string): (boolean, string?)
 	local profile = profiles[player]
-	if not profile or not SpellConfig.isValid(spellId) or not profile.ownedSpells[spellId] then
-		return false
+	if not profile then
+		return false, "Profile unavailable."
+	end
+	if not WeaponConfig.isValid(weaponId) then
+		return false, "Invalid weapon."
+	end
+	if not profile.unlockedWeapons[weaponId] then
+		return false, "Weapon locked."
+	end
+	if not SpellConfig.isValid(spellId) or not profile.ownedSpells[spellId] then
+		return false, "Spell not owned."
 	end
 
-	profile.infusedSpellId = spellId
+	local existing = profile.weaponInfusions[weaponId]
+	if typeof(existing) == "string" and existing ~= "" then
+		return false, "That weapon already has an infused spell."
+	end
+
+	if profile.grimoireCount < InfuserConfig.INFUSION_GRIMOIRE_COST then
+		return false, "Need a grimoire to infuse a weapon."
+	end
+
+	profile.grimoireCount -= InfuserConfig.INFUSION_GRIMOIRE_COST
+	profile.weaponInfusions[weaponId] = spellId
 	PlayerDataService.sendProfile(player)
 	scheduleSave(player)
-	return true
+	return true, nil
+end
+
+function PlayerDataService.tryPurgeWeaponInfusion(player: Player, weaponId: string): (boolean, string?)
+	local profile = profiles[player]
+	if not profile then
+		return false, "Profile unavailable."
+	end
+	if not WeaponConfig.isValid(weaponId) then
+		return false, "Invalid weapon."
+	end
+
+	local existing = profile.weaponInfusions[weaponId]
+	if typeof(existing) ~= "string" or existing == "" then
+		return false, "That weapon has no infusion to remove."
+	end
+
+	local cost = InfuserConfig.PURGE_COST
+	if profile.gold < cost then
+		return false, `Need {cost} gold to purge.`
+	end
+
+	profile.gold -= cost
+	profile.weaponInfusions[weaponId] = nil
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+	return true, nil
 end
 
 function PlayerDataService.getGrimoireCount(player: Player): number
@@ -4349,8 +4675,21 @@ function PlayerDataService.tryUseGrimoire(player: Player): (boolean, string?, st
 
 	profile.grimoireCount -= 1
 
-	local spellList = SpellConfig.getSpellList()
-	local spellId = spellList[math.random(1, #spellList)].id
+	local unownedIds: { string } = {}
+	for _, spell in SpellConfig.getSpellList() do
+		if profile.ownedSpells[spell.id] ~= true then
+			table.insert(unownedIds, spell.id)
+		end
+	end
+
+	local spellId: string
+	if #unownedIds > 0 then
+		spellId = unownedIds[math.random(1, #unownedIds)]
+	else
+		local spellList = SpellConfig.getSpellList()
+		spellId = spellList[math.random(1, #spellList)].id
+	end
+
 	local isNew = PlayerDataService.grantOwnedSpell(player, spellId)
 
 	if not isNew then
@@ -4589,6 +4928,7 @@ local PROJECTILE_LIFETIME = 2.5
 local lastActiveCastAt: { [Player]: number } = {}
 
 local infuseSpellEvent: RemoteEvent
+local purgeWeaponInfusionEvent: RemoteEvent
 local upgradeSpellEvent: RemoteEvent
 local unlockSpellEvent: RemoteEvent
 local castSpellEvent: RemoteEvent
@@ -4612,6 +4952,21 @@ local function getInfuseSpellEvent(): RemoteEvent
 	end
 
 	return infuseSpellEvent
+end
+
+local function getPurgeWeaponInfusionEvent(): RemoteEvent
+	if purgeWeaponInfusionEvent then
+		return purgeWeaponInfusionEvent
+	end
+
+	purgeWeaponInfusionEvent = ReplicatedStorage:FindFirstChild("PurgeWeaponInfusion") :: RemoteEvent?
+	if not purgeWeaponInfusionEvent then
+		purgeWeaponInfusionEvent = Instance.new("RemoteEvent")
+		purgeWeaponInfusionEvent.Name = "PurgeWeaponInfusion"
+		purgeWeaponInfusionEvent.Parent = ReplicatedStorage
+	end
+
+	return purgeWeaponInfusionEvent
 end
 
 local function getUpgradeSpellEvent(): RemoteEvent
@@ -5001,7 +5356,7 @@ end
 
 local function castInfusedSpell(player: Player, spellId: string): boolean
 	local stats = getEffectiveStats(player, spellId)
-	if spellId == "FrostNova" then
+	if (stats.aoeRadius or 0) > 0 then
 		castFrostNova(player, stats)
 	else
 		fireForwardProjectiles(player, stats)
@@ -5043,20 +5398,28 @@ local function tryCastActiveSpell(player: Player): boolean
 	return castInfusedSpell(player, spellId)
 end
 
-function SpellService.infusePlayerSpell(player: Player, spellId: string): boolean
+function SpellService.infusePlayerSpell(player: Player, weaponId: string, spellId: string): boolean
 	if not GamePhaseService.isInLobby(player) or GamePhaseService.isLoadoutLocked(player) then
 		return false
 	end
-	if not SpellConfig.isValid(spellId) then
+
+	local ok = PlayerDataService.tryInfuseWeapon(player, weaponId, spellId)
+	if ok then
+		notifyLoadout(player)
+	end
+	return ok
+end
+
+function SpellService.purgeWeaponInfusion(player: Player, weaponId: string): boolean
+	if not GamePhaseService.isInLobby(player) or GamePhaseService.isLoadoutLocked(player) then
 		return false
 	end
 
-	if not PlayerDataService.setInfusedSpell(player, spellId) then
-		return false
+	local ok = PlayerDataService.tryPurgeWeaponInfusion(player, weaponId)
+	if ok then
+		notifyLoadout(player)
 	end
-
-	notifyLoadout(player)
-	return true
+	return ok
 end
 
 function SpellService.upgradePlayerSpell(player: Player, spellId: string): boolean
@@ -5079,17 +5442,25 @@ end
 
 function SpellService.init()
 	getInfuseSpellEvent()
+	getPurgeWeaponInfusionEvent()
 	getUpgradeSpellEvent()
 	getUnlockSpellEvent()
 	getCastSpellEvent()
 	getSpellLoadoutUpdatedEvent()
 	getSpellCastEffectEvent()
 
-	getInfuseSpellEvent().OnServerEvent:Connect(function(player, spellId: string)
-		if typeof(spellId) ~= "string" then
+	getInfuseSpellEvent().OnServerEvent:Connect(function(player, weaponId: string, spellId: string)
+		if typeof(weaponId) ~= "string" or typeof(spellId) ~= "string" then
 			return
 		end
-		SpellService.infusePlayerSpell(player, spellId)
+		SpellService.infusePlayerSpell(player, weaponId, spellId)
+	end)
+
+	getPurgeWeaponInfusionEvent().OnServerEvent:Connect(function(player, weaponId: string)
+		if typeof(weaponId) ~= "string" then
+			return
+		end
+		SpellService.purgeWeaponInfusion(player, weaponId)
 	end)
 
 	getUpgradeSpellEvent().OnServerEvent:Connect(function(player, spellId: string)
@@ -6631,6 +7002,7 @@ local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig
 local CardService = require(script.Parent.CardService)
 local GamePhaseService = require(script.Parent.GamePhaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local SpellService = require(script.Parent.SpellService)
 
 local WeaponService = {}
 
@@ -7455,6 +7827,7 @@ function WeaponService.equipPlayerWeapon(player: Player, weaponId: string): bool
 	playerWeapons[player] = weaponId
 	giveWeapon(player, player.Character, weaponId)
 	notifyLoadout(player)
+	SpellService.refreshPlayerLoadout(player)
 	return true
 end
 
@@ -8988,6 +9361,7 @@ local InfuserConfig = require(ReplicatedStorage.Shared.InfuserConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
+local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 
 local InfuserMenuClient = {}
 
@@ -8999,6 +9373,7 @@ local TEXT = Color3.fromRGB(244, 228, 196)
 local TEXT_DIM = Color3.fromRGB(170, 154, 128)
 local LOCKED = Color3.fromRGB(110, 110, 110)
 local ACCENT = Color3.fromRGB(120, 72, 180)
+local WEAPON_ACCENT = Color3.fromRGB(58, 92, 148)
 local SELECTED = Color3.fromRGB(88, 58, 128)
 
 function InfuserMenuClient.init()
@@ -9006,12 +9381,20 @@ function InfuserMenuClient.init()
 	local playerGui = player:WaitForChild("PlayerGui")
 
 	local infuseSpellEvent = ReplicatedStorage:WaitForChild("InfuseSpell") :: RemoteEvent
+	local purgeWeaponInfusionEvent = ReplicatedStorage:WaitForChild("PurgeWeaponInfusion") :: RemoteEvent
 	local spellLoadoutUpdatedEvent = ReplicatedStorage:WaitForChild("SpellLoadoutUpdated") :: RemoteEvent
 	local profileStateEvent = ReplicatedStorage:WaitForChild("PlayerProfileState") :: RemoteEvent
 	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
 
-	local infusedSpellId = ""
+	local selectedWeaponId = LobbyConfig.STARTER_WEAPON
 	local selectedSpellId = ""
+	local equippedWeapon = LobbyConfig.STARTER_WEAPON
+	local walletGold = LobbyConfig.STARTER_GOLD
+	local grimoireCount = 0
+	local weaponInfusions: { [string]: string } = {}
+	local unlockedWeapons: { [string]: boolean } = {
+		[LobbyConfig.STARTER_WEAPON] = true,
+	}
 	local ownedSpells: { [string]: boolean } = {
 		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
 	}
@@ -9019,7 +9402,7 @@ function InfuserMenuClient.init()
 	local loadoutLocked = false
 	local menuOpen = false
 	local currentPhase = "Lobby"
-	local pendingInfusion = false
+	local pendingAction = false
 
 	for _, spell in SpellConfig.getSpellList() do
 		spellLevels[spell.id] = 1
@@ -9036,7 +9419,7 @@ function InfuserMenuClient.init()
 	panel.Name = "InfuserPanel"
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(440, 460)
+	panel.Size = UDim2.fromOffset(560, 480)
 	panel.BackgroundColor3 = PANEL
 	panel.BorderSizePixel = 0
 	panel.Visible = false
@@ -9081,31 +9464,75 @@ function InfuserMenuClient.init()
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.BackgroundTransparency = 1
 	statusLabel.Position = UDim2.fromOffset(16, 44)
-	statusLabel.Size = UDim2.new(1, -32, 0, 52)
+	statusLabel.Size = UDim2.new(1, -32, 0, 48)
 	statusLabel.Font = Enum.Font.Gotham
-	statusLabel.Text = "Select a learned spell, then infuse it to cast with E in dungeons."
+	statusLabel.Text = "Pick a weapon and learned spell. Infusing costs 1 grimoire and is permanent until purged."
 	statusLabel.TextColor3 = TEXT
 	statusLabel.TextSize = 14
 	statusLabel.TextWrapped = true
 	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 	statusLabel.Parent = panel
 
-	local list = Instance.new("ScrollingFrame")
-	list.BackgroundTransparency = 1
-	list.BorderSizePixel = 0
-	list.Position = UDim2.fromOffset(16, 104)
-	list.Size = UDim2.new(1, -32, 1, -188)
-	list.CanvasSize = UDim2.fromOffset(0, 0)
-	list.ScrollBarThickness = 6
-	list.Parent = panel
+	local columns = Instance.new("Frame")
+	columns.BackgroundTransparency = 1
+	columns.Position = UDim2.fromOffset(16, 100)
+	columns.Size = UDim2.new(1, -32, 1, -188)
+	columns.Parent = panel
 
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 10)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = list
+	local weaponHeader = Instance.new("TextLabel")
+	weaponHeader.BackgroundTransparency = 1
+	weaponHeader.Size = UDim2.new(0.48, 0, 0, 22)
+	weaponHeader.Font = Enum.Font.GothamBold
+	weaponHeader.Text = "Weapon"
+	weaponHeader.TextColor3 = WEAPON_ACCENT
+	weaponHeader.TextSize = 16
+	weaponHeader.TextXAlignment = Enum.TextXAlignment.Left
+	weaponHeader.Parent = columns
 
-	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 8)
+	local spellHeader = Instance.new("TextLabel")
+	spellHeader.BackgroundTransparency = 1
+	spellHeader.Position = UDim2.new(0.52, 0, 0, 0)
+	spellHeader.Size = UDim2.new(0.48, 0, 0, 22)
+	spellHeader.Font = Enum.Font.GothamBold
+	spellHeader.Text = "Spell"
+	spellHeader.TextColor3 = ACCENT
+	spellHeader.TextSize = 16
+	spellHeader.TextXAlignment = Enum.TextXAlignment.Left
+	spellHeader.Parent = columns
+
+	local weaponList = Instance.new("ScrollingFrame")
+	weaponList.BackgroundTransparency = 1
+	weaponList.BorderSizePixel = 0
+	weaponList.Position = UDim2.new(0, 0, 0, 28)
+	weaponList.Size = UDim2.new(0.48, -6, 1, -28)
+	weaponList.CanvasSize = UDim2.fromOffset(0, 0)
+	weaponList.ScrollBarThickness = 6
+	weaponList.Parent = columns
+
+	local weaponLayout = Instance.new("UIListLayout")
+	weaponLayout.Padding = UDim.new(0, 8)
+	weaponLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	weaponLayout.Parent = weaponList
+
+	local spellList = Instance.new("ScrollingFrame")
+	spellList.BackgroundTransparency = 1
+	spellList.BorderSizePixel = 0
+	spellList.Position = UDim2.new(0.52, 0, 0, 28)
+	spellList.Size = UDim2.new(0.48, -6, 1, -28)
+	spellList.CanvasSize = UDim2.fromOffset(0, 0)
+	spellList.ScrollBarThickness = 6
+	spellList.Parent = columns
+
+	local spellLayout = Instance.new("UIListLayout")
+	spellLayout.Padding = UDim.new(0, 8)
+	spellLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	spellLayout.Parent = spellList
+
+	weaponLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		weaponList.CanvasSize = UDim2.fromOffset(0, weaponLayout.AbsoluteContentSize.Y + 8)
+	end)
+	spellLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		spellList.CanvasSize = UDim2.fromOffset(0, spellLayout.AbsoluteContentSize.Y + 8)
 	end)
 
 	local actionBar = Instance.new("Frame")
@@ -9118,9 +9545,9 @@ function InfuserMenuClient.init()
 	local previewLabel = Instance.new("TextLabel")
 	previewLabel.BackgroundTransparency = 1
 	previewLabel.Position = UDim2.fromOffset(0, 0)
-	previewLabel.Size = UDim2.new(1, -148, 0, 72)
+	previewLabel.Size = UDim2.new(1, -280, 0, 72)
 	previewLabel.Font = Enum.Font.Gotham
-	previewLabel.Text = "Select a spell above."
+	previewLabel.Text = "Select a weapon and spell."
 	previewLabel.TextColor3 = TEXT_DIM
 	previewLabel.TextSize = 14
 	previewLabel.TextWrapped = true
@@ -9130,14 +9557,14 @@ function InfuserMenuClient.init()
 
 	local infuseButton = Instance.new("TextButton")
 	infuseButton.AnchorPoint = Vector2.new(1, 0.5)
-	infuseButton.Position = UDim2.new(1, 0, 0.5, 0)
-	infuseButton.Size = UDim2.fromOffset(132, 48)
+	infuseButton.Position = UDim2.new(1, -144, 0.5, 0)
+	infuseButton.Size = UDim2.fromOffset(124, 48)
 	infuseButton.BackgroundColor3 = ACCENT
 	infuseButton.BorderSizePixel = 0
 	infuseButton.Font = Enum.Font.GothamBold
 	infuseButton.Text = "Infuse"
 	infuseButton.TextColor3 = Color3.new(1, 1, 1)
-	infuseButton.TextSize = 18
+	infuseButton.TextSize = 17
 	infuseButton.AutoButtonColor = false
 	infuseButton.Parent = actionBar
 
@@ -9145,136 +9572,204 @@ function InfuserMenuClient.init()
 	infuseCorner.CornerRadius = UDim.new(0, 10)
 	infuseCorner.Parent = infuseButton
 
-	type SpellRow = {
+	local purgeButton = Instance.new("TextButton")
+	purgeButton.AnchorPoint = Vector2.new(1, 0.5)
+	purgeButton.Position = UDim2.new(1, 0, 0.5, 0)
+	purgeButton.Size = UDim2.fromOffset(132, 48)
+	purgeButton.BackgroundColor3 = PANEL_LIGHT
+	purgeButton.BorderSizePixel = 0
+	purgeButton.Font = Enum.Font.GothamBold
+	purgeButton.Text = `Purge ({InfuserConfig.PURGE_COST}g)`
+	purgeButton.TextColor3 = TEXT
+	purgeButton.TextSize = 15
+	purgeButton.AutoButtonColor = false
+	purgeButton.Parent = actionBar
+
+	local purgeCorner = Instance.new("UICorner")
+	purgeCorner.CornerRadius = UDim.new(0, 10)
+	purgeCorner.Parent = purgeButton
+
+	type Row = {
 		button: TextButton,
 		stroke: UIStroke,
 	}
 
-	local spellRows: { [string]: SpellRow } = {}
+	local weaponRows: { [string]: Row } = {}
+	local spellRows: { [string]: Row } = {}
 
 	local function getEffectiveDisplayStats(spellId: string)
 		return SpellUpgradeConfig.getEffectiveStats(spellId, spellLevels[spellId] or 1)
 	end
 
-	local function getDefaultSelection(): string
-		if infusedSpellId ~= "" and ownedSpells[infusedSpellId] then
-			return infusedSpellId
-		end
+	local function getWeaponInfusion(weaponId: string): string
+		return weaponInfusions[weaponId] or ""
+	end
 
+	local function weaponHasInfusion(weaponId: string): boolean
+		local infusion = getWeaponInfusion(weaponId)
+		return infusion ~= ""
+	end
+
+	local function getDefaultSpellSelection(): string
 		for _, spell in SpellConfig.getSpellList() do
 			if ownedSpells[spell.id] then
 				return spell.id
 			end
 		end
-
 		return ""
 	end
 
 	local function canInfuseSelection(): boolean
-		return selectedSpellId ~= ""
+		return selectedWeaponId ~= ""
+			and selectedSpellId ~= ""
+			and unlockedWeapons[selectedWeaponId] == true
 			and ownedSpells[selectedSpellId] == true
-			and selectedSpellId ~= infusedSpellId
+			and not weaponHasInfusion(selectedWeaponId)
+			and grimoireCount >= InfuserConfig.INFUSION_GRIMOIRE_COST
 			and not loadoutLocked
 			and currentPhase == "Lobby"
-			and not pendingInfusion
+			and not pendingAction
+	end
+
+	local function canPurgeSelection(): boolean
+		return selectedWeaponId ~= ""
+			and unlockedWeapons[selectedWeaponId] == true
+			and weaponHasInfusion(selectedWeaponId)
+			and walletGold >= InfuserConfig.PURGE_COST
+			and not loadoutLocked
+			and currentPhase == "Lobby"
+			and not pendingAction
 	end
 
 	local function updateActionBar()
-		if selectedSpellId == "" or ownedSpells[selectedSpellId] ~= true then
-			previewLabel.Text = "Select a learned spell above."
-			previewLabel.TextColor3 = TEXT_DIM
-			infuseButton.Text = "Infuse"
-			infuseButton.BackgroundColor3 = LOCKED
-			infuseButton.AutoButtonColor = false
-			return
-		end
+		local weapon = WeaponConfig.getWeapon(selectedWeaponId)
+		local weaponName = if weapon then weapon.displayName else "Weapon"
+		local infusionId = getWeaponInfusion(selectedWeaponId)
 
-		local stats = getEffectiveDisplayStats(selectedSpellId)
-		if selectedSpellId == infusedSpellId then
+		if infusionId ~= "" then
+			local stats = getEffectiveDisplayStats(infusionId)
 			previewLabel.Text =
-				`{stats.resolvedName} is already infused.\nPress E in dungeons to cast ({stats.staminaCost} stamina).`
+				`{weaponName} is bound to {stats.resolvedName}.\nPress E in dungeons while wielding it. Purge costs {InfuserConfig.PURGE_COST} gold.`
 			previewLabel.TextColor3 = GOLD
 			infuseButton.Text = "Infused"
-			infuseButton.BackgroundColor3 = GOLD_DIM
+			infuseButton.BackgroundColor3 = LOCKED
 			infuseButton.AutoButtonColor = false
+			purgeButton.Text = if pendingAction then "Purging..." else `Purge ({InfuserConfig.PURGE_COST}g)`
+			purgeButton.BackgroundColor3 = if canPurgeSelection() then Color3.fromRGB(92, 58, 58) else LOCKED
+			purgeButton.AutoButtonColor = canPurgeSelection()
 			return
 		end
 
-		previewLabel.Text =
-			`Ready: {stats.displayName}  Lv {spellLevels[selectedSpellId] or 1}\n{stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} stamina per cast (E)`
-		previewLabel.TextColor3 = TEXT
+		if selectedSpellId == "" or ownedSpells[selectedSpellId] ~= true then
+			previewLabel.Text = `{weaponName} has no infusion yet.\nLearn spells with grimoires, then infuse (costs 1 grimoire).`
+			previewLabel.TextColor3 = TEXT_DIM
+		else
+			local stats = getEffectiveDisplayStats(selectedSpellId)
+			local grimoireReady = grimoireCount >= InfuserConfig.INFUSION_GRIMOIRE_COST
+			previewLabel.Text = if grimoireReady
+				then `Bind {stats.displayName} to {weaponName} for 1 grimoire.\nCast with E while wielding it ({stats.staminaCost} stamina).`
+				else `Need 1 grimoire to infuse {stats.displayName} into {weaponName}.`
+			previewLabel.TextColor3 = if grimoireReady then TEXT else TEXT_DIM
+		end
 
 		local ready = canInfuseSelection()
-		infuseButton.Text = if pendingInfusion then "Infusing..." else "Infuse"
+		infuseButton.Text = if pendingAction then "Infusing..." else "Infuse"
 		infuseButton.BackgroundColor3 = if ready then ACCENT else LOCKED
 		infuseButton.AutoButtonColor = ready
+		purgeButton.Text = `Purge ({InfuserConfig.PURGE_COST}g)`
+		purgeButton.BackgroundColor3 = LOCKED
+		purgeButton.AutoButtonColor = false
 	end
 
 	local function updateMenuState()
-		local infusedName = if infusedSpellId ~= ""
-			then getEffectiveDisplayStats(infusedSpellId).resolvedName
-			else "None"
-
-		if not pendingInfusion then
+		if not pendingAction then
 			statusLabel.Text =
-				`Bind a spell to your weapon, then press E in dungeons to cast.\nCurrent infusion: {infusedName}`
+				`Grimoires: {grimoireCount}  |  Infuse cost: 1  |  Purge: {InfuserConfig.PURGE_COST} gold  |  Wallet: {walletGold}`
 		end
 
-		local layoutOrder = 0
-		for _, spell in SpellConfig.getSpellList() do
-			layoutOrder += 1
-			local spellId = spell.id
-			local row = spellRows[spellId]
+		for index, weapon in WeaponConfig.getWeaponList() do
+			local row = weaponRows[weapon.id]
 			if not row then
 				continue
 			end
 
-			local stats = getEffectiveDisplayStats(spellId)
-			local owned = ownedSpells[spellId] == true
-			local infused = spellId == infusedSpellId
-			local selected = spellId == selectedSpellId
+			local unlocked = unlockedWeapons[weapon.id] == true
+			local selected = weapon.id == selectedWeaponId
+			local infusionId = getWeaponInfusion(weapon.id)
+			local equippedTag = if weapon.id == equippedWeapon then "  EQUIPPED" else ""
 
-			row.button.LayoutOrder = if owned then layoutOrder else layoutOrder + 100
-
-			if not owned then
-				row.button.Text = `{stats.displayName}  LOCKED\nFind this spell with a grimoire.`
+			if not unlocked then
+				row.button.Text = `{weapon.displayName}  LOCKED`
 				row.button.BackgroundColor3 = PANEL_LIGHT
 				row.button.TextColor3 = LOCKED
-				row.button.AutoButtonColor = false
 				row.stroke.Color = PANEL_LIGHT
-				row.stroke.Thickness = 1
-			elseif infused then
-				row.button.Text =
-					`{stats.resolvedName}  INFUSED\nPress E in dungeons  |  {stats.staminaCost} stamina`
-				row.button.BackgroundColor3 = GOLD_DIM
+			elseif infusionId ~= "" then
+				local spellName = getEffectiveDisplayStats(infusionId).resolvedName
+				row.button.Text = `{weapon.displayName}{equippedTag}\n{spellName} infused`
+				row.button.BackgroundColor3 = if selected then GOLD_DIM else PANEL_LIGHT
 				row.button.TextColor3 = TEXT
+				row.stroke.Color = if selected then GOLD else WEAPON_ACCENT
+			else
+				row.button.Text = `{weapon.displayName}{equippedTag}\nNo infusion`
+				row.button.BackgroundColor3 = if selected then SELECTED else PANEL_LIGHT
+				row.button.TextColor3 = TEXT
+				row.stroke.Color = if selected then WEAPON_ACCENT else PANEL_LIGHT
+			end
+			row.stroke.Thickness = if selected then 2 else 1
+			row.button.LayoutOrder = index
+		end
+
+		local weaponInfused = weaponHasInfusion(selectedWeaponId)
+		local ownedSpellCount = 0
+		for index, spell in SpellConfig.getSpellList() do
+			local row = spellRows[spell.id]
+			if not row then
+				continue
+			end
+
+			local owned = ownedSpells[spell.id] == true
+			row.button.Visible = owned
+			if not owned then
+				continue
+			end
+
+			ownedSpellCount += 1
+			local selected = spell.id == selectedSpellId
+			local stats = getEffectiveDisplayStats(spell.id)
+
+			if weaponInfused then
+				row.button.Text = `{stats.displayName}  Lv {spellLevels[spell.id] or 1}\nPurge the weapon to change spells.`
+				row.button.BackgroundColor3 = PANEL_LIGHT
+				row.button.TextColor3 = TEXT_DIM
+				row.stroke.Color = PANEL_LIGHT
 				row.button.AutoButtonColor = false
-				row.stroke.Color = GOLD
-				row.stroke.Thickness = if selected then 2 else 1
 			else
 				row.button.Text =
-					`{stats.displayName}  Lv {spellLevels[spellId] or 1}\nClick to select, then press Infuse`
+					`{stats.displayName}  Lv {spellLevels[spell.id] or 1}\n{stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
 				row.button.BackgroundColor3 = if selected then SELECTED else PANEL_LIGHT
-				row.button.TextColor3 = if loadoutLocked or currentPhase ~= "Lobby" then LOCKED else TEXT
-				row.button.AutoButtonColor = false
+				row.button.TextColor3 = TEXT
 				row.stroke.Color = if selected then ACCENT else PANEL_LIGHT
-				row.stroke.Thickness = if selected then 2 else 1
+				row.button.AutoButtonColor = false
 			end
+			row.stroke.Thickness = if selected and not weaponInfused then 2 else 1
+			row.button.LayoutOrder = index
 		end
+
+		spellHeader.Text = if ownedSpellCount > 0 then "Spell" else "Spell (learn with grimoires)"
 
 		updateActionBar()
 	end
 
-	for index, stats in SpellConfig.getSpellList() do
+	for index, weapon in WeaponConfig.getWeaponList() do
 		local button = Instance.new("TextButton")
-		button.Size = UDim2.new(1, -4, 0, 72)
+		button.Size = UDim2.new(1, -4, 0, 64)
 		button.BackgroundColor3 = PANEL_LIGHT
 		button.BorderSizePixel = 0
 		button.Font = Enum.Font.GothamBold
-		button.TextSize = 15
+		button.TextSize = 14
 		button.TextWrapped = true
 		button.LayoutOrder = index
-		button.Parent = list
+		button.Parent = weaponList
 
 		local corner = Instance.new("UICorner")
 		corner.CornerRadius = UDim.new(0, 8)
@@ -9286,26 +9781,59 @@ function InfuserMenuClient.init()
 		stroke.Parent = button
 
 		button.MouseButton1Click:Connect(function()
-			if ownedSpells[stats.id] ~= true then
+			if unlockedWeapons[weapon.id] ~= true then
 				return
 			end
-
-			selectedSpellId = stats.id
+			selectedWeaponId = weapon.id
+			if weaponHasInfusion(weapon.id) then
+				selectedSpellId = getWeaponInfusion(weapon.id)
+			elseif selectedSpellId == "" or ownedSpells[selectedSpellId] ~= true then
+				selectedSpellId = getDefaultSpellSelection()
+			end
 			updateMenuState()
 		end)
 
-		spellRows[stats.id] = {
-			button = button,
-			stroke = stroke,
-		}
+		weaponRows[weapon.id] = { button = button, stroke = stroke }
+	end
+
+	for index, spell in SpellConfig.getSpellList() do
+		local button = Instance.new("TextButton")
+		button.Size = UDim2.new(1, -4, 0, 64)
+		button.BackgroundColor3 = PANEL_LIGHT
+		button.BorderSizePixel = 0
+		button.Font = Enum.Font.GothamBold
+		button.TextSize = 14
+		button.TextWrapped = true
+		button.LayoutOrder = index
+		button.Parent = spellList
+
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 8)
+		corner.Parent = button
+
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = PANEL_LIGHT
+		stroke.Thickness = 1
+		stroke.Parent = button
+
+		button.MouseButton1Click:Connect(function()
+			if ownedSpells[spell.id] ~= true or weaponHasInfusion(selectedWeaponId) then
+				return
+			end
+			selectedSpellId = spell.id
+			updateMenuState()
+		end)
+
+		spellRows[spell.id] = { button = button, stroke = stroke }
 	end
 
 	local function setMenuOpen(open: boolean)
 		menuOpen = open
 		panel.Visible = open
 		if open then
-			selectedSpellId = getDefaultSelection()
-			pendingInfusion = false
+			selectedWeaponId = equippedWeapon
+			selectedSpellId = getDefaultSpellSelection()
+			pendingAction = false
 			updateMenuState()
 		end
 	end
@@ -9315,9 +9843,19 @@ function InfuserMenuClient.init()
 			return
 		end
 
-		pendingInfusion = true
+		pendingAction = true
 		updateActionBar()
-		infuseSpellEvent:FireServer(selectedSpellId)
+		infuseSpellEvent:FireServer(selectedWeaponId, selectedSpellId)
+	end
+
+	local function tryPurgeSelected()
+		if not canPurgeSelection() then
+			return
+		end
+
+		pendingAction = true
+		updateActionBar()
+		purgeWeaponInfusionEvent:FireServer(selectedWeaponId)
 	end
 
 	closeButton.MouseButton1Click:Connect(function()
@@ -9325,6 +9863,7 @@ function InfuserMenuClient.init()
 	end)
 
 	infuseButton.MouseButton1Click:Connect(tryInfuseSelected)
+	purgeButton.MouseButton1Click:Connect(tryPurgeSelected)
 
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed or not menuOpen then
@@ -9333,26 +9872,13 @@ function InfuserMenuClient.init()
 
 		if input.KeyCode == Enum.KeyCode.Escape then
 			setMenuOpen(false)
-		elseif input.KeyCode == Enum.KeyCode.Return then
-			tryInfuseSelected()
 		end
 	end)
 
-	spellLoadoutUpdatedEvent.OnClientEvent:Connect(function(activeInfusion: string, locked: boolean)
-		pendingInfusion = false
-
-		if typeof(activeInfusion) == "string" then
-			local previousInfusion = infusedSpellId
-			infusedSpellId = activeInfusion
-			if activeInfusion ~= "" and activeInfusion ~= previousInfusion then
-				local stats = getEffectiveDisplayStats(activeInfusion)
-				statusLabel.Text = `{stats.resolvedName} infused! Press E in dungeons to cast.`
-				selectedSpellId = activeInfusion
-			end
-		end
-
+	spellLoadoutUpdatedEvent.OnClientEvent:Connect(function(_activeInfusion: string, locked: boolean)
 		loadoutLocked = locked == true
 		if locked then
+			pendingAction = false
 			setMenuOpen(false)
 		end
 		updateMenuState()
@@ -9363,8 +9889,33 @@ function InfuserMenuClient.init()
 			return
 		end
 
-		if typeof(snapshot.infusedSpellId) == "string" then
-			infusedSpellId = snapshot.infusedSpellId
+		local previousInfusion = getWeaponInfusion(selectedWeaponId)
+
+		if typeof(snapshot.gold) == "number" then
+			walletGold = snapshot.gold
+		end
+		if typeof(snapshot.grimoireCount) == "number" then
+			grimoireCount = snapshot.grimoireCount
+		end
+		if typeof(snapshot.equippedWeapon) == "string" then
+			equippedWeapon = snapshot.equippedWeapon
+		end
+		if typeof(snapshot.weaponInfusions) == "table" then
+			weaponInfusions = {}
+			for weaponId, spellId in snapshot.weaponInfusions do
+				if typeof(spellId) == "string" and spellId ~= "" then
+					weaponInfusions[weaponId] = spellId
+				end
+			end
+		elseif typeof(snapshot.infusedSpellId) == "string" and snapshot.infusedSpellId ~= "" then
+			weaponInfusions[equippedWeapon] = snapshot.infusedSpellId
+		end
+		if typeof(snapshot.unlockedWeapons) == "table" then
+			for weaponId, unlocked in snapshot.unlockedWeapons do
+				if typeof(unlocked) == "boolean" then
+					unlockedWeapons[weaponId] = unlocked
+				end
+			end
 		end
 		if typeof(snapshot.ownedSpells) == "table" then
 			for spellId, owned in snapshot.ownedSpells do
@@ -9381,8 +9932,26 @@ function InfuserMenuClient.init()
 			end
 		end
 
-		if menuOpen and (selectedSpellId == "" or ownedSpells[selectedSpellId] ~= true) then
-			selectedSpellId = getDefaultSelection()
+		if menuOpen then
+			local infusionId = getWeaponInfusion(selectedWeaponId)
+			if infusionId ~= "" then
+				selectedSpellId = infusionId
+			elseif selectedSpellId == "" or ownedSpells[selectedSpellId] ~= true then
+				selectedSpellId = getDefaultSpellSelection()
+			end
+
+			if pendingAction then
+				pendingAction = false
+				local weapon = WeaponConfig.getWeapon(selectedWeaponId)
+				local weaponName = if weapon then weapon.displayName else "Weapon"
+				local newInfusion = getWeaponInfusion(selectedWeaponId)
+				if newInfusion ~= "" and newInfusion ~= previousInfusion then
+					local stats = getEffectiveDisplayStats(newInfusion)
+					statusLabel.Text = `{stats.resolvedName} infused into {weaponName}! Press E while wielding it.`
+				elseif previousInfusion ~= "" and newInfusion == "" then
+					statusLabel.Text = `Infusion removed from {weaponName} for {InfuserConfig.PURGE_COST} gold.`
+				end
+			end
 		end
 
 		updateMenuState()
@@ -9499,7 +10068,7 @@ function LobbyHubClient.init()
 	hintLabel.Size = UDim2.fromScale(1, 1)
 	hintLabel.Font = Enum.Font.Gotham
 	hintLabel.Text =
-		"Talk to Bob for dungeon tips. Mira the Infuser lets you cast learned spells with E.\nOpen chests for grimoires, then upgrade gear from the lobby menus."
+		"Talk to Bob for dungeon tips. Mira infuses spells onto specific weapons for 300g purge.\nOpen chests for grimoires, then upgrade gear from the lobby menus."
 	hintLabel.TextColor3 = TEXT
 	hintLabel.TextSize = 16
 	hintLabel.TextWrapped = true
@@ -10230,6 +10799,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
+local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 
 local SpellMenuClient = {}
 
@@ -10248,12 +10818,13 @@ function SpellMenuClient.init()
 	local playerGui = player:WaitForChild("PlayerGui")
 
 	local upgradeSpellEvent = ReplicatedStorage:WaitForChild("UpgradeSpell") :: RemoteEvent
-	local unlockSpellEvent = ReplicatedStorage:WaitForChild("UnlockSpell") :: RemoteEvent
 	local spellLoadoutUpdatedEvent = ReplicatedStorage:WaitForChild("SpellLoadoutUpdated") :: RemoteEvent
 	local profileStateEvent = ReplicatedStorage:WaitForChild("PlayerProfileState") :: RemoteEvent
 	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
 
 	local infusedSpellId = ""
+	local equippedWeapon = LobbyConfig.STARTER_WEAPON
+	local weaponInfusions: { [string]: string } = {}
 	local loadoutLocked = false
 	local menuOpen = false
 	local activeTab = "Collection"
@@ -10320,7 +10891,7 @@ function SpellMenuClient.init()
 	statusLabel.Position = UDim2.fromOffset(16, 40)
 	statusLabel.Size = UDim2.new(1, -32, 0, 48)
 	statusLabel.Font = Enum.Font.Gotham
-	statusLabel.Text = "Equip and upgrade spells in the lobby."
+	statusLabel.Text = "Learn spells from grimoires, then upgrade them here."
 	statusLabel.TextColor3 = TEXT
 	statusLabel.TextSize = 14
 	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -10383,6 +10954,19 @@ function SpellMenuClient.init()
 		list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 8)
 	end)
 
+	local emptyLabel = Instance.new("TextLabel")
+	emptyLabel.Name = "EmptySpells"
+	emptyLabel.BackgroundTransparency = 1
+	emptyLabel.Size = UDim2.new(1, -32, 0, 96)
+	emptyLabel.Position = UDim2.fromOffset(16, 148)
+	emptyLabel.Font = Enum.Font.Gotham
+	emptyLabel.Text = "No spells discovered yet.\nUse grimoires from the chest menu to learn new spells."
+	emptyLabel.TextColor3 = TEXT_DIM
+	emptyLabel.TextSize = 15
+	emptyLabel.TextWrapped = true
+	emptyLabel.Visible = false
+	emptyLabel.Parent = panel
+
 	local spellButtons: { [string]: TextButton } = {}
 
 	local function getEffectiveDisplayStats(spellId: string)
@@ -10391,63 +10975,58 @@ function SpellMenuClient.init()
 	end
 
 	local function updateSpellButtons()
+		local ownedCount = 0
+
 		for spellId, button in spellButtons do
 			local stats = getEffectiveDisplayStats(spellId)
 			local level = spellLevels[spellId] or 1
 			local owned = ownedSpells[spellId] == true
-			local infused = spellId == infusedSpellId
+			button.Visible = owned
+			if not owned then
+				continue
+			end
+
+			ownedCount += 1
+			local infused = spellId == (weaponInfusions[equippedWeapon] or infusedSpellId)
 			local ultimateTag = if stats.isUltimate then "  ULT" else ""
 
 			if activeTab == "Collection" then
-				if owned then
-					if infused then
-						button.Text =
-							`{stats.resolvedName}{ultimateTag}  INFUSED  Lv {level}\n[Press E]  {stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
-						button.BackgroundColor3 = GOLD_DIM
-					else
-						button.Text =
-							`{stats.resolvedName}{ultimateTag}  Lv {level}\nInfuse at Mira, then press E in dungeons`
-						button.BackgroundColor3 = PANEL_LIGHT
-					end
+				if infused then
+					button.Text =
+						`{stats.resolvedName}{ultimateTag}  INFUSED  Lv {level}\n[Press E]  {stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
+					button.BackgroundColor3 = GOLD_DIM
+				else
+					button.Text =
+						`{stats.resolvedName}{ultimateTag}  Lv {level}\nInfuse at Mira onto a weapon, then press E`
+					button.BackgroundColor3 = PANEL_LIGHT
+				end
+				button.TextColor3 = TEXT
+				button.AutoButtonColor = false
+			else
+				local cost = SpellUpgradeConfig.getUpgradeCost(spellId, level)
+				if level >= SpellUpgradeConfig.MAX_LEVEL then
+					button.Text =
+						`{stats.resolvedName}{ultimateTag}  Lv {level} MAX\n{stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
+					button.BackgroundColor3 = GOLD_DIM
 					button.TextColor3 = TEXT
 					button.AutoButtonColor = false
-				else
-					local cost = SpellUpgradeConfig.getUnlockCost(spellId)
-					button.Text = `{stats.displayName}  LOCKED\nUnlock for {cost} gold`
+				elseif level >= SpellUpgradeConfig.ULTIMATE_LEVEL - 1 and level < SpellUpgradeConfig.ULTIMATE_LEVEL then
+					button.Text =
+						`{stats.displayName}  Lv {level} -> ULTIMATE\nUpgrade for {cost} gold`
 					button.BackgroundColor3 = PANEL_LIGHT
 					button.TextColor3 = if walletGold >= cost and not loadoutLocked then GOLD else LOCKED
 					button.AutoButtonColor = walletGold >= cost and not loadoutLocked
-				end
-			else
-				if owned then
-					local cost = SpellUpgradeConfig.getUpgradeCost(spellId, level)
-					if level >= SpellUpgradeConfig.MAX_LEVEL then
-						button.Text =
-							`{stats.resolvedName}{ultimateTag}  Lv {level} MAX\n{stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
-						button.BackgroundColor3 = GOLD_DIM
-						button.TextColor3 = TEXT
-						button.AutoButtonColor = false
-					elseif level >= SpellUpgradeConfig.ULTIMATE_LEVEL - 1 and level < SpellUpgradeConfig.ULTIMATE_LEVEL then
-						button.Text =
-							`{stats.displayName}  Lv {level} -> ULTIMATE\nUpgrade for {cost} gold`
-						button.BackgroundColor3 = PANEL_LIGHT
-						button.TextColor3 = if walletGold >= cost and not loadoutLocked then GOLD else LOCKED
-						button.AutoButtonColor = walletGold >= cost and not loadoutLocked
-					else
-						button.Text = `{stats.displayName}  Lv {level} -> {level + 1}\nUpgrade for {cost} gold`
-						button.BackgroundColor3 = PANEL_LIGHT
-						button.TextColor3 = if walletGold >= cost and not loadoutLocked then TEXT else LOCKED
-						button.AutoButtonColor = walletGold >= cost and not loadoutLocked
-					end
 				else
-					local cost = SpellUpgradeConfig.getUnlockCost(spellId)
-					button.Text = `{stats.displayName}  LOCKED\nUnlock for {cost} gold`
+					button.Text = `{stats.displayName}  Lv {level} -> {level + 1}\nUpgrade for {cost} gold`
 					button.BackgroundColor3 = PANEL_LIGHT
-					button.TextColor3 = if walletGold >= cost and not loadoutLocked then GOLD else LOCKED
+					button.TextColor3 = if walletGold >= cost and not loadoutLocked then TEXT else LOCKED
 					button.AutoButtonColor = walletGold >= cost and not loadoutLocked
 				end
 			end
 		end
+
+		emptyLabel.Visible = ownedCount == 0
+		list.Visible = ownedCount > 0
 	end
 
 	local function updateMenuState()
@@ -10459,18 +11038,20 @@ function SpellMenuClient.init()
 		equipTab.BackgroundColor3 = if activeTab == "Collection" then GOLD_DIM else PANEL_LIGHT
 		upgradeTab.BackgroundColor3 = if activeTab == "Upgrade" then GOLD_DIM else PANEL_LIGHT
 
-		local infusedName = if infusedSpellId ~= ""
-			then getEffectiveDisplayStats(infusedSpellId).resolvedName
+		local equippedInfusion = weaponInfusions[equippedWeapon] or infusedSpellId
+		local weaponName = WeaponConfig.getWeapon(equippedWeapon).displayName
+		local infusedName = if equippedInfusion ~= ""
+			then getEffectiveDisplayStats(equippedInfusion).resolvedName
 			else "None"
 
 		if loadoutLocked or not inLobby then
 			statusLabel.Text = "Spell loadout locked during a dungeon run."
 		elseif activeTab == "Collection" then
 			statusLabel.Text =
-				`Infused spell: {infusedName}  |  Press E in dungeons to cast.\nGold: {walletGold}`
+				`{weaponName} infusion: {infusedName}  |  Press E while wielding it.\nGold: {walletGold}`
 		else
 			statusLabel.Text =
-				`Ultimates unlock at level {SpellUpgradeConfig.ULTIMATE_LEVEL}. Wallet: {walletGold}`
+				`Upgrade discovered spells. Ultimates unlock at level {SpellUpgradeConfig.ULTIMATE_LEVEL}. Wallet: {walletGold}`
 		end
 
 		updateSpellButtons()
@@ -10502,21 +11083,12 @@ function SpellMenuClient.init()
 		badgeCorner.Parent = badge
 
 		button.MouseButton1Click:Connect(function()
-			if loadoutLocked or currentPhase ~= "Lobby" then
+			if loadoutLocked or currentPhase ~= "Lobby" or ownedSpells[stats.id] ~= true then
 				return
 			end
 
-			local owned = ownedSpells[stats.id] == true
-			if activeTab == "Collection" then
-				if not owned then
-					unlockSpellEvent:FireServer(stats.id)
-				end
-			else
-				if owned then
-					upgradeSpellEvent:FireServer(stats.id)
-				else
-					unlockSpellEvent:FireServer(stats.id)
-				end
+			if activeTab == "Upgrade" then
+				upgradeSpellEvent:FireServer(stats.id)
 			end
 		end)
 
@@ -10563,6 +11135,17 @@ function SpellMenuClient.init()
 
 		if typeof(snapshot.gold) == "number" then
 			walletGold = snapshot.gold
+		end
+		if typeof(snapshot.equippedWeapon) == "string" then
+			equippedWeapon = snapshot.equippedWeapon
+		end
+		if typeof(snapshot.weaponInfusions) == "table" then
+			weaponInfusions = {}
+			for weaponId, spellId in snapshot.weaponInfusions do
+				if typeof(spellId) == "string" and spellId ~= "" then
+					weaponInfusions[weaponId] = spellId
+				end
+			end
 		end
 		if typeof(snapshot.infusedSpellId) == "string" then
 			infusedSpellId = snapshot.infusedSpellId
@@ -11822,7 +12405,7 @@ function WeaponMenuClient.init()
 		grimoireBar.Visible = activeTab == "Chests"
 		grimoireLabel.Text = if grimoireCount > 0
 			then `Grimoires: {grimoireCount}\nUse one to learn a random spell.`
-			else "Grimoires: 0\nBetter chests drop them more often (4-28%)."
+			else "Grimoires: 0\nBetter chests drop them more often (10-42%)."
 		useGrimoireButton.BackgroundColor3 = if grimoireCount > 0 and not loadoutLocked
 			then Color3.fromRGB(120, 72, 180)
 			else LOCKED

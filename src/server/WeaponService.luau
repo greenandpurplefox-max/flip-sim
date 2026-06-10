@@ -16,6 +16,7 @@ local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig
 local CardService = require(script.Parent.CardService)
 local GamePhaseService = require(script.Parent.GamePhaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local SpellService = require(script.Parent.SpellService)
 
 local WeaponService = {}
 
@@ -840,6 +841,7 @@ function WeaponService.equipPlayerWeapon(player: Player, weaponId: string): bool
 	playerWeapons[player] = weaponId
 	giveWeapon(player, player.Character, weaponId)
 	notifyLoadout(player)
+	SpellService.refreshPlayerLoadout(player)
 	return true
 end
 

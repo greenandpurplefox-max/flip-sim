@@ -1,9 +1,9 @@
 local GrimoireConfig = {}
 
 GrimoireConfig.TIER_DROP_CHANCE = {
-	Common = 0.04,
-	Rare = 0.12,
-	Epic = 0.28,
+	Common = 0.10,
+	Rare = 0.24,
+	Epic = 0.42,
 }
 
 GrimoireConfig.DUPLICATE_GOLD = 30

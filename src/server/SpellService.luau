@@ -16,6 +16,7 @@ local PROJECTILE_LIFETIME = 2.5
 local lastActiveCastAt: { [Player]: number } = {}
 
 local infuseSpellEvent: RemoteEvent
+local purgeWeaponInfusionEvent: RemoteEvent
 local upgradeSpellEvent: RemoteEvent
 local unlockSpellEvent: RemoteEvent
 local castSpellEvent: RemoteEvent
@@ -39,6 +40,21 @@ local function getInfuseSpellEvent(): RemoteEvent
 	end
 
 	return infuseSpellEvent
+end
+
+local function getPurgeWeaponInfusionEvent(): RemoteEvent
+	if purgeWeaponInfusionEvent then
+		return purgeWeaponInfusionEvent
+	end
+
+	purgeWeaponInfusionEvent = ReplicatedStorage:FindFirstChild("PurgeWeaponInfusion") :: RemoteEvent?
+	if not purgeWeaponInfusionEvent then
+		purgeWeaponInfusionEvent = Instance.new("RemoteEvent")
+		purgeWeaponInfusionEvent.Name = "PurgeWeaponInfusion"
+		purgeWeaponInfusionEvent.Parent = ReplicatedStorage
+	end
+
+	return purgeWeaponInfusionEvent
 end
 
 local function getUpgradeSpellEvent(): RemoteEvent
@@ -428,7 +444,7 @@ end
 
 local function castInfusedSpell(player: Player, spellId: string): boolean
 	local stats = getEffectiveStats(player, spellId)
-	if spellId == "FrostNova" then
+	if (stats.aoeRadius or 0) > 0 then
 		castFrostNova(player, stats)
 	else
 		fireForwardProjectiles(player, stats)
@@ -470,20 +486,28 @@ local function tryCastActiveSpell(player: Player): boolean
 	return castInfusedSpell(player, spellId)
 end
 
-function SpellService.infusePlayerSpell(player: Player, spellId: string): boolean
+function SpellService.infusePlayerSpell(player: Player, weaponId: string, spellId: string): boolean
 	if not GamePhaseService.isInLobby(player) or GamePhaseService.isLoadoutLocked(player) then
 		return false
 	end
-	if not SpellConfig.isValid(spellId) then
+
+	local ok = PlayerDataService.tryInfuseWeapon(player, weaponId, spellId)
+	if ok then
+		notifyLoadout(player)
+	end
+	return ok
+end
+
+function SpellService.purgeWeaponInfusion(player: Player, weaponId: string): boolean
+	if not GamePhaseService.isInLobby(player) or GamePhaseService.isLoadoutLocked(player) then
 		return false
 	end
 
-	if not PlayerDataService.setInfusedSpell(player, spellId) then
-		return false
+	local ok = PlayerDataService.tryPurgeWeaponInfusion(player, weaponId)
+	if ok then
+		notifyLoadout(player)
 	end
-
-	notifyLoadout(player)
-	return true
+	return ok
 end
 
 function SpellService.upgradePlayerSpell(player: Player, spellId: string): boolean
@@ -506,17 +530,25 @@ end
 
 function SpellService.init()
 	getInfuseSpellEvent()
+	getPurgeWeaponInfusionEvent()
 	getUpgradeSpellEvent()
 	getUnlockSpellEvent()
 	getCastSpellEvent()
 	getSpellLoadoutUpdatedEvent()
 	getSpellCastEffectEvent()
 
-	getInfuseSpellEvent().OnServerEvent:Connect(function(player, spellId: string)
-		if typeof(spellId) ~= "string" then
+	getInfuseSpellEvent().OnServerEvent:Connect(function(player, weaponId: string, spellId: string)
+		if typeof(weaponId) ~= "string" or typeof(spellId) ~= "string" then
 			return
 		end
-		SpellService.infusePlayerSpell(player, spellId)
+		SpellService.infusePlayerSpell(player, weaponId, spellId)
+	end)
+
+	getPurgeWeaponInfusionEvent().OnServerEvent:Connect(function(player, weaponId: string)
+		if typeof(weaponId) ~= "string" then
+			return
+		end
+		SpellService.purgeWeaponInfusion(player, weaponId)
 	end)
 
 	getUpgradeSpellEvent().OnServerEvent:Connect(function(player, spellId: string)
