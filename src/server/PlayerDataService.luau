@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local GrimoireConfig = require(ReplicatedStorage.Shared.GrimoireConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
@@ -22,10 +23,11 @@ export type PlayerProfile = {
 	equippedWeapon: string,
 	weaponLevels: { [string]: number },
 	unlockedWeapons: { [string]: boolean },
-	equippedActiveSpell: string,
-	equippedPassiveSpell: string,
+	ownedSpells: { [string]: boolean },
+	infusedSpellId: string,
 	spellLevels: { [string]: number },
 	unlockedSpells: { [string]: boolean },
+	grimoireCount: number,
 	lobbyChests: { LobbyChest },
 }
 
@@ -54,6 +56,9 @@ local function getDefaultProfile(): PlayerProfile
 	end
 
 	local spellLevels: { [string]: number } = {}
+	local ownedSpells: { [string]: boolean } = {
+		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
+	}
 	local unlockedSpells: { [string]: boolean } = {
 		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
 	}
@@ -70,10 +75,11 @@ local function getDefaultProfile(): PlayerProfile
 		equippedWeapon = LobbyConfig.STARTER_WEAPON,
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
-		equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL,
-		equippedPassiveSpell = SpellConfig.NO_PASSIVE,
+		ownedSpells = ownedSpells,
+		infusedSpellId = "",
 		spellLevels = spellLevels,
 		unlockedSpells = unlockedSpells,
+		grimoireCount = 0,
 		lobbyChests = {},
 	}
 end
@@ -135,15 +141,16 @@ local function sanitizeProfile(data: any): PlayerProfile
 		profile.equippedWeapon = LobbyConfig.STARTER_WEAPON
 	end
 
-	profile.equippedActiveSpell = if SpellConfig.isValid(data.equippedActiveSpell)
-		then data.equippedActiveSpell
-		else defaults.equippedActiveSpell
-	profile.equippedPassiveSpell = defaults.equippedPassiveSpell
-	if typeof(data.equippedPassiveSpell) == "string" and data.equippedPassiveSpell ~= "" then
-		if SpellConfig.isValid(data.equippedPassiveSpell) and SpellConfig.getKind(data.equippedPassiveSpell) == "Passive" then
-			profile.equippedPassiveSpell = data.equippedPassiveSpell
-		end
+	profile.infusedSpellId = ""
+	if typeof(data.infusedSpellId) == "string" and SpellConfig.isValid(data.infusedSpellId) then
+		profile.infusedSpellId = data.infusedSpellId
+	elseif typeof(data.equippedActiveSpell) == "string" and SpellConfig.isValid(data.equippedActiveSpell) then
+		profile.infusedSpellId = data.equippedActiveSpell
 	end
+
+	profile.grimoireCount = if typeof(data.grimoireCount) == "number"
+		then math.max(0, math.floor(data.grimoireCount))
+		else defaults.grimoireCount
 
 	if typeof(data.spellLevels) == "table" then
 		for spellId, level in data.spellLevels do
@@ -161,19 +168,25 @@ local function sanitizeProfile(data: any): PlayerProfile
 		end
 	end
 
+	if typeof(data.ownedSpells) == "table" then
+		for spellId, owned in data.ownedSpells do
+			if SpellConfig.isValid(spellId) and typeof(owned) == "boolean" then
+				profile.ownedSpells[spellId] = owned
+			end
+		end
+	end
+
 	profile.unlockedSpells[LobbyConfig.STARTER_ACTIVE_SPELL] = true
+	profile.ownedSpells[LobbyConfig.STARTER_ACTIVE_SPELL] = true
 
-	if not profile.unlockedSpells[profile.equippedActiveSpell] then
-		profile.equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL
-	end
-	if SpellConfig.getKind(profile.equippedActiveSpell) ~= "Active" then
-		profile.equippedActiveSpell = LobbyConfig.STARTER_ACTIVE_SPELL
+	for spellId, unlocked in profile.unlockedSpells do
+		if unlocked then
+			profile.ownedSpells[spellId] = true
+		end
 	end
 
-	if not SpellConfig.hasEquippedPassive(profile.equippedPassiveSpell)
-		or not profile.unlockedSpells[profile.equippedPassiveSpell]
-	then
-		profile.equippedPassiveSpell = SpellConfig.NO_PASSIVE
+	if profile.infusedSpellId ~= "" and not profile.ownedSpells[profile.infusedSpellId] then
+		profile.infusedSpellId = ""
 	end
 
 	profile.lobbyChests = sanitizeLobbyChests(data.lobbyChests)
@@ -206,9 +219,11 @@ local function buildSnapshot(profile: PlayerProfile)
 
 	local spellLevels: { [string]: number } = {}
 	local unlockedSpells: { [string]: boolean } = {}
+	local ownedSpells: { [string]: boolean } = {}
 	for _, spell in SpellConfig.getSpellList() do
 		spellLevels[spell.id] = profile.spellLevels[spell.id] or 1
 		unlockedSpells[spell.id] = profile.unlockedSpells[spell.id] == true
+		ownedSpells[spell.id] = profile.ownedSpells[spell.id] == true
 	end
 
 	return {
@@ -216,10 +231,11 @@ local function buildSnapshot(profile: PlayerProfile)
 		equippedWeapon = profile.equippedWeapon,
 		weaponLevels = weaponLevels,
 		unlockedWeapons = unlockedWeapons,
-		equippedActiveSpell = profile.equippedActiveSpell,
-		equippedPassiveSpell = profile.equippedPassiveSpell,
+		ownedSpells = ownedSpells,
+		infusedSpellId = profile.infusedSpellId,
 		spellLevels = spellLevels,
 		unlockedSpells = unlockedSpells,
+		grimoireCount = profile.grimoireCount,
 		lobbyChests = profile.lobbyChests,
 	}
 end
@@ -358,38 +374,83 @@ function PlayerDataService.tryUpgradeWeapon(player: Player, weaponId: string): (
 	return true, nil
 end
 
-function PlayerDataService.getEquippedActiveSpell(player: Player): string
+function PlayerDataService.getInfusedSpell(player: Player): string
 	local profile = profiles[player]
-	return if profile then profile.equippedActiveSpell else LobbyConfig.STARTER_ACTIVE_SPELL
+	return if profile then profile.infusedSpellId else ""
 end
 
-function PlayerDataService.getEquippedPassiveSpell(player: Player): string
+function PlayerDataService.ownsSpell(player: Player, spellId: string): boolean
 	local profile = profiles[player]
-	return if profile then profile.equippedPassiveSpell else SpellConfig.NO_PASSIVE
+	return profile ~= nil and profile.ownedSpells[spellId] == true
 end
 
-function PlayerDataService.setEquippedActiveSpell(player: Player, spellId: string): boolean
+function PlayerDataService.setInfusedSpell(player: Player, spellId: string): boolean
 	local profile = profiles[player]
-	if not profile or SpellConfig.getKind(spellId) ~= "Active" or not profile.unlockedSpells[spellId] then
+	if not profile or not SpellConfig.isValid(spellId) or not profile.ownedSpells[spellId] then
 		return false
 	end
 
-	profile.equippedActiveSpell = spellId
+	profile.infusedSpellId = spellId
 	PlayerDataService.sendProfile(player)
 	scheduleSave(player)
 	return true
 end
 
-function PlayerDataService.setEquippedPassiveSpell(player: Player, spellId: string): boolean
+function PlayerDataService.getGrimoireCount(player: Player): number
 	local profile = profiles[player]
-	if not profile or SpellConfig.getKind(spellId) ~= "Passive" or not profile.unlockedSpells[spellId] then
+	return if profile then profile.grimoireCount else 0
+end
+
+function PlayerDataService.addGrimoire(player: Player, amount: number)
+	local profile = profiles[player]
+	if not profile or amount <= 0 then
+		return
+	end
+
+	profile.grimoireCount += math.floor(amount)
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+end
+
+function PlayerDataService.grantOwnedSpell(player: Player, spellId: string): boolean
+	local profile = profiles[player]
+	if not profile or not SpellConfig.isValid(spellId) then
 		return false
 	end
 
-	profile.equippedPassiveSpell = spellId
+	local wasOwned = profile.ownedSpells[spellId] == true
+	profile.ownedSpells[spellId] = true
+	profile.unlockedSpells[spellId] = true
 	PlayerDataService.sendProfile(player)
 	scheduleSave(player)
-	return true
+	return not wasOwned
+end
+
+function PlayerDataService.tryUseGrimoire(player: Player): (boolean, string?, string?)
+	local profile = profiles[player]
+	if not profile or profile.grimoireCount <= 0 then
+		return false, nil, "No grimoires left."
+	end
+
+	profile.grimoireCount -= 1
+
+	local spellList = SpellConfig.getSpellList()
+	local spellId = spellList[math.random(1, #spellList)].id
+	local isNew = PlayerDataService.grantOwnedSpell(player, spellId)
+
+	if not isNew then
+		profile.gold += GrimoireConfig.DUPLICATE_GOLD
+	end
+
+	PlayerDataService.sendProfile(player)
+	scheduleSave(player)
+
+	local spell = SpellConfig.getSpell(spellId)
+	local message = if isNew
+		then `Learned {spell.displayName}!`
+		else `Already knew {spell.displayName}. +{GrimoireConfig.DUPLICATE_GOLD} gold.`
+
+	return true, spellId, message
 end
 
 function PlayerDataService.isSpellUnlocked(player: Player, spellId: string): boolean
@@ -422,6 +483,7 @@ function PlayerDataService.tryUnlockSpell(player: Player, spellId: string): (boo
 
 	profile.gold -= cost
 	profile.unlockedSpells[spellId] = true
+	profile.ownedSpells[spellId] = true
 	PlayerDataService.sendProfile(player)
 	scheduleSave(player)
 	return true, nil

@@ -3,6 +3,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local MovementConfig = require(ReplicatedStorage.Shared.MovementConfig)
+local StaminaConfig = require(ReplicatedStorage.Shared.StaminaConfig)
+
+local StaminaService = require(script.Parent.StaminaService)
 
 local DashService = {}
 
@@ -94,6 +97,10 @@ local function onDashRequested(player: Player, direction: Vector3)
 	local now = os.clock()
 	local lastDash = lastDashTimes[player] or 0
 	if now - lastDash < MovementConfig.DASH_COOLDOWN then
+		return
+	end
+
+	if not StaminaService.trySpend(player, StaminaConfig.DASH_COST) then
 		return
 	end
 

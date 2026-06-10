@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local MovementConfig = require(ReplicatedStorage.Shared.MovementConfig)
+local StaminaConfig = require(ReplicatedStorage.Shared.StaminaConfig)
 
 local MovementClient = {}
 
@@ -203,8 +204,16 @@ local function getDashDirection(humanoid: Humanoid, root: BasePart): Vector3
 	return Vector3.new(0, 0, -1)
 end
 
+local function getCurrentStamina(): number
+	return player:GetAttribute("Stamina") or StaminaConfig.MAX
+end
+
 local function requestDash()
 	if dashing then
+		return
+	end
+
+	if getCurrentStamina() < StaminaConfig.DASH_COST then
 		return
 	end
 

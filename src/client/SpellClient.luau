@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
+local StaminaConfig = require(ReplicatedStorage.Shared.StaminaConfig)
 
 local SpellClient = {}
 
@@ -21,8 +22,7 @@ function SpellClient.init()
 
 	local inDungeon = false
 	local castBound = false
-	local equippedActiveSpell = SpellConfig.DEFAULT_ACTIVE
-	local equippedPassiveSpell = SpellConfig.NO_PASSIVE
+	local infusedSpellId = ""
 	local spellLevels: { [string]: number } = {}
 
 	local screenGui = Instance.new("ScreenGui")
@@ -32,8 +32,8 @@ function SpellClient.init()
 
 	local castHud = Instance.new("Frame")
 	castHud.Name = "CastHud"
-	castHud.AnchorPoint = Vector2.new(0, 1)
-	castHud.Position = UDim2.new(0, 16, 1, -78)
+	castHud.AnchorPoint = Vector2.new(1, 1)
+	castHud.Position = UDim2.new(1, -16, 1, -78)
 	castHud.Size = UDim2.fromOffset(250, 58)
 	castHud.BackgroundColor3 = Color3.fromRGB(24, 18, 34)
 	castHud.BackgroundTransparency = 0.12
@@ -66,51 +66,58 @@ function SpellClient.init()
 	castHintLabel.Position = UDim2.fromOffset(12, 30)
 	castHintLabel.Size = UDim2.new(1, -24, 0, 18)
 	castHintLabel.Font = Enum.Font.Gotham
-	castHintLabel.Text = "Press E to cast active spell"
+	castHintLabel.Text = "Press E to cast"
 	castHintLabel.TextColor3 = Color3.fromRGB(196, 180, 220)
 	castHintLabel.TextSize = 14
 	castHintLabel.TextXAlignment = Enum.TextXAlignment.Left
 	castHintLabel.Parent = castHud
 
-	local procBanner = Instance.new("TextLabel")
-	procBanner.Name = "PassiveProcBanner"
-	procBanner.AnchorPoint = Vector2.new(1, 1)
-	procBanner.Position = UDim2.new(1, -16, 1, -78)
-	procBanner.Size = UDim2.fromOffset(280, 42)
-	procBanner.BackgroundColor3 = Color3.fromRGB(28, 22, 18)
-	procBanner.BackgroundTransparency = 0.18
-	procBanner.BorderSizePixel = 0
-	procBanner.Font = Enum.Font.GothamBold
-	procBanner.Text = ""
-	procBanner.TextColor3 = Color3.fromRGB(255, 240, 180)
-	procBanner.TextSize = 16
-	procBanner.TextTransparency = 1
-	procBanner.Visible = false
-	procBanner.Parent = screenGui
-
-	local procCorner = Instance.new("UICorner")
-	procCorner.CornerRadius = UDim.new(0, 10)
-	procCorner.Parent = procBanner
-
-	local procStroke = Instance.new("UIStroke")
-	procStroke.Color = Color3.fromRGB(214, 176, 72)
-	procStroke.Thickness = 2
-	procStroke.Transparency = 1
-	procStroke.Parent = procBanner
-
-	local function updateCastHud()
-		local level = spellLevels[equippedActiveSpell] or 1
-		local stats = SpellUpgradeConfig.getEffectiveStats(equippedActiveSpell, level)
-		castNameLabel.Text = stats.resolvedName
-		castHudStroke.Color = stats.projectileColor
-		castHud.Visible = inDungeon
+	local function getCurrentStamina(): number
+		return player:GetAttribute("Stamina") or StaminaConfig.MAX
 	end
 
-	local function showCastFlash(color: Color3, kind: string?)
+	local function getInfusedStats()
+		if infusedSpellId == "" then
+			return nil
+		end
+		local level = spellLevels[infusedSpellId] or 1
+		return SpellUpgradeConfig.getEffectiveStats(infusedSpellId, level)
+	end
+
+	local function canCastInfusedSpell(): boolean
+		local stats = getInfusedStats()
+		if not stats then
+			return false
+		end
+		return getCurrentStamina() >= stats.staminaCost
+	end
+
+	local function updateCastHud()
+		local stats = getInfusedStats()
+		if not stats or not inDungeon then
+			castHud.Visible = false
+			return
+		end
+
+		local stamina = getCurrentStamina()
+		local canCast = stamina >= stats.staminaCost
+
+		castNameLabel.Text = stats.resolvedName
+		castHudStroke.Color = stats.projectileColor
+		castHintLabel.Text = if canCast
+			then `Press E  |  {stats.staminaCost} stamina`
+			else `Need {stats.staminaCost} stamina ({math.floor(stamina)} left)`
+		castHintLabel.TextColor3 = if canCast
+			then Color3.fromRGB(196, 180, 220)
+			else Color3.fromRGB(255, 140, 120)
+		castHud.Visible = true
+	end
+
+	local function showCastFlash(color: Color3)
 		local flash = Instance.new("Frame")
 		flash.Name = "SpellCastFlash"
 		flash.BackgroundColor3 = color
-		flash.BackgroundTransparency = if kind == "passive" then 0.9 else 0.78
+		flash.BackgroundTransparency = 0.78
 		flash.BorderSizePixel = 0
 		flash.Size = UDim2.fromScale(1, 1)
 		flash.ZIndex = 20
@@ -119,14 +126,14 @@ function SpellClient.init()
 		local ring = Instance.new("Frame")
 		ring.AnchorPoint = Vector2.new(0.5, 0.5)
 		ring.Position = UDim2.fromScale(0.5, 0.55)
-		ring.Size = UDim2.fromOffset(if kind == "passive" then 120 else 220, if kind == "passive" then 120 else 220)
+		ring.Size = UDim2.fromOffset(220, 220)
 		ring.BackgroundTransparency = 1
 		ring.ZIndex = 21
 		ring.Parent = flash
 
 		local ringStroke = Instance.new("UIStroke")
 		ringStroke.Color = color
-		ringStroke.Thickness = if kind == "passive" then 4 else 8
+		ringStroke.Thickness = 8
 		ringStroke.Transparency = 0.15
 		ringStroke.Parent = ring
 
@@ -135,7 +142,7 @@ function SpellClient.init()
 		ringCorner.Parent = ring
 
 		TweenService:Create(ring, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = UDim2.fromOffset(if kind == "passive" then 220 else 420, if kind == "passive" then 220 else 420),
+			Size = UDim2.fromOffset(420, 420),
 		}):Play()
 		TweenService:Create(ringStroke, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Transparency = 1,
@@ -149,7 +156,7 @@ function SpellClient.init()
 		end)
 	end
 
-	local function showCharacterCastBurst(color: Color3, kind: string?)
+	local function showCharacterCastBurst(color: Color3)
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not root then
@@ -175,15 +182,15 @@ function SpellClient.init()
 		core.CanTouch = false
 		core.Material = Enum.Material.Neon
 		core.Color = color
-		core.Size = Vector3.new(if kind == "passive" then 2.2 else 3.6, if kind == "passive" then 2.2 else 3.6, if kind == "passive" then 2.2 else 3.6)
+		core.Size = Vector3.new(3.6, 3.6, 3.6)
 		core.Transparency = 0.2
 		core.CFrame = anchor.CFrame
 		core.Parent = anchor
 
 		local light = Instance.new("PointLight")
 		light.Color = color
-		light.Brightness = if kind == "passive" then 4 else 7
-		light.Range = if kind == "passive" then 14 else 22
+		light.Brightness = 7
+		light.Range = 22
 		light.Parent = core
 
 		local emitter = Instance.new("ParticleEmitter")
@@ -198,33 +205,21 @@ function SpellClient.init()
 		emitter.SpreadAngle = Vector2.new(180, 180)
 		emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
 		emitter.Parent = core
-		emitter:Emit(if kind == "passive" then 24 else 48)
+		emitter:Emit(48)
 
 		task.delay(0.45, function()
 			anchor:Destroy()
 		end)
 	end
 
-	local function showPassiveBanner(spellName: string, color: Color3)
-		procBanner.Text = `{spellName} triggered!`
-		procBanner.TextColor3 = color:Lerp(Color3.new(1, 1, 1), 0.35)
-		procBanner.Visible = true
-		procBanner.TextTransparency = 0
-		procStroke.Color = color
-		procStroke.Transparency = 0.1
-
-		task.delay(0.9, function()
-			TweenService:Create(procBanner, TweenInfo.new(0.25), { TextTransparency = 1 }):Play()
-			TweenService:Create(procStroke, TweenInfo.new(0.25), { Transparency = 1 }):Play()
-			task.delay(0.25, function()
-				procBanner.Visible = false
-			end)
-		end)
-	end
-
 	local function onCastAction(_actionName: string, inputState: Enum.UserInputState)
 		if inputState ~= Enum.UserInputState.Begin or not inDungeon then
 			return Enum.ContextActionResult.Pass
+		end
+
+		if not canCastInfusedSpell() then
+			updateCastHud()
+			return Enum.ContextActionResult.Sink
 		end
 
 		castSpellEvent:FireServer()
@@ -241,28 +236,32 @@ function SpellClient.init()
 		end
 	end
 
-	spellLoadoutUpdatedEvent.OnClientEvent:Connect(function(activeSpellId: string, passiveSpellId: string)
-		if typeof(activeSpellId) == "string" then
-			equippedActiveSpell = activeSpellId
-		end
-		if typeof(passiveSpellId) == "string" then
-			equippedPassiveSpell = passiveSpellId
+	spellLoadoutUpdatedEvent.OnClientEvent:Connect(function(activeInfusion: string, _locked: boolean)
+		if typeof(activeInfusion) == "string" then
+			infusedSpellId = activeInfusion
 		end
 		updateCastHud()
 	end)
 
 	profileStateEvent.OnClientEvent:Connect(function(snapshot)
-		if typeof(snapshot) ~= "table" or typeof(snapshot.spellLevels) ~= "table" then
+		if typeof(snapshot) ~= "table" then
 			return
 		end
 
-		for spellId, level in snapshot.spellLevels do
-			if typeof(level) == "number" then
-				spellLevels[spellId] = level
+		if typeof(snapshot.infusedSpellId) == "string" then
+			infusedSpellId = snapshot.infusedSpellId
+		end
+		if typeof(snapshot.spellLevels) == "table" then
+			for spellId, level in snapshot.spellLevels do
+				if typeof(level) == "number" then
+					spellLevels[spellId] = level
+				end
 			end
 		end
 		updateCastHud()
 	end)
+
+	player:GetAttributeChangedSignal("Stamina"):Connect(updateCastHud)
 
 	phaseStateEvent.OnClientEvent:Connect(function(phase: string)
 		inDungeon = phase == "Dungeon"
@@ -270,17 +269,13 @@ function SpellClient.init()
 		updateCastHud()
 	end)
 
-	spellCastEffectEvent.OnClientEvent:Connect(function(_spellId: string, spellName: string, color: Color3, kind: string?)
+	spellCastEffectEvent.OnClientEvent:Connect(function(_spellId: string, _spellName: string, color: Color3)
 		if typeof(color) ~= "Color3" then
 			return
 		end
 
-		local effectKind = if typeof(kind) == "string" then kind else "cast"
-		showCastFlash(color, effectKind)
-		showCharacterCastBurst(color, effectKind)
-		if effectKind == "passive" and typeof(spellName) == "string" then
-			showPassiveBanner(spellName, color)
-		end
+		showCastFlash(color)
+		showCharacterCastBurst(color)
 	end)
 
 	player:GetAttributeChangedSignal("GamePhase"):Connect(function()

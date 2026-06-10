@@ -7,17 +7,17 @@ local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
 local CardService = require(script.Parent.CardService)
 local GamePhaseService = require(script.Parent.GamePhaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local StaminaService = require(script.Parent.StaminaService)
 
 local SpellService = {}
 
-local ON_HIT_PASSIVE_COOLDOWN = 0.4
 local PROJECTILE_LIFETIME = 2.5
 
 local lastActiveCastAt: { [Player]: number } = {}
-local lastOnHitPassiveAt: { [Player]: number } = {}
-local lastIntervalCastAt: { [Player]: number } = {}
+local lastInfusionProcAt: { [Player]: number } = {}
+local INFUSION_PROC_COOLDOWN = 0.85
 
-local equipSpellEvent: RemoteEvent
+local infuseSpellEvent: RemoteEvent
 local upgradeSpellEvent: RemoteEvent
 local unlockSpellEvent: RemoteEvent
 local castSpellEvent: RemoteEvent
@@ -28,19 +28,19 @@ local function isPlayerActive(player: Player): boolean
 	return player.Parent ~= nil
 end
 
-local function getEquipSpellEvent(): RemoteEvent
-	if equipSpellEvent then
-		return equipSpellEvent
+local function getInfuseSpellEvent(): RemoteEvent
+	if infuseSpellEvent then
+		return infuseSpellEvent
 	end
 
-	equipSpellEvent = ReplicatedStorage:FindFirstChild("EquipSpell") :: RemoteEvent?
-	if not equipSpellEvent then
-		equipSpellEvent = Instance.new("RemoteEvent")
-		equipSpellEvent.Name = "EquipSpell"
-		equipSpellEvent.Parent = ReplicatedStorage
+	infuseSpellEvent = ReplicatedStorage:FindFirstChild("InfuseSpell") :: RemoteEvent?
+	if not infuseSpellEvent then
+		infuseSpellEvent = Instance.new("RemoteEvent")
+		infuseSpellEvent.Name = "InfuseSpell"
+		infuseSpellEvent.Parent = ReplicatedStorage
 	end
 
-	return equipSpellEvent
+	return infuseSpellEvent
 end
 
 local function getUpgradeSpellEvent(): RemoteEvent
@@ -374,7 +374,7 @@ local function fireForwardProjectiles(player: Player, stats: SpellUpgradeConfig.
 	end
 
 	local direction = flattenLookVector(root)
-	local count = stats.projectileCount or 1
+	local count = if stats.isUltimate then 2 else 1
 	for index = 0, count - 1 do
 		local origin = root.Position + Vector3.new(0, 1.2, 0) + direction * (1.5 + index * 1.2)
 		spawnProjectile(player, origin, direction, stats)
@@ -407,26 +407,14 @@ local function castFrostNova(player: Player, stats: SpellUpgradeConfig.Effective
 	end
 end
 
-local function notifyCastEffect(
-	player: Player,
-	spellId: string,
-	stats: SpellUpgradeConfig.EffectiveSpellStats,
-	kind: string?
-)
-	getSpellCastEffectEvent():FireClient(
-		player,
-		spellId,
-		stats.resolvedName,
-		stats.projectileColor,
-		kind or "cast"
-	)
+local function notifyCastEffect(player: Player, spellId: string, stats: SpellUpgradeConfig.EffectiveSpellStats)
+	getSpellCastEffectEvent():FireClient(player, spellId, stats.resolvedName, stats.projectileColor)
 end
 
 local function notifyLoadout(player: Player)
 	getSpellLoadoutUpdatedEvent():FireClient(
 		player,
-		PlayerDataService.getEquippedActiveSpell(player),
-		PlayerDataService.getEquippedPassiveSpell(player),
+		PlayerDataService.getInfusedSpell(player),
 		GamePhaseService.isLoadoutLocked(player)
 	)
 end
@@ -437,34 +425,43 @@ function SpellService.refreshPlayerLoadout(player: Player)
 	end
 
 	lastActiveCastAt[player] = nil
-	lastIntervalCastAt[player] = nil
+	lastInfusionProcAt[player] = nil
 	notifyLoadout(player)
 end
 
-function SpellService.onPlayerDamaged(player: Player)
+local function castInfusedSpell(player: Player, spellId: string): boolean
+	local stats = getEffectiveStats(player, spellId)
+	if spellId == "FrostNova" then
+		castFrostNova(player, stats)
+	else
+		fireForwardProjectiles(player, stats)
+	end
+	notifyCastEffect(player, spellId, stats)
+	return true
+end
+
+function SpellService.tryProcInfusionOnHit(player: Player)
 	if not isPlayerActive(player) or not GamePhaseService.isInDungeon(player) then
 		return
 	end
 
-	local spellId = PlayerDataService.getEquippedPassiveSpell(player)
-	if not SpellConfig.hasEquippedPassive(spellId) then
-		return
-	end
-
-	local base = SpellConfig.getSpell(spellId)
-	if not base or base.trigger ~= "OnHit" then
+	local spellId = PlayerDataService.getInfusedSpell(player)
+	if spellId == "" or not PlayerDataService.ownsSpell(player, spellId) then
 		return
 	end
 
 	local now = os.clock()
-	if lastOnHitPassiveAt[player] and now - lastOnHitPassiveAt[player] < ON_HIT_PASSIVE_COOLDOWN then
+	if lastInfusionProcAt[player] and now - lastInfusionProcAt[player] < INFUSION_PROC_COOLDOWN then
 		return
 	end
-	lastOnHitPassiveAt[player] = now
 
 	local stats = getEffectiveStats(player, spellId)
-	fireForwardProjectiles(player, stats)
-	notifyCastEffect(player, spellId, stats, "passive")
+	if not StaminaService.trySpend(player, stats.staminaCost) then
+		return
+	end
+
+	lastInfusionProcAt[player] = now
+	castInfusedSpell(player, spellId)
 end
 
 local function tryCastActiveSpell(player: Player): boolean
@@ -479,8 +476,8 @@ local function tryCastActiveSpell(player: Player): boolean
 		return false
 	end
 
-	local spellId = PlayerDataService.getEquippedActiveSpell(player)
-	if not PlayerDataService.isSpellUnlocked(player, spellId) then
+	local spellId = PlayerDataService.getInfusedSpell(player)
+	if spellId == "" or not PlayerDataService.ownsSpell(player, spellId) then
 		return false
 	end
 
@@ -492,33 +489,20 @@ local function tryCastActiveSpell(player: Player): boolean
 		return false
 	end
 
-	lastActiveCastAt[player] = now
-
-	if spellId == "FrostNova" then
-		castFrostNova(player, stats)
-	else
-		fireForwardProjectiles(player, stats)
+	if not StaminaService.trySpend(player, stats.staminaCost) then
+		return false
 	end
 
-	notifyCastEffect(player, spellId, stats)
-	return true
+	lastActiveCastAt[player] = now
+	return castInfusedSpell(player, spellId)
 end
 
-function SpellService.equipPlayerSpell(player: Player, spellId: string): boolean
+function SpellService.infusePlayerSpell(player: Player, spellId: string): boolean
 	if GamePhaseService.isLoadoutLocked(player) or not SpellConfig.isValid(spellId) then
 		return false
 	end
 
-	local kind = SpellConfig.getKind(spellId)
-	if kind == "Active" then
-		if not PlayerDataService.setEquippedActiveSpell(player, spellId) then
-			return false
-		end
-	elseif kind == "Passive" then
-		if not PlayerDataService.setEquippedPassiveSpell(player, spellId) then
-			return false
-		end
-	else
+	if not PlayerDataService.setInfusedSpell(player, spellId) then
 		return false
 	end
 
@@ -544,55 +528,19 @@ function SpellService.unlockPlayerSpell(player: Player, spellId: string): boolea
 	return ok
 end
 
-local function tickPassiveIntervals()
-	for _, player in Players:GetPlayers() do
-		if not isPlayerActive(player) or not GamePhaseService.isInDungeon(player) then
-			continue
-		end
-
-		local character = player.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if not humanoid or humanoid.Health <= 0 then
-			continue
-		end
-
-		local spellId = PlayerDataService.getEquippedPassiveSpell(player)
-		if not SpellConfig.hasEquippedPassive(spellId) then
-			continue
-		end
-
-		local base = SpellConfig.getSpell(spellId)
-		if not base or base.trigger ~= "Interval" then
-			continue
-		end
-
-		local stats = getEffectiveStats(player, spellId)
-		local interval = stats.interval or 5
-		local now = os.clock()
-		local lastCast = lastIntervalCastAt[player] or 0
-		if now - lastCast < interval then
-			continue
-		end
-
-		lastIntervalCastAt[player] = now
-		fireForwardProjectiles(player, stats)
-		notifyCastEffect(player, spellId, stats, "passive")
-	end
-end
-
 function SpellService.init()
-	getEquipSpellEvent()
+	getInfuseSpellEvent()
 	getUpgradeSpellEvent()
 	getUnlockSpellEvent()
 	getCastSpellEvent()
 	getSpellLoadoutUpdatedEvent()
 	getSpellCastEffectEvent()
 
-	getEquipSpellEvent().OnServerEvent:Connect(function(player, spellId: string)
+	getInfuseSpellEvent().OnServerEvent:Connect(function(player, spellId: string)
 		if typeof(spellId) ~= "string" then
 			return
 		end
-		SpellService.equipPlayerSpell(player, spellId)
+		SpellService.infusePlayerSpell(player, spellId)
 	end)
 
 	getUpgradeSpellEvent().OnServerEvent:Connect(function(player, spellId: string)
@@ -627,15 +575,7 @@ function SpellService.init()
 
 	Players.PlayerRemoving:Connect(function(player)
 		lastActiveCastAt[player] = nil
-		lastOnHitPassiveAt[player] = nil
-		lastIntervalCastAt[player] = nil
-	end)
-
-	task.spawn(function()
-		while true do
-			task.wait(0.25)
-			tickPassiveIntervals()
-		end
+		lastInfusionProcAt[player] = nil
 	end)
 end
 

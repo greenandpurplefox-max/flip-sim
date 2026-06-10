@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
+local GrimoireConfig = require(ReplicatedStorage.Shared.GrimoireConfig)
 local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 
 local GamePhaseService = require(script.Parent.GamePhaseService)
@@ -18,6 +19,8 @@ export type ChestLoot = {
 	tierName: string,
 	gold: number,
 	remainingChests: number,
+	grimoireDropped: boolean,
+	grimoireCount: number,
 }
 
 local runChests: { [Player]: { PendingChest } } = {}
@@ -26,6 +29,8 @@ local treasureChestAwardedEvent: RemoteEvent
 local treasureChestStateEvent: RemoteEvent
 local treasureChestOpenedEvent: RemoteEvent
 local openTreasureChestEvent: RemoteEvent
+local useGrimoireEvent: RemoteEvent
+local grimoireUsedEvent: RemoteEvent
 
 local function getTreasureChestAwardedEvent(): RemoteEvent
 	if treasureChestAwardedEvent then
@@ -85,6 +90,36 @@ local function getOpenTreasureChestEvent(): RemoteEvent
 	end
 
 	return openTreasureChestEvent
+end
+
+local function getUseGrimoireEvent(): RemoteEvent
+	if useGrimoireEvent then
+		return useGrimoireEvent
+	end
+
+	useGrimoireEvent = ReplicatedStorage:FindFirstChild("UseGrimoire") :: RemoteEvent?
+	if not useGrimoireEvent then
+		useGrimoireEvent = Instance.new("RemoteEvent")
+		useGrimoireEvent.Name = "UseGrimoire"
+		useGrimoireEvent.Parent = ReplicatedStorage
+	end
+
+	return useGrimoireEvent
+end
+
+local function getGrimoireUsedEvent(): RemoteEvent
+	if grimoireUsedEvent then
+		return grimoireUsedEvent
+	end
+
+	grimoireUsedEvent = ReplicatedStorage:FindFirstChild("GrimoireUsed") :: RemoteEvent?
+	if not grimoireUsedEvent then
+		grimoireUsedEvent = Instance.new("RemoteEvent")
+		grimoireUsedEvent.Name = "GrimoireUsed"
+		grimoireUsedEvent.Parent = ReplicatedStorage
+	end
+
+	return grimoireUsedEvent
 end
 
 local function serializeChests(chests: { PendingChest }?)
@@ -173,15 +208,40 @@ function TreasureChestService.openLobbyChest(player: Player, chestIndex: number)
 	local gold = TreasureConfig.rollGold(chest.tierId, chest.roomDepth)
 	PlayerDataService.addGold(player, gold)
 
+	local grimoireDropped = math.random() < GrimoireConfig.CHEST_DROP_CHANCE
+	if grimoireDropped then
+		PlayerDataService.addGrimoire(player, 1)
+	end
+
 	local loot: ChestLoot = {
 		tierId = chest.tierId,
 		tierName = tier.displayName,
 		gold = gold,
 		remainingChests = if chests then #chests else 0,
+		grimoireDropped = grimoireDropped,
+		grimoireCount = PlayerDataService.getGrimoireCount(player),
 	}
 
 	syncLobbyChests(player)
 	getTreasureChestOpenedEvent():FireClient(player, loot)
+	return true
+end
+
+function TreasureChestService.useGrimoire(player: Player): boolean
+	if not GamePhaseService.isInLobby(player) then
+		return false
+	end
+
+	local ok, spellId, message = PlayerDataService.tryUseGrimoire(player)
+	if not ok or not spellId or not message then
+		return false
+	end
+
+	getGrimoireUsedEvent():FireClient(player, {
+		spellId = spellId,
+		message = message,
+		grimoireCount = PlayerDataService.getGrimoireCount(player),
+	})
 	return true
 end
 
@@ -190,6 +250,8 @@ function TreasureChestService.init()
 	getTreasureChestStateEvent()
 	getTreasureChestOpenedEvent()
 	getOpenTreasureChestEvent()
+	getUseGrimoireEvent()
+	getGrimoireUsedEvent()
 
 	getOpenTreasureChestEvent().OnServerEvent:Connect(function(player, chestIndex: number)
 		if typeof(chestIndex) ~= "number" then
@@ -197,6 +259,10 @@ function TreasureChestService.init()
 		end
 
 		TreasureChestService.openLobbyChest(player, math.floor(chestIndex))
+	end)
+
+	getUseGrimoireEvent().OnServerEvent:Connect(function(player)
+		TreasureChestService.useGrimoire(player)
 	end)
 
 	local function bindPlayer(player: Player)

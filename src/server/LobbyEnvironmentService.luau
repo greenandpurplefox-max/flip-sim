@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BlacksmithConfig = require(ReplicatedStorage.Shared.BlacksmithConfig)
 local BobConfig = require(ReplicatedStorage.Shared.BobConfig)
+local InfuserConfig = require(ReplicatedStorage.Shared.InfuserConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 
 local LobbyEnvironmentService = {}
@@ -252,6 +253,87 @@ local function createBob(parent: Instance)
 	model.Parent = parent
 end
 
+local function createInfuser(parent: Instance)
+	local model = Instance.new("Model")
+	model.Name = "Infuser"
+
+	local skin = Color3.fromRGB(204, 168, 132)
+	local robe = Color3.fromRGB(88, 52, 132)
+	local trim = Color3.fromRGB(120, 72, 180)
+	local book = Color3.fromRGB(72, 48, 108)
+
+	local rootPosition = InfuserConfig.POSITION + Vector3.new(0, 3.1, 0)
+	local rootCFrame = CFrame.lookAt(
+		rootPosition,
+		Vector3.new(InfuserConfig.LOOK_AT.X, rootPosition.Y, InfuserConfig.LOOK_AT.Z)
+	)
+
+	local root = createPart("HumanoidRootPart", Vector3.new(2, 2.2, 1), rootCFrame, robe, model, {
+		material = Enum.Material.Fabric,
+	})
+	model.PrimaryPart = root
+
+	local head = createPart("Head", Vector3.new(1.35, 1.35, 1.35), rootCFrame * CFrame.new(0, 1.75, 0), skin, model, {
+		shape = Enum.PartType.Ball,
+		canCollide = false,
+	})
+	weld(root, head, CFrame.new(0, 1.75, 0), CFrame.new())
+
+	local face = Instance.new("Decal")
+	face.Name = "face"
+	face.Texture = "rbxasset://textures/face.png"
+	face.Face = Enum.NormalId.Front
+	face.Parent = head
+
+	local hood = createPart("Hood", Vector3.new(1.55, 0.75, 1.55), rootCFrame * CFrame.new(0, 2.05, 0), trim, model, {
+		canCollide = false,
+	})
+	weld(head, hood, CFrame.new(0, 0.35, 0), CFrame.new())
+
+	local leftArm = createPart("LeftArm", Vector3.new(1, 2.2, 1), rootCFrame * CFrame.new(-1.55, 0.1, 0), robe, model, {
+		material = Enum.Material.Fabric,
+		canCollide = false,
+	})
+	weld(root, leftArm, CFrame.new(-1.55, 0.1, 0), CFrame.new())
+
+	local rightArm = createPart("RightArm", Vector3.new(1, 2.2, 1), rootCFrame * CFrame.new(1.55, 0.1, 0), robe, model, {
+		material = Enum.Material.Fabric,
+		canCollide = false,
+	})
+	weld(root, rightArm, CFrame.new(1.55, 0.1, 0), CFrame.new())
+
+	local grimoire = createPart("Grimoire", Vector3.new(0.9, 1.2, 0.18), rootCFrame * CFrame.new(1.1, 0.2, -0.55), book, model, {
+		material = Enum.Material.SmoothPlastic,
+		canCollide = false,
+	})
+	weld(rightArm, grimoire, CFrame.new(0, -0.35, -0.55), CFrame.new())
+
+	local leftLeg = createPart("LeftLeg", Vector3.new(1, 2, 1), rootCFrame * CFrame.new(-0.55, -2.1, 0), trim, model, {
+		canCollide = false,
+	})
+	weld(root, leftLeg, CFrame.new(-0.55, -2.1, 0), CFrame.new())
+
+	local rightLeg = createPart("RightLeg", Vector3.new(1, 2, 1), rootCFrame * CFrame.new(0.55, -2.1, 0), trim, model, {
+		canCollide = false,
+	})
+	weld(root, rightLeg, CFrame.new(0.55, -2.1, 0), CFrame.new())
+
+	local humanoid = Instance.new("Humanoid")
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	humanoid.Parent = model
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = InfuserConfig.PROMPT_ACTION_TEXT
+	prompt.ObjectText = InfuserConfig.PROMPT_OBJECT_TEXT
+	prompt.MaxActivationDistance = InfuserConfig.PROMPT_DISTANCE
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = root
+
+	model:SetAttribute("InfuserNpc", true)
+	model.Parent = parent
+end
+
 function LobbyEnvironmentService.init()
 	if not LobbyConfig.USE_LOBBY then
 		return
@@ -287,6 +369,7 @@ function LobbyEnvironmentService.init()
 
 	createSign(folder, BlacksmithConfig.POSITION + Vector3.new(0, 6.5, 0), "Blacksmith", Color3.fromRGB(255, 196, 96))
 	createSign(folder, BobConfig.POSITION + Vector3.new(0, 6.5, 0), "Bob", Color3.fromRGB(144, 196, 255))
+	createSign(folder, InfuserConfig.POSITION + Vector3.new(0, 6.5, 0), "Infuser", Color3.fromRGB(180, 120, 255))
 	createSign(folder, LobbyConfig.PORTAL_POSITION + Vector3.new(0, 0, 8), "Dungeon Gate", Color3.fromRGB(120, 255, 160))
 
 	local forge = createPart(
@@ -308,6 +391,7 @@ function LobbyEnvironmentService.init()
 
 	createBlacksmith(folder)
 	createBob(folder)
+	createInfuser(folder)
 
 	local portalBase = createPart(
 		"DungeonPortal",

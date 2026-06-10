@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local BlacksmithConfig = require(ReplicatedStorage.Shared.BlacksmithConfig)
 local BobConfig = require(ReplicatedStorage.Shared.BobConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local InfuserMenuClient = require(script.Parent.InfuserMenuClient)
 local WeaponMenuClient = require(script.Parent.WeaponMenuClient)
 
 local BlacksmithDialogueClient = {}
@@ -218,6 +219,26 @@ function BlacksmithDialogueClient.init()
 		end)
 	end
 
+	local function bindInfuser(model: Model)
+		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then
+			return
+		end
+
+		local prompt = root:FindFirstChildOfClass("ProximityPrompt")
+		if not prompt then
+			return
+		end
+
+		prompt.Triggered:Connect(function(triggerPlayer)
+			if triggerPlayer ~= player or currentPhase ~= "Lobby" then
+				return
+			end
+
+			InfuserMenuClient.open()
+		end)
+	end
+
 	local function bindBlacksmith(model: Model)
 		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not root then
@@ -258,6 +279,8 @@ function BlacksmithDialogueClient.init()
 				bindBlacksmith(child)
 			elseif child.Name == "Bob" then
 				bindDialogueNpc(child, bobNpc)
+			elseif child.Name == "Infuser" then
+				bindInfuser(child)
 			end
 		end
 

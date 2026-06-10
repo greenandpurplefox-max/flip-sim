@@ -37,6 +37,8 @@ function WeaponMenuClient.init()
 	local chestStateEvent = ReplicatedStorage:WaitForChild("TreasureChestState") :: RemoteEvent
 	local openChestEvent = ReplicatedStorage:WaitForChild("OpenTreasureChest") :: RemoteEvent
 	local chestOpenedEvent = ReplicatedStorage:WaitForChild("TreasureChestOpened") :: RemoteEvent
+	local useGrimoireEvent = ReplicatedStorage:WaitForChild("UseGrimoire") :: RemoteEvent
+	local grimoireUsedEvent = ReplicatedStorage:WaitForChild("GrimoireUsed") :: RemoteEvent
 
 	local equippedWeapon = WeaponConfig.DEFAULT_WEAPON
 	local loadoutLocked = false
@@ -44,6 +46,7 @@ function WeaponMenuClient.init()
 	local activeTab = "Equip"
 	local walletGold = LobbyConfig.STARTER_GOLD
 	local lobbyChests: { ChestEntry } = {}
+	local grimoireCount = 0
 	local weaponLevels: { [string]: number } = {}
 	local unlockedWeapons: { [string]: boolean } = {
 		[LobbyConfig.STARTER_WEAPON] = true,
@@ -199,11 +202,62 @@ function WeaponMenuClient.init()
 		chestList.CanvasSize = UDim2.fromOffset(0, chestLayout.AbsoluteContentSize.Y + 8)
 	end)
 
+	local grimoireBar = Instance.new("Frame")
+	grimoireBar.Name = "GrimoireBar"
+	grimoireBar.BackgroundColor3 = PANEL_LIGHT
+	grimoireBar.BorderSizePixel = 0
+	grimoireBar.Position = UDim2.fromOffset(16, 120)
+	grimoireBar.Size = UDim2.new(1, -32, 0, 64)
+	grimoireBar.Visible = false
+	grimoireBar.Parent = panel
+
+	local grimoireCorner = Instance.new("UICorner")
+	grimoireCorner.CornerRadius = UDim.new(0, 8)
+	grimoireCorner.Parent = grimoireBar
+
+	local grimoireLabel = Instance.new("TextLabel")
+	grimoireLabel.BackgroundTransparency = 1
+	grimoireLabel.Position = UDim2.fromOffset(12, 10)
+	grimoireLabel.Size = UDim2.new(1, -140, 0, 44)
+	grimoireLabel.Font = Enum.Font.GothamBold
+	grimoireLabel.Text = "Grimoires: 0"
+	grimoireLabel.TextColor3 = Color3.fromRGB(180, 120, 255)
+	grimoireLabel.TextSize = 15
+	grimoireLabel.TextWrapped = true
+	grimoireLabel.TextXAlignment = Enum.TextXAlignment.Left
+	grimoireLabel.Parent = grimoireBar
+
+	local useGrimoireButton = Instance.new("TextButton")
+	useGrimoireButton.AnchorPoint = Vector2.new(1, 0.5)
+	useGrimoireButton.Position = UDim2.new(1, -8, 0.5, 0)
+	useGrimoireButton.Size = UDim2.fromOffset(112, 40)
+	useGrimoireButton.BackgroundColor3 = Color3.fromRGB(120, 72, 180)
+	useGrimoireButton.BorderSizePixel = 0
+	useGrimoireButton.Font = Enum.Font.GothamBold
+	useGrimoireButton.Text = "Use Grimoire"
+	useGrimoireButton.TextColor3 = Color3.new(1, 1, 1)
+	useGrimoireButton.TextSize = 14
+	useGrimoireButton.Parent = grimoireBar
+
+	local useGrimoireCorner = Instance.new("UICorner")
+	useGrimoireCorner.CornerRadius = UDim.new(0, 8)
+	useGrimoireCorner.Parent = useGrimoireButton
+
+	useGrimoireButton.MouseButton1Click:Connect(function()
+		if loadoutLocked or currentPhase ~= "Lobby" or grimoireCount <= 0 then
+			return
+		end
+		useGrimoireEvent:FireServer()
+	end)
+
+	chestList.Position = UDim2.fromOffset(16, 192)
+	chestList.Size = UDim2.new(1, -32, 1, -208)
+
 	local emptyChestLabel = Instance.new("TextLabel")
 	emptyChestLabel.Name = "EmptyChests"
 	emptyChestLabel.BackgroundTransparency = 1
 	emptyChestLabel.Size = UDim2.new(1, -32, 0, 80)
-	emptyChestLabel.Position = UDim2.fromOffset(16, 140)
+	emptyChestLabel.Position = UDim2.fromOffset(16, 200)
 	emptyChestLabel.Font = Enum.Font.Gotham
 	emptyChestLabel.Text = "No chests yet.\nClear dungeon rooms for a chance to find treasure."
 	emptyChestLabel.TextColor3 = TEXT_DIM
@@ -228,6 +282,14 @@ function WeaponMenuClient.init()
 
 		emptyChestLabel.Visible = activeTab == "Chests" and #lobbyChests == 0
 		chestList.Visible = activeTab == "Chests" and #lobbyChests > 0
+		grimoireBar.Visible = activeTab == "Chests"
+		grimoireLabel.Text = if grimoireCount > 0
+			then `Grimoires: {grimoireCount}\nUse one to learn a random spell.`
+			else "Grimoires: 0\n5% chance to find one when opening a chest."
+		useGrimoireButton.BackgroundColor3 = if grimoireCount > 0 and not loadoutLocked
+			then Color3.fromRGB(120, 72, 180)
+			else LOCKED
+		useGrimoireButton.AutoButtonColor = grimoireCount > 0 and not loadoutLocked
 
 		for index, chest in lobbyChests do
 			local tier = TreasureConfig.getTier(chest.tierId)
@@ -361,8 +423,12 @@ function WeaponMenuClient.init()
 			statusLabel.Text = `Equipped: {WeaponConfig.getWeapon(equippedWeapon).displayName}  |  Gold: {walletGold}`
 		elseif activeTab == "Upgrade" then
 			statusLabel.Text = `Spend gold to upgrade weapons. Wallet: {walletGold}`
-		elseif #lobbyChests > 0 then
-			statusLabel.Text = `{#lobbyChests} chest(s) ready to open.`
+		elseif activeTab == "Chests" then
+			if #lobbyChests > 0 then
+				statusLabel.Text = `{#lobbyChests} chest(s) ready. Grimoires: {grimoireCount}.`
+			else
+				statusLabel.Text = `Open chests for gold and grimoires. You have {grimoireCount}.`
+			end
 		else
 			statusLabel.Text = "Find chests in the dungeon, then open them here."
 		end
@@ -470,6 +536,9 @@ function WeaponMenuClient.init()
 				end
 			end
 		end
+		if typeof(snapshot.grimoireCount) == "number" then
+			grimoireCount = snapshot.grimoireCount
+		end
 
 		updateMenuState()
 	end)
@@ -516,7 +585,28 @@ function WeaponMenuClient.init()
 	chestOpenedEvent.OnClientEvent:Connect(function(loot)
 		if typeof(loot) == "table" and typeof(loot.gold) == "number" then
 			local tierName = if typeof(loot.tierName) == "string" then loot.tierName else "Chest"
-			statusLabel.Text = `{tierName} opened for {loot.gold} gold!`
+			local message = `{tierName} opened for {loot.gold} gold!`
+			if loot.grimoireDropped == true then
+				message ..= " You found a grimoire!"
+			end
+			statusLabel.Text = message
+		end
+		if typeof(loot) == "table" and typeof(loot.grimoireCount) == "number" then
+			grimoireCount = loot.grimoireCount
+		end
+		updateMenuState()
+	end)
+
+	grimoireUsedEvent.OnClientEvent:Connect(function(payload)
+		if typeof(payload) ~= "table" then
+			return
+		end
+
+		if typeof(payload.grimoireCount) == "number" then
+			grimoireCount = payload.grimoireCount
+		end
+		if typeof(payload.message) == "string" then
+			statusLabel.Text = payload.message
 		end
 		updateMenuState()
 	end)

@@ -75,7 +75,8 @@ function LobbyHubClient.init()
 	hintLabel.BackgroundTransparency = 1
 	hintLabel.Size = UDim2.fromScale(1, 1)
 	hintLabel.Font = Enum.Font.Gotham
-	hintLabel.Text = "Talk to Bob for dungeon tips.\nUpgrade weapons and spells from the lobby menus. Stand on the green gate to enter."
+	hintLabel.Text =
+		"Talk to Bob for dungeon tips. Mira the Infuser binds spells into your sword.\nOpen chests for grimoires, then upgrade gear from the lobby menus."
 	hintLabel.TextColor3 = TEXT
 	hintLabel.TextSize = 16
 	hintLabel.TextWrapped = true

@@ -16,27 +16,24 @@ local TEXT_DIM = Color3.fromRGB(170, 154, 128)
 local LOCKED = Color3.fromRGB(110, 110, 110)
 local ACCENT = Color3.fromRGB(96, 58, 148)
 local ACTIVE_BADGE = Color3.fromRGB(255, 120, 48)
-local PASSIVE_BADGE = Color3.fromRGB(120, 180, 255)
 
 function SpellMenuClient.init()
 	local player = Players.LocalPlayer
 	local playerGui = player:WaitForChild("PlayerGui")
 
-	local equipSpellEvent = ReplicatedStorage:WaitForChild("EquipSpell") :: RemoteEvent
 	local upgradeSpellEvent = ReplicatedStorage:WaitForChild("UpgradeSpell") :: RemoteEvent
 	local unlockSpellEvent = ReplicatedStorage:WaitForChild("UnlockSpell") :: RemoteEvent
 	local spellLoadoutUpdatedEvent = ReplicatedStorage:WaitForChild("SpellLoadoutUpdated") :: RemoteEvent
 	local profileStateEvent = ReplicatedStorage:WaitForChild("PlayerProfileState") :: RemoteEvent
 	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
 
-	local equippedActiveSpell = SpellConfig.DEFAULT_ACTIVE
-	local equippedPassiveSpell = SpellConfig.NO_PASSIVE
+	local infusedSpellId = ""
 	local loadoutLocked = false
 	local menuOpen = false
-	local activeTab = "Equip"
+	local activeTab = "Collection"
 	local walletGold = LobbyConfig.STARTER_GOLD
 	local spellLevels: { [string]: number } = {}
-	local unlockedSpells: { [string]: boolean } = {
+	local ownedSpells: { [string]: boolean } = {
 		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
 	}
 	local currentPhase = "Lobby"
@@ -120,7 +117,7 @@ function SpellMenuClient.init()
 	equipTab.BackgroundColor3 = GOLD_DIM
 	equipTab.BorderSizePixel = 0
 	equipTab.Font = Enum.Font.GothamBold
-	equipTab.Text = "Equip"
+	equipTab.Text = "Collection"
 	equipTab.TextColor3 = TEXT
 	equipTab.TextSize = 15
 	equipTab.Parent = tabBar
@@ -167,47 +164,40 @@ function SpellMenuClient.init()
 		return SpellUpgradeConfig.getEffectiveStats(spellId, level)
 	end
 
-	local function getKindLabel(spellId: string): string
-		local kind = SpellConfig.getKind(spellId)
-		return if kind == "Active" then "[Active - E]" else "[Passive]"
-	end
-
 	local function updateSpellButtons()
 		for spellId, button in spellButtons do
 			local stats = getEffectiveDisplayStats(spellId)
 			local level = spellLevels[spellId] or 1
-			local unlocked = unlockedSpells[spellId] == true
-			local isActive = SpellConfig.getKind(spellId) == "Active"
-			local equipped = if isActive
-				then spellId == equippedActiveSpell
-				else SpellConfig.hasEquippedPassive(spellId) and spellId == equippedPassiveSpell
+			local owned = ownedSpells[spellId] == true
+			local infused = spellId == infusedSpellId
 			local ultimateTag = if stats.isUltimate then "  ULT" else ""
-			local kindLabel = getKindLabel(spellId)
 
-			if activeTab == "Equip" then
-				if unlocked then
-					local detail = if stats.cooldown
-						then `{stats.damageMin}-{stats.damageMax} dmg  |  {stats.cooldown}s`
-						elseif stats.interval then `{stats.damageMin}-{stats.damageMax} dmg  |  every {stats.interval}s`
-						else `{stats.damageMin}-{stats.damageMax} dmg`
-					button.Text =
-						`{stats.resolvedName}{ultimateTag}  Lv {level}\n{kindLabel}  {detail}`
-					button.BackgroundColor3 = if equipped then GOLD_DIM else PANEL_LIGHT
-					button.TextColor3 = if loadoutLocked then LOCKED else TEXT
-					button.AutoButtonColor = not loadoutLocked
+			if activeTab == "Collection" then
+				if owned then
+					if infused then
+						button.Text =
+							`{stats.resolvedName}{ultimateTag}  INFUSED  Lv {level}\n[Press E]  {stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
+						button.BackgroundColor3 = GOLD_DIM
+					else
+						button.Text =
+							`{stats.resolvedName}{ultimateTag}  Lv {level}\nInfuse at Mira the Infuser to use this spell`
+						button.BackgroundColor3 = PANEL_LIGHT
+					end
+					button.TextColor3 = TEXT
+					button.AutoButtonColor = false
 				else
 					local cost = SpellUpgradeConfig.getUnlockCost(spellId)
-					button.Text = `{stats.displayName}  LOCKED\n{kindLabel}  Unlock for {cost} gold`
+					button.Text = `{stats.displayName}  LOCKED\nUnlock for {cost} gold`
 					button.BackgroundColor3 = PANEL_LIGHT
 					button.TextColor3 = if walletGold >= cost and not loadoutLocked then GOLD else LOCKED
 					button.AutoButtonColor = walletGold >= cost and not loadoutLocked
 				end
 			else
-				if unlocked then
+				if owned then
 					local cost = SpellUpgradeConfig.getUpgradeCost(spellId, level)
 					if level >= SpellUpgradeConfig.MAX_LEVEL then
 						button.Text =
-							`{stats.resolvedName}{ultimateTag}  Lv {level} MAX\n{kindLabel}  {stats.damageMin}-{stats.damageMax} dmg`
+							`{stats.resolvedName}{ultimateTag}  Lv {level} MAX\n{stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} ST`
 						button.BackgroundColor3 = GOLD_DIM
 						button.TextColor3 = TEXT
 						button.AutoButtonColor = false
@@ -240,19 +230,18 @@ function SpellMenuClient.init()
 		menuButton.BackgroundColor3 = if loadoutLocked or not inLobby then LOCKED else ACCENT
 		menuButton.AutoButtonColor = not loadoutLocked and inLobby
 
-		equipTab.BackgroundColor3 = if activeTab == "Equip" then GOLD_DIM else PANEL_LIGHT
+		equipTab.BackgroundColor3 = if activeTab == "Collection" then GOLD_DIM else PANEL_LIGHT
 		upgradeTab.BackgroundColor3 = if activeTab == "Upgrade" then GOLD_DIM else PANEL_LIGHT
 
-		local activeStats = getEffectiveDisplayStats(equippedActiveSpell)
-		local passiveName = if SpellConfig.hasEquippedPassive(equippedPassiveSpell)
-			then getEffectiveDisplayStats(equippedPassiveSpell).resolvedName
+		local infusedName = if infusedSpellId ~= ""
+			then getEffectiveDisplayStats(infusedSpellId).resolvedName
 			else "None"
 
 		if loadoutLocked or not inLobby then
 			statusLabel.Text = "Spell loadout locked during a dungeon run."
-		elseif activeTab == "Equip" then
+		elseif activeTab == "Collection" then
 			statusLabel.Text =
-				`Active: {activeStats.resolvedName} (E)  |  Passive: {passiveName}\nGold: {walletGold}`
+				`Infused spell: {infusedName}  |  Visit Mira to change infusion.\nGold: {walletGold}`
 		else
 			statusLabel.Text =
 				`Ultimates unlock at level {SpellUpgradeConfig.ULTIMATE_LEVEL}. Wallet: {walletGold}`
@@ -279,7 +268,7 @@ function SpellMenuClient.init()
 		local badge = Instance.new("Frame")
 		badge.Size = UDim2.fromOffset(6, 78)
 		badge.BorderSizePixel = 0
-		badge.BackgroundColor3 = if stats.kind == "Active" then ACTIVE_BADGE else PASSIVE_BADGE
+		badge.BackgroundColor3 = ACTIVE_BADGE
 		badge.Parent = button
 
 		local badgeCorner = Instance.new("UICorner")
@@ -291,15 +280,13 @@ function SpellMenuClient.init()
 				return
 			end
 
-			local unlocked = unlockedSpells[stats.id] == true
-			if activeTab == "Equip" then
-				if unlocked then
-					equipSpellEvent:FireServer(stats.id)
-				else
+			local owned = ownedSpells[stats.id] == true
+			if activeTab == "Collection" then
+				if not owned then
 					unlockSpellEvent:FireServer(stats.id)
 				end
 			else
-				if unlocked then
+				if owned then
 					upgradeSpellEvent:FireServer(stats.id)
 				else
 					unlockSpellEvent:FireServer(stats.id)
@@ -311,7 +298,7 @@ function SpellMenuClient.init()
 	end
 
 	equipTab.MouseButton1Click:Connect(function()
-		activeTab = "Equip"
+		activeTab = "Collection"
 		updateMenuState()
 	end)
 
@@ -331,12 +318,9 @@ function SpellMenuClient.init()
 		panel.Visible = menuOpen
 	end)
 
-	spellLoadoutUpdatedEvent.OnClientEvent:Connect(function(activeSpellId: string, passiveSpellId: string, locked: boolean)
-		if typeof(activeSpellId) == "string" then
-			equippedActiveSpell = activeSpellId
-		end
-		if typeof(passiveSpellId) == "string" then
-			equippedPassiveSpell = passiveSpellId
+	spellLoadoutUpdatedEvent.OnClientEvent:Connect(function(activeInfusion: string, locked: boolean)
+		if typeof(activeInfusion) == "string" then
+			infusedSpellId = activeInfusion
 		end
 		loadoutLocked = locked == true
 		if locked then
@@ -354,11 +338,8 @@ function SpellMenuClient.init()
 		if typeof(snapshot.gold) == "number" then
 			walletGold = snapshot.gold
 		end
-		if typeof(snapshot.equippedActiveSpell) == "string" then
-			equippedActiveSpell = snapshot.equippedActiveSpell
-		end
-		if typeof(snapshot.equippedPassiveSpell) == "string" then
-			equippedPassiveSpell = snapshot.equippedPassiveSpell
+		if typeof(snapshot.infusedSpellId) == "string" then
+			infusedSpellId = snapshot.infusedSpellId
 		end
 		if typeof(snapshot.spellLevels) == "table" then
 			for spellId, level in snapshot.spellLevels do
@@ -367,10 +348,16 @@ function SpellMenuClient.init()
 				end
 			end
 		end
-		if typeof(snapshot.unlockedSpells) == "table" then
+		if typeof(snapshot.ownedSpells) == "table" then
+			for spellId, owned in snapshot.ownedSpells do
+				if typeof(owned) == "boolean" then
+					ownedSpells[spellId] = owned
+				end
+			end
+		elseif typeof(snapshot.unlockedSpells) == "table" then
 			for spellId, unlocked in snapshot.unlockedSpells do
 				if typeof(unlocked) == "boolean" then
-					unlockedSpells[spellId] = unlocked
+					ownedSpells[spellId] = unlocked
 				end
 			end
 		end
@@ -394,8 +381,8 @@ function SpellMenuClient.init()
 			return
 		end
 
-		if tab == "Equip" or tab == "Upgrade" then
-			activeTab = tab
+		if tab == "Collection" or tab == "Upgrade" or tab == "Equip" then
+			activeTab = if tab == "Equip" then "Collection" else tab
 		end
 
 		menuOpen = true
