@@ -180,7 +180,7 @@ function SpellMenuClient.init()
 						button.BackgroundColor3 = GOLD_DIM
 					else
 						button.Text =
-							`{stats.resolvedName}{ultimateTag}  Lv {level}\nInfuse at Mira the Infuser to use this spell`
+							`{stats.resolvedName}{ultimateTag}  Lv {level}\nInfuse at Mira, then press E in dungeons`
 						button.BackgroundColor3 = PANEL_LIGHT
 					end
 					button.TextColor3 = TEXT
@@ -241,7 +241,7 @@ function SpellMenuClient.init()
 			statusLabel.Text = "Spell loadout locked during a dungeon run."
 		elseif activeTab == "Collection" then
 			statusLabel.Text =
-				`Infused spell: {infusedName}  |  Visit Mira to change infusion.\nGold: {walletGold}`
+				`Infused spell: {infusedName}  |  Press E in dungeons to cast.\nGold: {walletGold}`
 		else
 			statusLabel.Text =
 				`Ultimates unlock at level {SpellUpgradeConfig.ULTIMATE_LEVEL}. Wallet: {walletGold}`

@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local InfuserConfig = require(ReplicatedStorage.Shared.InfuserConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
@@ -16,6 +17,7 @@ local TEXT = Color3.fromRGB(244, 228, 196)
 local TEXT_DIM = Color3.fromRGB(170, 154, 128)
 local LOCKED = Color3.fromRGB(110, 110, 110)
 local ACCENT = Color3.fromRGB(120, 72, 180)
+local SELECTED = Color3.fromRGB(88, 58, 128)
 
 function InfuserMenuClient.init()
 	local player = Players.LocalPlayer
@@ -27,6 +29,7 @@ function InfuserMenuClient.init()
 	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
 
 	local infusedSpellId = ""
+	local selectedSpellId = ""
 	local ownedSpells: { [string]: boolean } = {
 		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
 	}
@@ -34,6 +37,7 @@ function InfuserMenuClient.init()
 	local loadoutLocked = false
 	local menuOpen = false
 	local currentPhase = "Lobby"
+	local pendingInfusion = false
 
 	for _, spell in SpellConfig.getSpellList() do
 		spellLevels[spell.id] = 1
@@ -42,13 +46,15 @@ function InfuserMenuClient.init()
 	local screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "InfuserMenuUI"
 	screenGui.ResetOnSpawn = false
+	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screenGui.DisplayOrder = 12
 	screenGui.Parent = playerGui
 
 	local panel = Instance.new("Frame")
 	panel.Name = "InfuserPanel"
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(420, 420)
+	panel.Size = UDim2.fromOffset(440, 460)
 	panel.BackgroundColor3 = PANEL
 	panel.BorderSizePixel = 0
 	panel.Visible = false
@@ -68,7 +74,7 @@ function InfuserMenuClient.init()
 	title.Position = UDim2.fromOffset(16, 12)
 	title.Size = UDim2.new(1, -64, 0, 28)
 	title.Font = Enum.Font.GothamBold
-	title.Text = "Weapon Infusion"
+	title.Text = InfuserConfig.DISPLAY_NAME
 	title.TextColor3 = GOLD
 	title.TextSize = 22
 	title.TextXAlignment = Enum.TextXAlignment.Left
@@ -93,9 +99,9 @@ function InfuserMenuClient.init()
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.BackgroundTransparency = 1
 	statusLabel.Position = UDim2.fromOffset(16, 44)
-	statusLabel.Size = UDim2.new(1, -32, 0, 44)
+	statusLabel.Size = UDim2.new(1, -32, 0, 52)
 	statusLabel.Font = Enum.Font.Gotham
-	statusLabel.Text = "Choose a spell to bind into your equipped weapon."
+	statusLabel.Text = "Select a learned spell, then infuse it to cast with E in dungeons."
 	statusLabel.TextColor3 = TEXT
 	statusLabel.TextSize = 14
 	statusLabel.TextWrapped = true
@@ -105,8 +111,8 @@ function InfuserMenuClient.init()
 	local list = Instance.new("ScrollingFrame")
 	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
-	list.Position = UDim2.fromOffset(16, 96)
-	list.Size = UDim2.new(1, -32, 1, -112)
+	list.Position = UDim2.fromOffset(16, 104)
+	list.Size = UDim2.new(1, -32, 1, -188)
 	list.CanvasSize = UDim2.fromOffset(0, 0)
 	list.ScrollBarThickness = 6
 	list.Parent = panel
@@ -120,43 +126,161 @@ function InfuserMenuClient.init()
 		list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 8)
 	end)
 
-	local spellButtons: { [string]: TextButton } = {}
+	local actionBar = Instance.new("Frame")
+	actionBar.BackgroundTransparency = 1
+	actionBar.AnchorPoint = Vector2.new(0, 1)
+	actionBar.Position = UDim2.new(0, 16, 1, -16)
+	actionBar.Size = UDim2.new(1, -32, 0, 72)
+	actionBar.Parent = panel
+
+	local previewLabel = Instance.new("TextLabel")
+	previewLabel.BackgroundTransparency = 1
+	previewLabel.Position = UDim2.fromOffset(0, 0)
+	previewLabel.Size = UDim2.new(1, -148, 0, 72)
+	previewLabel.Font = Enum.Font.Gotham
+	previewLabel.Text = "Select a spell above."
+	previewLabel.TextColor3 = TEXT_DIM
+	previewLabel.TextSize = 14
+	previewLabel.TextWrapped = true
+	previewLabel.TextXAlignment = Enum.TextXAlignment.Left
+	previewLabel.TextYAlignment = Enum.TextYAlignment.Center
+	previewLabel.Parent = actionBar
+
+	local infuseButton = Instance.new("TextButton")
+	infuseButton.AnchorPoint = Vector2.new(1, 0.5)
+	infuseButton.Position = UDim2.new(1, 0, 0.5, 0)
+	infuseButton.Size = UDim2.fromOffset(132, 48)
+	infuseButton.BackgroundColor3 = ACCENT
+	infuseButton.BorderSizePixel = 0
+	infuseButton.Font = Enum.Font.GothamBold
+	infuseButton.Text = "Infuse"
+	infuseButton.TextColor3 = Color3.new(1, 1, 1)
+	infuseButton.TextSize = 18
+	infuseButton.AutoButtonColor = false
+	infuseButton.Parent = actionBar
+
+	local infuseCorner = Instance.new("UICorner")
+	infuseCorner.CornerRadius = UDim.new(0, 10)
+	infuseCorner.Parent = infuseButton
+
+	type SpellRow = {
+		button: TextButton,
+		stroke: UIStroke,
+	}
+
+	local spellRows: { [string]: SpellRow } = {}
 
 	local function getEffectiveDisplayStats(spellId: string)
 		return SpellUpgradeConfig.getEffectiveStats(spellId, spellLevels[spellId] or 1)
+	end
+
+	local function getDefaultSelection(): string
+		if infusedSpellId ~= "" and ownedSpells[infusedSpellId] then
+			return infusedSpellId
+		end
+
+		for _, spell in SpellConfig.getSpellList() do
+			if ownedSpells[spell.id] then
+				return spell.id
+			end
+		end
+
+		return ""
+	end
+
+	local function canInfuseSelection(): boolean
+		return selectedSpellId ~= ""
+			and ownedSpells[selectedSpellId] == true
+			and selectedSpellId ~= infusedSpellId
+			and not loadoutLocked
+			and currentPhase == "Lobby"
+			and not pendingInfusion
+	end
+
+	local function updateActionBar()
+		if selectedSpellId == "" or ownedSpells[selectedSpellId] ~= true then
+			previewLabel.Text = "Select a learned spell above."
+			previewLabel.TextColor3 = TEXT_DIM
+			infuseButton.Text = "Infuse"
+			infuseButton.BackgroundColor3 = LOCKED
+			infuseButton.AutoButtonColor = false
+			return
+		end
+
+		local stats = getEffectiveDisplayStats(selectedSpellId)
+		if selectedSpellId == infusedSpellId then
+			previewLabel.Text =
+				`{stats.resolvedName} is already infused.\nPress E in dungeons to cast ({stats.staminaCost} stamina).`
+			previewLabel.TextColor3 = GOLD
+			infuseButton.Text = "Infused"
+			infuseButton.BackgroundColor3 = GOLD_DIM
+			infuseButton.AutoButtonColor = false
+			return
+		end
+
+		previewLabel.Text =
+			`Ready: {stats.displayName}  Lv {spellLevels[selectedSpellId] or 1}\n{stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} stamina per cast (E)`
+		previewLabel.TextColor3 = TEXT
+
+		local ready = canInfuseSelection()
+		infuseButton.Text = if pendingInfusion then "Infusing..." else "Infuse"
+		infuseButton.BackgroundColor3 = if ready then ACCENT else LOCKED
+		infuseButton.AutoButtonColor = ready
 	end
 
 	local function updateMenuState()
 		local infusedName = if infusedSpellId ~= ""
 			then getEffectiveDisplayStats(infusedSpellId).resolvedName
 			else "None"
-		statusLabel.Text =
-			`Infuse spells into your sword so they trigger when you attack.\nCurrent infusion: {infusedName}`
 
-		for spellId, button in spellButtons do
+		if not pendingInfusion then
+			statusLabel.Text =
+				`Bind a spell to your weapon, then press E in dungeons to cast.\nCurrent infusion: {infusedName}`
+		end
+
+		local layoutOrder = 0
+		for _, spell in SpellConfig.getSpellList() do
+			layoutOrder += 1
+			local spellId = spell.id
+			local row = spellRows[spellId]
+			if not row then
+				continue
+			end
+
 			local stats = getEffectiveDisplayStats(spellId)
 			local owned = ownedSpells[spellId] == true
 			local infused = spellId == infusedSpellId
+			local selected = spellId == selectedSpellId
+
+			row.button.LayoutOrder = if owned then layoutOrder else layoutOrder + 100
 
 			if not owned then
-				button.Text = `{stats.displayName}  LOCKED\nFind this spell with a grimoire.`
-				button.BackgroundColor3 = PANEL_LIGHT
-				button.TextColor3 = LOCKED
-				button.AutoButtonColor = false
+				row.button.Text = `{stats.displayName}  LOCKED\nFind this spell with a grimoire.`
+				row.button.BackgroundColor3 = PANEL_LIGHT
+				row.button.TextColor3 = LOCKED
+				row.button.AutoButtonColor = false
+				row.stroke.Color = PANEL_LIGHT
+				row.stroke.Thickness = 1
 			elseif infused then
-				button.Text =
-					`{stats.resolvedName}  INFUSED\n{stats.damageMin}-{stats.damageMax} dmg  |  {stats.staminaCost} stamina`
-				button.BackgroundColor3 = GOLD_DIM
-				button.TextColor3 = TEXT
-				button.AutoButtonColor = false
+				row.button.Text =
+					`{stats.resolvedName}  INFUSED\nPress E in dungeons  |  {stats.staminaCost} stamina`
+				row.button.BackgroundColor3 = GOLD_DIM
+				row.button.TextColor3 = TEXT
+				row.button.AutoButtonColor = false
+				row.stroke.Color = GOLD
+				row.stroke.Thickness = if selected then 2 else 1
 			else
-				button.Text =
-					`{stats.displayName}  Lv {spellLevels[spellId] or 1}\nInfuse for {stats.staminaCost} stamina per cast`
-				button.BackgroundColor3 = PANEL_LIGHT
-				button.TextColor3 = if loadoutLocked or currentPhase ~= "Lobby" then LOCKED else TEXT
-				button.AutoButtonColor = not loadoutLocked and currentPhase == "Lobby"
+				row.button.Text =
+					`{stats.displayName}  Lv {spellLevels[spellId] or 1}\nClick to select, then press Infuse`
+				row.button.BackgroundColor3 = if selected then SELECTED else PANEL_LIGHT
+				row.button.TextColor3 = if loadoutLocked or currentPhase ~= "Lobby" then LOCKED else TEXT
+				row.button.AutoButtonColor = false
+				row.stroke.Color = if selected then ACCENT else PANEL_LIGHT
+				row.stroke.Thickness = if selected then 2 else 1
 			end
 		end
+
+		updateActionBar()
 	end
 
 	for index, stats in SpellConfig.getSpellList() do
@@ -174,35 +298,77 @@ function InfuserMenuClient.init()
 		corner.CornerRadius = UDim.new(0, 8)
 		corner.Parent = button
 
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = PANEL_LIGHT
+		stroke.Thickness = 1
+		stroke.Parent = button
+
 		button.MouseButton1Click:Connect(function()
-			if loadoutLocked or currentPhase ~= "Lobby" or ownedSpells[stats.id] ~= true then
+			if ownedSpells[stats.id] ~= true then
 				return
 			end
-			if stats.id == infusedSpellId then
-				return
-			end
-			infuseSpellEvent:FireServer(stats.id)
+
+			selectedSpellId = stats.id
+			updateMenuState()
 		end)
 
-		spellButtons[stats.id] = button
+		spellRows[stats.id] = {
+			button = button,
+			stroke = stroke,
+		}
 	end
 
 	local function setMenuOpen(open: boolean)
 		menuOpen = open
 		panel.Visible = open
 		if open then
+			selectedSpellId = getDefaultSelection()
+			pendingInfusion = false
 			updateMenuState()
 		end
+	end
+
+	local function tryInfuseSelected()
+		if not canInfuseSelection() then
+			return
+		end
+
+		pendingInfusion = true
+		updateActionBar()
+		infuseSpellEvent:FireServer(selectedSpellId)
 	end
 
 	closeButton.MouseButton1Click:Connect(function()
 		setMenuOpen(false)
 	end)
 
-	spellLoadoutUpdatedEvent.OnClientEvent:Connect(function(activeInfusion: string, locked: boolean)
-		if typeof(activeInfusion) == "string" then
-			infusedSpellId = activeInfusion
+	infuseButton.MouseButton1Click:Connect(tryInfuseSelected)
+
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or not menuOpen then
+			return
 		end
+
+		if input.KeyCode == Enum.KeyCode.Escape then
+			setMenuOpen(false)
+		elseif input.KeyCode == Enum.KeyCode.Return then
+			tryInfuseSelected()
+		end
+	end)
+
+	spellLoadoutUpdatedEvent.OnClientEvent:Connect(function(activeInfusion: string, locked: boolean)
+		pendingInfusion = false
+
+		if typeof(activeInfusion) == "string" then
+			local previousInfusion = infusedSpellId
+			infusedSpellId = activeInfusion
+			if activeInfusion ~= "" and activeInfusion ~= previousInfusion then
+				local stats = getEffectiveDisplayStats(activeInfusion)
+				statusLabel.Text = `{stats.resolvedName} infused! Press E in dungeons to cast.`
+				selectedSpellId = activeInfusion
+			end
+		end
+
 		loadoutLocked = locked == true
 		if locked then
 			setMenuOpen(false)
@@ -232,6 +398,11 @@ function InfuserMenuClient.init()
 				end
 			end
 		end
+
+		if menuOpen and (selectedSpellId == "" or ownedSpells[selectedSpellId] ~= true) then
+			selectedSpellId = getDefaultSelection()
+		end
+
 		updateMenuState()
 	end)
 

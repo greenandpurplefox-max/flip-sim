@@ -208,7 +208,8 @@ function TreasureChestService.openLobbyChest(player: Player, chestIndex: number)
 	local gold = TreasureConfig.rollGold(chest.tierId, chest.roomDepth)
 	PlayerDataService.addGold(player, gold)
 
-	local grimoireDropped = math.random() < GrimoireConfig.CHEST_DROP_CHANCE
+	local grimoireDropChance = GrimoireConfig.getChestDropChance(chest.tierId)
+	local grimoireDropped = math.random() < grimoireDropChance
 	if grimoireDropped then
 		PlayerDataService.addGrimoire(player, 1)
 	end

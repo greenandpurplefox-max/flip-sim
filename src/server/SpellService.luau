@@ -14,8 +14,6 @@ local SpellService = {}
 local PROJECTILE_LIFETIME = 2.5
 
 local lastActiveCastAt: { [Player]: number } = {}
-local lastInfusionProcAt: { [Player]: number } = {}
-local INFUSION_PROC_COOLDOWN = 0.85
 
 local infuseSpellEvent: RemoteEvent
 local upgradeSpellEvent: RemoteEvent
@@ -425,7 +423,6 @@ function SpellService.refreshPlayerLoadout(player: Player)
 	end
 
 	lastActiveCastAt[player] = nil
-	lastInfusionProcAt[player] = nil
 	notifyLoadout(player)
 end
 
@@ -438,30 +435,6 @@ local function castInfusedSpell(player: Player, spellId: string): boolean
 	end
 	notifyCastEffect(player, spellId, stats)
 	return true
-end
-
-function SpellService.tryProcInfusionOnHit(player: Player)
-	if not isPlayerActive(player) or not GamePhaseService.isInDungeon(player) then
-		return
-	end
-
-	local spellId = PlayerDataService.getInfusedSpell(player)
-	if spellId == "" or not PlayerDataService.ownsSpell(player, spellId) then
-		return
-	end
-
-	local now = os.clock()
-	if lastInfusionProcAt[player] and now - lastInfusionProcAt[player] < INFUSION_PROC_COOLDOWN then
-		return
-	end
-
-	local stats = getEffectiveStats(player, spellId)
-	if not StaminaService.trySpend(player, stats.staminaCost) then
-		return
-	end
-
-	lastInfusionProcAt[player] = now
-	castInfusedSpell(player, spellId)
 end
 
 local function tryCastActiveSpell(player: Player): boolean
@@ -498,7 +471,10 @@ local function tryCastActiveSpell(player: Player): boolean
 end
 
 function SpellService.infusePlayerSpell(player: Player, spellId: string): boolean
-	if GamePhaseService.isLoadoutLocked(player) or not SpellConfig.isValid(spellId) then
+	if not GamePhaseService.isInLobby(player) or GamePhaseService.isLoadoutLocked(player) then
+		return false
+	end
+	if not SpellConfig.isValid(spellId) then
 		return false
 	end
 
@@ -575,7 +551,6 @@ function SpellService.init()
 
 	Players.PlayerRemoving:Connect(function(player)
 		lastActiveCastAt[player] = nil
-		lastInfusionProcAt[player] = nil
 	end)
 end
 

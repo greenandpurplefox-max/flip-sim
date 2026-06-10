@@ -285,7 +285,7 @@ function WeaponMenuClient.init()
 		grimoireBar.Visible = activeTab == "Chests"
 		grimoireLabel.Text = if grimoireCount > 0
 			then `Grimoires: {grimoireCount}\nUse one to learn a random spell.`
-			else "Grimoires: 0\n5% chance to find one when opening a chest."
+			else "Grimoires: 0\nBetter chests drop them more often (4-28%)."
 		useGrimoireButton.BackgroundColor3 = if grimoireCount > 0 and not loadoutLocked
 			then Color3.fromRGB(120, 72, 180)
 			else LOCKED

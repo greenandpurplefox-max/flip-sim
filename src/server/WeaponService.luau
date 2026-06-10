@@ -14,7 +14,6 @@ local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig)
 
 local CardService = require(script.Parent.CardService)
-local SpellService = require(script.Parent.SpellService)
 local GamePhaseService = require(script.Parent.GamePhaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
@@ -630,7 +629,6 @@ local function applyMonsterDamage(
 
 	if attacker then
 		getSwordHitEvent():FireClient(attacker)
-		SpellService.tryProcInfusionOnHit(attacker)
 	end
 end
 
