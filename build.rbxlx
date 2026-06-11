@@ -4443,6 +4443,16 @@ local function scheduleSave(player: Player)
 	end)
 end
 
+function PlayerDataService.saveProfileNow(player: Player)
+	local pending = pendingSaveTasks[player]
+	if pending then
+		task.cancel(pending)
+		pendingSaveTasks[player] = nil
+	end
+
+	PlayerDataService.saveProfile(player)
+end
+
 function PlayerDataService.sendProfile(player: Player)
 	local profile = profiles[player]
 	if profile then
@@ -4607,7 +4617,7 @@ function PlayerDataService.tryInfuseWeapon(player: Player, weaponId: string, spe
 	profile.grimoireCount -= InfuserConfig.INFUSION_GRIMOIRE_COST
 	profile.weaponInfusions[weaponId] = spellId
 	PlayerDataService.sendProfile(player)
-	scheduleSave(player)
+	PlayerDataService.saveProfileNow(player)
 	return true, nil
 end
 
@@ -4633,7 +4643,7 @@ function PlayerDataService.tryPurgeWeaponInfusion(player: Player, weaponId: stri
 	profile.gold -= cost
 	profile.weaponInfusions[weaponId] = nil
 	PlayerDataService.sendProfile(player)
-	scheduleSave(player)
+	PlayerDataService.saveProfileNow(player)
 	return true, nil
 end
 
@@ -4650,7 +4660,7 @@ function PlayerDataService.addGrimoire(player: Player, amount: number)
 
 	profile.grimoireCount += math.floor(amount)
 	PlayerDataService.sendProfile(player)
-	scheduleSave(player)
+	PlayerDataService.saveProfileNow(player)
 end
 
 function PlayerDataService.grantOwnedSpell(player: Player, spellId: string): boolean
@@ -4697,7 +4707,7 @@ function PlayerDataService.tryUseGrimoire(player: Player): (boolean, string?, st
 	end
 
 	PlayerDataService.sendProfile(player)
-	scheduleSave(player)
+	PlayerDataService.saveProfileNow(player)
 
 	local spell = SpellConfig.getSpell(spellId)
 	local message = if isNew
@@ -4924,6 +4934,7 @@ local StaminaService = require(script.Parent.StaminaService)
 local SpellService = {}
 
 local PROJECTILE_LIFETIME = 2.5
+local PROJECTILE_TARGET_RANGE = 140
 
 local lastActiveCastAt: { [Player]: number } = {}
 
@@ -5249,6 +5260,43 @@ local function getMonsterRoot(monster: Model): BasePart?
 	return monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
+local function getProjectileDirection(player: Player, origin: Vector3, fallback: Vector3): Vector3
+	local folder = getMonstersFolder()
+	if not folder then
+		return fallback
+	end
+
+	local closestDistance = PROJECTILE_TARGET_RANGE
+	local targetPosition: Vector3? = nil
+
+	for _, monster in folder:GetChildren() do
+		if not monster:IsA("Model") or not canDamageMonster(monster, player) then
+			continue
+		end
+
+		local humanoid = monster:FindFirstChildOfClass("Humanoid")
+		local monsterRoot = getMonsterRoot(monster)
+		if not humanoid or humanoid.Health <= 0 or not monsterRoot then
+			continue
+		end
+
+		local distance = (monsterRoot.Position - origin).Magnitude
+		if distance < closestDistance then
+			closestDistance = distance
+			targetPosition = monsterRoot.Position + Vector3.new(0, 1.2, 0)
+		end
+	end
+
+	if targetPosition then
+		local direction = targetPosition - origin
+		if direction.Magnitude > 0.05 then
+			return direction.Unit
+		end
+	end
+
+	return fallback
+end
+
 local function spawnProjectile(
 	player: Player,
 	origin: Vector3,
@@ -5292,17 +5340,18 @@ local function spawnProjectile(
 	end)
 end
 
-local function fireForwardProjectiles(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
+local function fireProjectileSpell(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not root then
 		return
 	end
 
-	local direction = flattenLookVector(root)
+	local fallbackDirection = flattenLookVector(root)
 	local count = if stats.isUltimate then 2 else 1
 	for index = 0, count - 1 do
-		local origin = root.Position + Vector3.new(0, 1.2, 0) + direction * (1.5 + index * 1.2)
+		local origin = root.Position + Vector3.new(0, 1.2, 0) + fallbackDirection * (1.5 + index * 1.2)
+		local direction = getProjectileDirection(player, origin, fallbackDirection)
 		spawnProjectile(player, origin, direction, stats)
 	end
 end
@@ -5359,7 +5408,7 @@ local function castInfusedSpell(player: Player, spellId: string): boolean
 	if (stats.aoeRadius or 0) > 0 then
 		castFrostNova(player, stats)
 	else
-		fireForwardProjectiles(player, stats)
+		fireProjectileSpell(player, stats)
 	end
 	notifyCastEffect(player, spellId, stats)
 	return true
@@ -7950,7 +7999,8 @@ return WeaponService
       <Item class="LocalScript" referent="46">
         <Properties>
           <string name="Name">Client</string>
-          <string name="Source"><![CDATA[local DungeonRunClient = require(script.DungeonRunClient)
+          <string name="Source"><![CDATA[local UiStyleFix = require(script.UiStyleFix)
+local DungeonRunClient = require(script.DungeonRunClient)
 local BlacksmithDialogueClient = require(script.BlacksmithDialogueClient)
 local TreasureChestClient = require(script.TreasureChestClient)
 local LobbyHubClient = require(script.LobbyHubClient)
@@ -7964,6 +8014,7 @@ local HealthBarUI = require(script.HealthBarUI)
 local BossHealthBarUI = require(script.BossHealthBarUI)
 local MovementClient = require(script.MovementClient)
 
+UiStyleFix.init()
 WeaponClient.init()
 LobbyHubClient.init()
 BlacksmithDialogueClient.init()
@@ -7989,6 +8040,7 @@ local UserInputService = game:GetService("UserInputService")
 local BlacksmithConfig = require(ReplicatedStorage.Shared.BlacksmithConfig)
 local BobConfig = require(ReplicatedStorage.Shared.BobConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local UiCorner = require(script.Parent.UiCorner)
 local InfuserMenuClient = require(script.Parent.InfuserMenuClient)
 local WeaponMenuClient = require(script.Parent.WeaponMenuClient)
 
@@ -8035,9 +8087,7 @@ function BlacksmithDialogueClient.init()
 	panel.BorderSizePixel = 0
 	panel.Parent = screenGui
 
-	local panelCorner = Instance.new("UICorner")
-	panelCorner.CornerRadius = UDim.new(0, 14)
-	panelCorner.Parent = panel
+	UiCorner.apply(panel, 14)
 
 	local panelStroke = Instance.new("UIStroke")
 	panelStroke.Color = GOLD
@@ -8092,9 +8142,7 @@ function BlacksmithDialogueClient.init()
 	continueButton.TextSize = 16
 	continueButton.Parent = panel
 
-	local continueCorner = Instance.new("UICorner")
-	continueCorner.CornerRadius = UDim.new(0, 10)
-	continueCorner.Parent = continueButton
+	UiCorner.apply(continueButton, 10)
 
 	local leaveButton = Instance.new("TextButton")
 	leaveButton.AnchorPoint = Vector2.new(0, 1)
@@ -8108,9 +8156,7 @@ function BlacksmithDialogueClient.init()
 	leaveButton.TextSize = 16
 	leaveButton.Parent = panel
 
-	local leaveCorner = Instance.new("UICorner")
-	leaveCorner.CornerRadius = UDim.new(0, 10)
-	leaveCorner.Parent = leaveButton
+	UiCorner.apply(leaveButton, 10)
 
 	local function renderLine()
 		if not activeNpc then
@@ -8291,6 +8337,7 @@ local TweenService = game:GetService("TweenService")
 local BossConfig = require(ReplicatedStorage.Shared.BossConfig)
 local DungeonConfig = require(ReplicatedStorage.Shared.DungeonConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local BossHealthBarUI = {}
 
@@ -8334,9 +8381,7 @@ local function disconnectBoss()
 end
 
 local function addCorner(instance: GuiObject, radius: number)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, radius)
-	corner.Parent = instance
+	UiCorner.apply(instance, radius)
 end
 
 local function addStroke(instance: GuiObject, color: Color3, thickness: number, transparency: number?)
@@ -8599,6 +8644,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CardConfig = require(ReplicatedStorage.Shared.CardConfig)
 local DungeonConfig = require(ReplicatedStorage.Shared.DungeonConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local DungeonRunClient = {}
 
@@ -8637,9 +8683,7 @@ local function createUI()
 	statusLabel.ZIndex = 8
 	statusLabel.Parent = screenGui
 
-	local statusCorner = Instance.new("UICorner")
-	statusCorner.CornerRadius = UDim.new(0, 10)
-	statusCorner.Parent = statusLabel
+	UiCorner.apply(statusLabel, 10)
 
 	local statusStroke = Instance.new("UIStroke")
 	statusStroke.Color = GOLD
@@ -8656,9 +8700,7 @@ local function createUI()
 	cardPanel.Visible = false
 	cardPanel.Parent = screenGui
 
-	local panelCorner = Instance.new("UICorner")
-	panelCorner.CornerRadius = UDim.new(0, 14)
-	panelCorner.Parent = cardPanel
+	UiCorner.apply(cardPanel, 14)
 
 	local panelStroke = Instance.new("UIStroke")
 	panelStroke.Color = GOLD
@@ -8715,9 +8757,7 @@ local function createUI()
 		button.LayoutOrder = index
 		button.Parent = list
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 10)
-		corner.Parent = button
+		UiCorner.apply(button, 10)
 
 		table.insert(cardButtons, button)
 	end
@@ -8830,6 +8870,7 @@ local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 
 local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -8903,10 +8944,7 @@ local function addStroke(instance: GuiObject, color: Color3, thickness: number, 
 end
 
 local function addCorner(instance: GuiObject, radius: number)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, radius)
-	corner.Parent = instance
-	return corner
+	UiCorner.apply(instance, radius)
 end
 
 local function createGem(parent: Instance, position: UDim2, zIndex: number)
@@ -9362,6 +9400,7 @@ local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local InfuserMenuClient = {}
 
@@ -9425,9 +9464,7 @@ function InfuserMenuClient.init()
 	panel.Visible = false
 	panel.Parent = screenGui
 
-	local panelCorner = Instance.new("UICorner")
-	panelCorner.CornerRadius = UDim.new(0, 12)
-	panelCorner.Parent = panel
+	UiCorner.apply(panel, 12)
 
 	local panelStroke = Instance.new("UIStroke")
 	panelStroke.Color = ACCENT
@@ -9457,9 +9494,7 @@ function InfuserMenuClient.init()
 	closeButton.TextSize = 18
 	closeButton.Parent = panel
 
-	local closeCorner = Instance.new("UICorner")
-	closeCorner.CornerRadius = UDim.new(0, 8)
-	closeCorner.Parent = closeButton
+	UiCorner.apply(closeButton, 8)
 
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.BackgroundTransparency = 1
@@ -9568,9 +9603,7 @@ function InfuserMenuClient.init()
 	infuseButton.AutoButtonColor = false
 	infuseButton.Parent = actionBar
 
-	local infuseCorner = Instance.new("UICorner")
-	infuseCorner.CornerRadius = UDim.new(0, 10)
-	infuseCorner.Parent = infuseButton
+	UiCorner.apply(infuseButton, 10)
 
 	local purgeButton = Instance.new("TextButton")
 	purgeButton.AnchorPoint = Vector2.new(1, 0.5)
@@ -9585,9 +9618,7 @@ function InfuserMenuClient.init()
 	purgeButton.AutoButtonColor = false
 	purgeButton.Parent = actionBar
 
-	local purgeCorner = Instance.new("UICorner")
-	purgeCorner.CornerRadius = UDim.new(0, 10)
-	purgeCorner.Parent = purgeButton
+	UiCorner.apply(purgeButton, 10)
 
 	type Row = {
 		button: TextButton,
@@ -9771,9 +9802,7 @@ function InfuserMenuClient.init()
 		button.LayoutOrder = index
 		button.Parent = weaponList
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = button
+		UiCorner.apply(button, 8)
 
 		local stroke = Instance.new("UIStroke")
 		stroke.Color = PANEL_LIGHT
@@ -9807,9 +9836,7 @@ function InfuserMenuClient.init()
 		button.LayoutOrder = index
 		button.Parent = spellList
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = button
+		UiCorner.apply(button, 8)
 
 		local stroke = Instance.new("UIStroke")
 		stroke.Color = PANEL_LIGHT
@@ -9994,6 +10021,7 @@ return InfuserMenuClient
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local LobbyHubClient = {}
 
@@ -10028,9 +10056,7 @@ function LobbyHubClient.init()
 	walletFrame.BorderSizePixel = 0
 	walletFrame.Parent = screenGui
 
-	local walletCorner = Instance.new("UICorner")
-	walletCorner.CornerRadius = UDim.new(0, 10)
-	walletCorner.Parent = walletFrame
+	UiCorner.apply(walletFrame, 10)
 
 	local walletStroke = Instance.new("UIStroke")
 	walletStroke.Color = GOLD
@@ -10054,9 +10080,7 @@ function LobbyHubClient.init()
 	hintFrame.BorderSizePixel = 0
 	hintFrame.Parent = screenGui
 
-	local hintCorner = Instance.new("UICorner")
-	hintCorner.CornerRadius = UDim.new(0, 10)
-	hintCorner.Parent = hintFrame
+	UiCorner.apply(hintFrame, 10)
 
 	local hintStroke = Instance.new("UIStroke")
 	hintStroke.Color = GOLD
@@ -10119,6 +10143,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local MovementConfig = require(ReplicatedStorage.Shared.MovementConfig)
 local StaminaConfig = require(ReplicatedStorage.Shared.StaminaConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local MovementClient = {}
 
@@ -10172,9 +10197,7 @@ local function createShiftLockCursor(): ScreenGui
 		line.BorderSizePixel = 0
 		line.Parent = center
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = line
+		UiCorner.apply(line, UDim.new(1, 0))
 	end
 
 	createLine("Horizontal", UDim2.fromOffset(18, 2), UDim2.new(0.5, -9, 0.5, -1))
@@ -10198,9 +10221,7 @@ local function createShiftLockCursor(): ScreenGui
 	dot.BorderSizePixel = 0
 	dot.Parent = center
 
-	local dotCorner = Instance.new("UICorner")
-	dotCorner.CornerRadius = UDim.new(1, 0)
-	dotCorner.Parent = dot
+	UiCorner.apply(dot, UDim.new(1, 0))
 
 	return screenGui
 end
@@ -10498,6 +10519,7 @@ local TweenService = game:GetService("TweenService")
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
 local StaminaConfig = require(ReplicatedStorage.Shared.StaminaConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local SpellClient = {}
 
@@ -10533,9 +10555,7 @@ function SpellClient.init()
 	castHud.Visible = false
 	castHud.Parent = screenGui
 
-	local castHudCorner = Instance.new("UICorner")
-	castHudCorner.CornerRadius = UDim.new(0, 10)
-	castHudCorner.Parent = castHud
+	UiCorner.apply(castHud, 10)
 
 	local castHudStroke = Instance.new("UIStroke")
 	castHudStroke.Color = Color3.fromRGB(160, 96, 255)
@@ -10629,9 +10649,7 @@ function SpellClient.init()
 		ringStroke.Transparency = 0.15
 		ringStroke.Parent = ring
 
-		local ringCorner = Instance.new("UICorner")
-		ringCorner.CornerRadius = UDim.new(1, 0)
-		ringCorner.Parent = ring
+		UiCorner.apply(ring, UDim.new(1, 0))
 
 		TweenService:Create(ring, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Size = UDim2.fromOffset(420, 420),
@@ -10800,6 +10818,7 @@ local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local SpellMenuClient = {}
 
@@ -10857,9 +10876,7 @@ function SpellMenuClient.init()
 	menuButton.TextSize = 22
 	menuButton.Parent = screenGui
 
-	local menuCorner = Instance.new("UICorner")
-	menuCorner.CornerRadius = UDim.new(0, 10)
-	menuCorner.Parent = menuButton
+	UiCorner.apply(menuButton, 10)
 
 	local panel = Instance.new("Frame")
 	panel.Name = "SpellPanel"
@@ -10871,9 +10888,7 @@ function SpellMenuClient.init()
 	panel.Visible = false
 	panel.Parent = screenGui
 
-	local panelCorner = Instance.new("UICorner")
-	panelCorner.CornerRadius = UDim.new(0, 12)
-	panelCorner.Parent = panel
+	UiCorner.apply(panel, 12)
 
 	local title = Instance.new("TextLabel")
 	title.BackgroundTransparency = 1
@@ -10930,9 +10945,7 @@ function SpellMenuClient.init()
 	upgradeTab.Parent = tabBar
 
 	for _, tab in { equipTab, upgradeTab } do
-		local tabCorner = Instance.new("UICorner")
-		tabCorner.CornerRadius = UDim.new(0, 8)
-		tabCorner.Parent = tab
+		UiCorner.apply(tab, 8)
 	end
 
 	local list = Instance.new("ScrollingFrame")
@@ -11068,9 +11081,7 @@ function SpellMenuClient.init()
 		button.LayoutOrder = index
 		button.Parent = list
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = button
+		UiCorner.apply(button, 8)
 
 		local badge = Instance.new("Frame")
 		badge.Size = UDim2.fromOffset(6, 78)
@@ -11078,9 +11089,7 @@ function SpellMenuClient.init()
 		badge.BackgroundColor3 = ACTIVE_BADGE
 		badge.Parent = button
 
-		local badgeCorner = Instance.new("UICorner")
-		badgeCorner.CornerRadius = UDim.new(0, 8)
-		badgeCorner.Parent = badge
+		UiCorner.apply(badge, 8)
 
 		button.MouseButton1Click:Connect(function()
 			if loadoutLocked or currentPhase ~= "Lobby" or ownedSpells[stats.id] ~= true then
@@ -11220,6 +11229,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local StaminaConfig = require(ReplicatedStorage.Shared.StaminaConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local StaminaBarUI = {}
 
@@ -11312,9 +11322,7 @@ local function mountBar(character: Model)
 	frame.Size = UDim2.fromScale(1, 1)
 	frame.Parent = gui
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = frame
+	UiCorner.apply(frame, 6)
 
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = PALETTE.gold
@@ -11331,9 +11339,7 @@ local function mountBar(character: Model)
 	inset.ClipsDescendants = true
 	inset.Parent = frame
 
-	local insetCorner = Instance.new("UICorner")
-	insetCorner.CornerRadius = UDim.new(0, 4)
-	insetCorner.Parent = inset
+	UiCorner.apply(inset, 4)
 
 	fillBar = Instance.new("Frame")
 	fillBar.Name = "Fill"
@@ -11344,9 +11350,7 @@ local function mountBar(character: Model)
 	fillBar.BorderSizePixel = 0
 	fillBar.Parent = inset
 
-	local fillCorner = Instance.new("UICorner")
-	fillCorner.CornerRadius = UDim.new(0, 4)
-	fillCorner.Parent = fillBar
+	UiCorner.apply(fillBar, 4)
 
 	local title = Instance.new("TextLabel")
 	title.BackgroundTransparency = 1
@@ -11403,6 +11407,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local TreasureChestPreview = require(script.Parent.TreasureChestPreview)
+local UiCorner = require(script.Parent.UiCorner)
 
 local TreasureChestClient = {}
 
@@ -11411,6 +11416,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 local GOLD = Color3.fromRGB(228, 188, 84)
 local GOLD_BRIGHT = Color3.fromRGB(255, 228, 140)
+local GRIMOIRE = Color3.fromRGB(180, 120, 255)
+local GRIMOIRE_BRIGHT = Color3.fromRGB(220, 180, 255)
 local SHADOW = Color3.fromRGB(8, 4, 10)
 local REQUIRED_TAPS = 3
 
@@ -11418,6 +11425,7 @@ local screenGui: ScreenGui
 local backdrop: Frame
 local container: Frame
 local goldLabel: TextLabel
+local grimoireLabel: TextLabel
 local tapHintLabel: TextLabel
 local viewportHost: Frame
 local activeToken = 0
@@ -11475,6 +11483,23 @@ local function ensureUI()
 	goldLabel.ZIndex = 4
 	goldLabel.Parent = container
 
+	grimoireLabel = Instance.new("TextLabel")
+	grimoireLabel.Name = "GrimoireReward"
+	grimoireLabel.AnchorPoint = Vector2.new(0.5, 0)
+	grimoireLabel.BackgroundTransparency = 1
+	grimoireLabel.Position = UDim2.new(0.5, 0, 0, 52)
+	grimoireLabel.Size = UDim2.fromOffset(360, 44)
+	grimoireLabel.Font = Enum.Font.Antique
+	grimoireLabel.Text = ""
+	grimoireLabel.TextColor3 = GRIMOIRE_BRIGHT
+	grimoireLabel.TextSize = 30
+	grimoireLabel.TextStrokeColor3 = SHADOW
+	grimoireLabel.TextStrokeTransparency = 0.1
+	grimoireLabel.TextTransparency = 1
+	grimoireLabel.Visible = false
+	grimoireLabel.ZIndex = 4
+	grimoireLabel.Parent = container
+
 	tapHintLabel = Instance.new("TextLabel")
 	tapHintLabel.Name = "TapHint"
 	tapHintLabel.AnchorPoint = Vector2.new(0.5, 1)
@@ -11499,9 +11524,102 @@ local function ensureUI()
 	viewportHost.Parent = container
 end
 
-local function spawnGoldBurst(parent: Instance, tierGlow: Color3)
+local function spawnViewportGoldStream(
+	model: Model,
+	parts: TreasureChestPreview.ChestModelParts,
+	gold: number,
+	tierGlow: Color3
+)
+	local origin = parts.lidOpenCFrame.Position + Vector3.new(0, 0.15, 0.35)
+	local coinCount = math.clamp(math.floor(gold / 6), 16, 42)
+
+	for index = 1, coinCount do
+		task.delay((index - 1) * 0.035, function()
+			if not model.Parent then
+				return
+			end
+
+			local coin = Instance.new("Part")
+			coin.Name = `GoldCoin_{index}`
+			coin.Size = Vector3.new(0.32, 0.1, 0.32)
+			coin.Color = if index % 4 == 0 then tierGlow else GOLD_BRIGHT
+			coin.Material = Enum.Material.Neon
+			coin.Anchored = true
+			coin.CanCollide = false
+			coin.CFrame = CFrame.new(origin)
+				* CFrame.new(math.random(-20, 20) / 100, math.random(-5, 10) / 100, math.random(-15, 15) / 100)
+				* CFrame.Angles(math.random() * math.pi, math.random() * math.pi, math.random() * math.pi)
+			coin.Parent = model
+
+			local horizontal = Vector3.new(math.random(-18, 18) / 10, 0, math.random(-18, 18) / 10)
+			local rise = Vector3.new(0, math.random(12, 28) / 10, 0)
+			local fall = Vector3.new(horizontal.X, -math.random(28, 52) / 10, horizontal.Z)
+			local mid = origin + rise + horizontal * 0.45
+			local endPos = origin + fall
+
+			local duration = 0.55 + math.random() * 0.35
+			local startTime = os.clock()
+			local startCFrame = coin.CFrame
+			local startRotation = startCFrame - startCFrame.Position
+
+			local connection: RBXScriptConnection
+			connection = RunService.RenderStepped:Connect(function()
+				if not coin.Parent then
+					connection:Disconnect()
+					return
+				end
+
+				local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+				local eased = smoothstep(alpha)
+				local arcAlpha = math.sin(eased * math.pi)
+				local position = startCFrame.Position:Lerp(mid, arcAlpha):Lerp(endPos, eased)
+				coin.CFrame = CFrame.new(position) * startRotation * CFrame.Angles(0, eased * math.pi * 2, 0)
+
+				if alpha >= 1 then
+					connection:Disconnect()
+					coin:Destroy()
+				end
+			end)
+		end)
+	end
+end
+
+local function spawnViewportGrimoire(model: Model, parts: TreasureChestPreview.ChestModelParts)
+	local origin = parts.lidOpenCFrame.Position + Vector3.new(0, 0.35, 0.2)
+
+	local book = Instance.new("Part")
+	book.Name = "GrimoireDrop"
+	book.Size = Vector3.new(0.55, 0.75, 0.12)
+	book.Color = GRIMOIRE
+	book.Material = Enum.Material.Neon
+	book.Anchored = true
+	book.CanCollide = false
+	book.CFrame = CFrame.new(origin) * CFrame.Angles(math.rad(-18), math.rad(24), math.rad(8))
+	book.Parent = model
+
+	local target = origin + Vector3.new(0.8, 1.6, -0.4)
+	TweenService:Create(book, TweenInfo.new(0.85, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		CFrame = CFrame.new(target) * CFrame.Angles(math.rad(-28), math.rad(40), math.rad(-12)),
+		Transparency = 0.15,
+	}):Play()
+
+	task.delay(1.1, function()
+		if book.Parent then
+			TweenService:Create(book, TweenInfo.new(0.35), { Transparency = 1 }):Play()
+			task.delay(0.4, function()
+				if book.Parent then
+					book:Destroy()
+				end
+			end)
+		end
+	end)
+end
+
+local function spawnGoldBurst(parent: Instance, tierGlow: Color3, gold: number)
 	local origin = UDim2.new(0.5, 0, 0.58, 0)
-	for index = 1, 18 do
+	local burstCount = math.clamp(math.floor(gold / 10), 14, 28)
+
+	for index = 1, burstCount do
 		local coin = Instance.new("Frame")
 		coin.Name = `GoldCoin_{index}`
 		coin.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -11509,30 +11627,29 @@ local function spawnGoldBurst(parent: Instance, tierGlow: Color3)
 		coin.BorderSizePixel = 0
 		coin.Position = origin
 		coin.Rotation = math.random(-25, 25)
-		coin.Size = UDim2.fromOffset(16, 16)
+		coin.Size = UDim2.fromOffset(14 + math.random(0, 6), 14 + math.random(0, 6))
 		coin.ZIndex = 5
 		coin.Parent = parent
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = coin
+		UiCorner.apply(coin, UDim.new(1, 0))
 
-		local angle = (index / 18) * math.pi * 2 + math.random() * 0.35
-		local distance = 90 + math.random(30, 110)
+		local angle = (index / burstCount) * math.pi * 2 + math.random() * 0.35
+		local distance = 70 + math.random(40, 130)
+		local fall = math.random(40, 120)
 		local target = UDim2.new(
 			0.5,
 			math.cos(angle) * distance,
 			0.58,
-			math.sin(angle) * distance - math.random(30, 70)
+			math.sin(angle) * distance * 0.35 + fall
 		)
 
-		TweenService:Create(coin, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		TweenService:Create(coin, TweenInfo.new(0.85 + math.random() * 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Position = target,
-			Rotation = coin.Rotation + math.random(-90, 90),
+			Rotation = coin.Rotation + math.random(-120, 120),
 			BackgroundTransparency = 1,
 		}):Play()
 
-		task.delay(0.75, function()
+		task.delay(1.1, function()
 			if coin.Parent then
 				coin:Destroy()
 			end
@@ -11556,7 +11673,8 @@ local function runOpenSequence(
 	model: Model,
 	basePivot: CFrame,
 	parts: TreasureChestPreview.ChestModelParts,
-	gold: number
+	gold: number,
+	grimoireDropped: boolean
 )
 	local openDuration = 0.38
 	local openStart = os.clock()
@@ -11577,24 +11695,46 @@ local function runOpenSequence(
 	end
 
 	parts.lid.CFrame = parts.lidOpenCFrame
-	spawnGoldBurst(container, parts.glow.Color)
+	spawnViewportGoldStream(model, parts, gold, parts.glow.Color)
+	spawnGoldBurst(container, parts.glow.Color, gold)
+	if grimoireDropped then
+		spawnViewportGrimoire(model, parts)
+	end
 
 	TweenService:Create(goldLabel, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 		TextTransparency = 0,
 		TextStrokeTransparency = 0.1,
 	}):Play()
 
-	task.wait(2.6)
+	if grimoireDropped then
+		grimoireLabel.Visible = true
+		TweenService:Create(grimoireLabel, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			TextTransparency = 0,
+			TextStrokeTransparency = 0.1,
+		}):Play()
+	end
+
+	task.wait(if grimoireDropped then 3.1 else 2.6)
 	if token ~= activeToken then
 		return
 	end
 
-	local fade = TweenService:Create(goldLabel, TweenInfo.new(0.35), {
+	local fadeGold = TweenService:Create(goldLabel, TweenInfo.new(0.35), {
 		TextTransparency = 1,
 		TextStrokeTransparency = 1,
 	})
-	fade:Play()
-	fade.Completed:Wait()
+	fadeGold:Play()
+
+	if grimoireDropped then
+		local fadeGrimoire = TweenService:Create(grimoireLabel, TweenInfo.new(0.35), {
+			TextTransparency = 1,
+			TextStrokeTransparency = 1,
+		})
+		fadeGrimoire:Play()
+		fadeGrimoire.Completed:Wait()
+	else
+		fadeGold.Completed:Wait()
+	end
 
 	if token == activeToken then
 		backdrop.Visible = false
@@ -11612,6 +11752,7 @@ local function playOpeningAnimation(loot: any)
 
 	local tierId = if typeof(loot.tierId) == "string" then loot.tierId else "Common"
 	local gold = math.floor(loot.gold)
+	local grimoireDropped = loot.grimoireDropped == true
 
 	ensureUI()
 	activeToken += 1
@@ -11626,6 +11767,10 @@ local function playOpeningAnimation(loot: any)
 	goldLabel.Text = `+{gold} Gold`
 	goldLabel.TextTransparency = 1
 	goldLabel.TextStrokeTransparency = 1
+	grimoireLabel.Text = "+1 Grimoire"
+	grimoireLabel.TextTransparency = 1
+	grimoireLabel.TextStrokeTransparency = 1
+	grimoireLabel.Visible = grimoireDropped
 	tapHintLabel.Visible = true
 	tapHintLabel.Text = `Tap the chest to open! (0/{REQUIRED_TAPS})`
 
@@ -11687,7 +11832,7 @@ local function playOpeningAnimation(loot: any)
 		tapHintLabel.Visible = false
 
 		task.spawn(function()
-			runOpenSequence(token, model, basePivot, parts, gold)
+			runOpenSequence(token, model, basePivot, parts, gold, grimoireDropped)
 		end)
 	end)
 end
@@ -11805,6 +11950,115 @@ return TreasureChestPreview
           </Properties>
         </Item>
         <Item class="ModuleScript" referent="59">
+          <Properties>
+            <string name="Name">UiCorner</string>
+            <string name="Source"><![CDATA[local UiCorner = {}
+
+function UiCorner.apply(parent: Instance, radius: number | UDim): UICorner
+	local udim: UDim = if typeof(radius) == "number" then UDim.new(0, radius) else radius
+
+	local corner = Instance.new("UICorner")
+	corner.TopLeftRadius = udim
+	corner.TopRightRadius = udim
+	corner.BottomRightRadius = udim
+	corner.BottomLeftRadius = udim
+	corner.Parent = parent
+	return corner
+end
+
+return UiCorner
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="60">
+          <Properties>
+            <string name="Name">UiStyleFix</string>
+            <string name="Source"><![CDATA[local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local UiStyleFix = {}
+
+local function radiusFromSelector(selector: string): number?
+	local fromClass = string.match(selector, "RoundedCorner(%d+)")
+	if fromClass then
+		return tonumber(fromClass)
+	end
+	return nil
+end
+
+local function fixTokenAttributes(instance: Instance)
+	for attributeName, attributeValue in instance:GetAttributes() do
+		if typeof(attributeValue) ~= "string" then
+			continue
+		end
+
+		local numeric = string.match(attributeValue, "^%$?(%d+)$")
+			or string.match(attributeName, "(%d+)")
+		if not numeric then
+			continue
+		end
+
+		if string.find(attributeName, "Rad", 1, true)
+			or string.find(attributeName, "Corner", 1, true)
+			or string.find(attributeName, "Radius", 1, true)
+		then
+			instance:SetAttribute(attributeName, UDim.new(0, tonumber(numeric)))
+		end
+	end
+end
+
+local function fixStyleRule(rule: StyleRule)
+	local selector = rule.Selector
+	if typeof(selector) ~= "string" or not string.find(selector, "UICorner", 1, true) then
+		return
+	end
+
+	local radius = radiusFromSelector(selector)
+	if radius then
+		rule:SetProperty("CornerRadius", UDim.new(0, radius))
+	end
+end
+
+local function fixStyleSheet(sheet: StyleSheet)
+	fixTokenAttributes(sheet)
+
+	for _, descendant in sheet:GetDescendants() do
+		if descendant:IsA("StyleRule") then
+			fixStyleRule(descendant)
+		elseif descendant:IsA("StyleSheet") then
+			fixTokenAttributes(descendant)
+		end
+	end
+end
+
+local function scanFolder(folder: Instance)
+	for _, child in folder:GetChildren() do
+		if child:IsA("StyleSheet") then
+			fixStyleSheet(child)
+		elseif child:IsA("Folder") then
+			scanFolder(child)
+		end
+	end
+end
+
+function UiStyleFix.init()
+	scanFolder(ReplicatedStorage)
+
+	ReplicatedStorage.ChildAdded:Connect(function(child)
+		if child:IsA("StyleSheet") then
+			task.defer(fixStyleSheet, child)
+		elseif child:IsA("Folder") and (child.Name == "Design" or child.Name == "Designs") then
+			task.defer(function()
+				scanFolder(child)
+			end)
+		end
+	end)
+end
+
+return UiStyleFix
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="61">
           <Properties>
             <string name="Name">WeaponClient</string>
             <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -12115,7 +12369,7 @@ return WeaponClient
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="60">
+        <Item class="ModuleScript" referent="62">
           <Properties>
             <string name="Name">WeaponMenuClient</string>
             <string name="Source"><![CDATA[local Players = game:GetService("Players")
@@ -12126,6 +12380,7 @@ local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig)
 local TreasureChestPreview = require(script.Parent.TreasureChestPreview)
+local UiCorner = require(script.Parent.UiCorner)
 
 local WeaponMenuClient = {}
 
@@ -12195,9 +12450,7 @@ function WeaponMenuClient.init()
 	menuButton.TextSize = 22
 	menuButton.Parent = screenGui
 
-	local menuCorner = Instance.new("UICorner")
-	menuCorner.CornerRadius = UDim.new(0, 10)
-	menuCorner.Parent = menuButton
+	UiCorner.apply(menuButton, 10)
 
 	local panel = Instance.new("Frame")
 	panel.Name = "WeaponPanel"
@@ -12209,9 +12462,7 @@ function WeaponMenuClient.init()
 	panel.Visible = false
 	panel.Parent = screenGui
 
-	local panelCorner = Instance.new("UICorner")
-	panelCorner.CornerRadius = UDim.new(0, 12)
-	panelCorner.Parent = panel
+	UiCorner.apply(panel, 12)
 
 	local title = Instance.new("TextLabel")
 	title.BackgroundTransparency = 1
@@ -12278,9 +12529,7 @@ function WeaponMenuClient.init()
 	chestsTab.Parent = tabBar
 
 	for _, tab in { equipTab, upgradeTab, chestsTab } do
-		local tabCorner = Instance.new("UICorner")
-		tabCorner.CornerRadius = UDim.new(0, 8)
-		tabCorner.Parent = tab
+		UiCorner.apply(tab, 8)
 	end
 
 	local list = Instance.new("ScrollingFrame")
@@ -12331,9 +12580,7 @@ function WeaponMenuClient.init()
 	grimoireBar.Visible = false
 	grimoireBar.Parent = panel
 
-	local grimoireCorner = Instance.new("UICorner")
-	grimoireCorner.CornerRadius = UDim.new(0, 8)
-	grimoireCorner.Parent = grimoireBar
+	UiCorner.apply(grimoireBar, 8)
 
 	local grimoireLabel = Instance.new("TextLabel")
 	grimoireLabel.BackgroundTransparency = 1
@@ -12359,9 +12606,7 @@ function WeaponMenuClient.init()
 	useGrimoireButton.TextSize = 14
 	useGrimoireButton.Parent = grimoireBar
 
-	local useGrimoireCorner = Instance.new("UICorner")
-	useGrimoireCorner.CornerRadius = UDim.new(0, 8)
-	useGrimoireCorner.Parent = useGrimoireButton
+	UiCorner.apply(useGrimoireButton, 8)
 
 	useGrimoireButton.MouseButton1Click:Connect(function()
 		if loadoutLocked or currentPhase ~= "Lobby" or grimoireCount <= 0 then
@@ -12420,9 +12665,7 @@ function WeaponMenuClient.init()
 			row.LayoutOrder = index
 			row.Parent = chestList
 
-			local rowCorner = Instance.new("UICorner")
-			rowCorner.CornerRadius = UDim.new(0, 8)
-			rowCorner.Parent = row
+			UiCorner.apply(row, 8)
 
 			local previewHost = Instance.new("Frame")
 			previewHost.BackgroundTransparency = 1
@@ -12465,9 +12708,7 @@ function WeaponMenuClient.init()
 			openButton.TextSize = 16
 			openButton.Parent = row
 
-			local openCorner = Instance.new("UICorner")
-			openCorner.CornerRadius = UDim.new(0, 8)
-			openCorner.Parent = openButton
+			UiCorner.apply(openButton, 8)
 
 			openButton.MouseButton1Click:Connect(function()
 				if loadoutLocked or currentPhase ~= "Lobby" then
@@ -12567,9 +12808,7 @@ function WeaponMenuClient.init()
 		button.LayoutOrder = index
 		button.Parent = list
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = button
+		UiCorner.apply(button, 8)
 
 		button.MouseButton1Click:Connect(function()
 			if loadoutLocked or currentPhase ~= "Lobby" then
@@ -12761,13 +13000,13 @@ return WeaponMenuClient
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="61">
+  <Item class="Workspace" referent="63">
     <Properties>
       <string name="Name">Workspace</string>
       <bool name="FilteringEnabled">true</bool>
       <bool name="NeedsPivotMigration">false</bool>
     </Properties>
-    <Item class="Part" referent="62">
+    <Item class="Part" referent="64">
       <Properties>
         <string name="Name">Baseplate</string>
         <bool name="Anchored">true</bool>
@@ -12785,7 +13024,7 @@ return WeaponMenuClient
           <Z>512</Z>
         </Vector3>
       </Properties>
-      <Item class="Texture" referent="63">
+      <Item class="Texture" referent="65">
         <Properties>
           <string name="Name">LavaTop</string>
           <token name="Face">1</token>

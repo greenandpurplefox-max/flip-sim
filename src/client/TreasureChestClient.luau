@@ -13,6 +13,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 local GOLD = Color3.fromRGB(228, 188, 84)
 local GOLD_BRIGHT = Color3.fromRGB(255, 228, 140)
+local GRIMOIRE = Color3.fromRGB(180, 120, 255)
+local GRIMOIRE_BRIGHT = Color3.fromRGB(220, 180, 255)
 local SHADOW = Color3.fromRGB(8, 4, 10)
 local REQUIRED_TAPS = 3
 
@@ -20,6 +22,7 @@ local screenGui: ScreenGui
 local backdrop: Frame
 local container: Frame
 local goldLabel: TextLabel
+local grimoireLabel: TextLabel
 local tapHintLabel: TextLabel
 local viewportHost: Frame
 local activeToken = 0
@@ -77,6 +80,23 @@ local function ensureUI()
 	goldLabel.ZIndex = 4
 	goldLabel.Parent = container
 
+	grimoireLabel = Instance.new("TextLabel")
+	grimoireLabel.Name = "GrimoireReward"
+	grimoireLabel.AnchorPoint = Vector2.new(0.5, 0)
+	grimoireLabel.BackgroundTransparency = 1
+	grimoireLabel.Position = UDim2.new(0.5, 0, 0, 52)
+	grimoireLabel.Size = UDim2.fromOffset(360, 44)
+	grimoireLabel.Font = Enum.Font.Antique
+	grimoireLabel.Text = ""
+	grimoireLabel.TextColor3 = GRIMOIRE_BRIGHT
+	grimoireLabel.TextSize = 30
+	grimoireLabel.TextStrokeColor3 = SHADOW
+	grimoireLabel.TextStrokeTransparency = 0.1
+	grimoireLabel.TextTransparency = 1
+	grimoireLabel.Visible = false
+	grimoireLabel.ZIndex = 4
+	grimoireLabel.Parent = container
+
 	tapHintLabel = Instance.new("TextLabel")
 	tapHintLabel.Name = "TapHint"
 	tapHintLabel.AnchorPoint = Vector2.new(0.5, 1)
@@ -101,9 +121,102 @@ local function ensureUI()
 	viewportHost.Parent = container
 end
 
-local function spawnGoldBurst(parent: Instance, tierGlow: Color3)
+local function spawnViewportGoldStream(
+	model: Model,
+	parts: TreasureChestPreview.ChestModelParts,
+	gold: number,
+	tierGlow: Color3
+)
+	local origin = parts.lidOpenCFrame.Position + Vector3.new(0, 0.15, 0.35)
+	local coinCount = math.clamp(math.floor(gold / 6), 16, 42)
+
+	for index = 1, coinCount do
+		task.delay((index - 1) * 0.035, function()
+			if not model.Parent then
+				return
+			end
+
+			local coin = Instance.new("Part")
+			coin.Name = `GoldCoin_{index}`
+			coin.Size = Vector3.new(0.32, 0.1, 0.32)
+			coin.Color = if index % 4 == 0 then tierGlow else GOLD_BRIGHT
+			coin.Material = Enum.Material.Neon
+			coin.Anchored = true
+			coin.CanCollide = false
+			coin.CFrame = CFrame.new(origin)
+				* CFrame.new(math.random(-20, 20) / 100, math.random(-5, 10) / 100, math.random(-15, 15) / 100)
+				* CFrame.Angles(math.random() * math.pi, math.random() * math.pi, math.random() * math.pi)
+			coin.Parent = model
+
+			local horizontal = Vector3.new(math.random(-18, 18) / 10, 0, math.random(-18, 18) / 10)
+			local rise = Vector3.new(0, math.random(12, 28) / 10, 0)
+			local fall = Vector3.new(horizontal.X, -math.random(28, 52) / 10, horizontal.Z)
+			local mid = origin + rise + horizontal * 0.45
+			local endPos = origin + fall
+
+			local duration = 0.55 + math.random() * 0.35
+			local startTime = os.clock()
+			local startCFrame = coin.CFrame
+			local startRotation = startCFrame - startCFrame.Position
+
+			local connection: RBXScriptConnection
+			connection = RunService.RenderStepped:Connect(function()
+				if not coin.Parent then
+					connection:Disconnect()
+					return
+				end
+
+				local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+				local eased = smoothstep(alpha)
+				local arcAlpha = math.sin(eased * math.pi)
+				local position = startCFrame.Position:Lerp(mid, arcAlpha):Lerp(endPos, eased)
+				coin.CFrame = CFrame.new(position) * startRotation * CFrame.Angles(0, eased * math.pi * 2, 0)
+
+				if alpha >= 1 then
+					connection:Disconnect()
+					coin:Destroy()
+				end
+			end)
+		end)
+	end
+end
+
+local function spawnViewportGrimoire(model: Model, parts: TreasureChestPreview.ChestModelParts)
+	local origin = parts.lidOpenCFrame.Position + Vector3.new(0, 0.35, 0.2)
+
+	local book = Instance.new("Part")
+	book.Name = "GrimoireDrop"
+	book.Size = Vector3.new(0.55, 0.75, 0.12)
+	book.Color = GRIMOIRE
+	book.Material = Enum.Material.Neon
+	book.Anchored = true
+	book.CanCollide = false
+	book.CFrame = CFrame.new(origin) * CFrame.Angles(math.rad(-18), math.rad(24), math.rad(8))
+	book.Parent = model
+
+	local target = origin + Vector3.new(0.8, 1.6, -0.4)
+	TweenService:Create(book, TweenInfo.new(0.85, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		CFrame = CFrame.new(target) * CFrame.Angles(math.rad(-28), math.rad(40), math.rad(-12)),
+		Transparency = 0.15,
+	}):Play()
+
+	task.delay(1.1, function()
+		if book.Parent then
+			TweenService:Create(book, TweenInfo.new(0.35), { Transparency = 1 }):Play()
+			task.delay(0.4, function()
+				if book.Parent then
+					book:Destroy()
+				end
+			end)
+		end
+	end)
+end
+
+local function spawnGoldBurst(parent: Instance, tierGlow: Color3, gold: number)
 	local origin = UDim2.new(0.5, 0, 0.58, 0)
-	for index = 1, 18 do
+	local burstCount = math.clamp(math.floor(gold / 10), 14, 28)
+
+	for index = 1, burstCount do
 		local coin = Instance.new("Frame")
 		coin.Name = `GoldCoin_{index}`
 		coin.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -111,28 +224,29 @@ local function spawnGoldBurst(parent: Instance, tierGlow: Color3)
 		coin.BorderSizePixel = 0
 		coin.Position = origin
 		coin.Rotation = math.random(-25, 25)
-		coin.Size = UDim2.fromOffset(16, 16)
+		coin.Size = UDim2.fromOffset(14 + math.random(0, 6), 14 + math.random(0, 6))
 		coin.ZIndex = 5
 		coin.Parent = parent
 
 		UiCorner.apply(coin, UDim.new(1, 0))
 
-		local angle = (index / 18) * math.pi * 2 + math.random() * 0.35
-		local distance = 90 + math.random(30, 110)
+		local angle = (index / burstCount) * math.pi * 2 + math.random() * 0.35
+		local distance = 70 + math.random(40, 130)
+		local fall = math.random(40, 120)
 		local target = UDim2.new(
 			0.5,
 			math.cos(angle) * distance,
 			0.58,
-			math.sin(angle) * distance - math.random(30, 70)
+			math.sin(angle) * distance * 0.35 + fall
 		)
 
-		TweenService:Create(coin, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		TweenService:Create(coin, TweenInfo.new(0.85 + math.random() * 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Position = target,
-			Rotation = coin.Rotation + math.random(-90, 90),
+			Rotation = coin.Rotation + math.random(-120, 120),
 			BackgroundTransparency = 1,
 		}):Play()
 
-		task.delay(0.75, function()
+		task.delay(1.1, function()
 			if coin.Parent then
 				coin:Destroy()
 			end
@@ -156,7 +270,8 @@ local function runOpenSequence(
 	model: Model,
 	basePivot: CFrame,
 	parts: TreasureChestPreview.ChestModelParts,
-	gold: number
+	gold: number,
+	grimoireDropped: boolean
 )
 	local openDuration = 0.38
 	local openStart = os.clock()
@@ -177,24 +292,46 @@ local function runOpenSequence(
 	end
 
 	parts.lid.CFrame = parts.lidOpenCFrame
-	spawnGoldBurst(container, parts.glow.Color)
+	spawnViewportGoldStream(model, parts, gold, parts.glow.Color)
+	spawnGoldBurst(container, parts.glow.Color, gold)
+	if grimoireDropped then
+		spawnViewportGrimoire(model, parts)
+	end
 
 	TweenService:Create(goldLabel, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 		TextTransparency = 0,
 		TextStrokeTransparency = 0.1,
 	}):Play()
 
-	task.wait(2.6)
+	if grimoireDropped then
+		grimoireLabel.Visible = true
+		TweenService:Create(grimoireLabel, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			TextTransparency = 0,
+			TextStrokeTransparency = 0.1,
+		}):Play()
+	end
+
+	task.wait(if grimoireDropped then 3.1 else 2.6)
 	if token ~= activeToken then
 		return
 	end
 
-	local fade = TweenService:Create(goldLabel, TweenInfo.new(0.35), {
+	local fadeGold = TweenService:Create(goldLabel, TweenInfo.new(0.35), {
 		TextTransparency = 1,
 		TextStrokeTransparency = 1,
 	})
-	fade:Play()
-	fade.Completed:Wait()
+	fadeGold:Play()
+
+	if grimoireDropped then
+		local fadeGrimoire = TweenService:Create(grimoireLabel, TweenInfo.new(0.35), {
+			TextTransparency = 1,
+			TextStrokeTransparency = 1,
+		})
+		fadeGrimoire:Play()
+		fadeGrimoire.Completed:Wait()
+	else
+		fadeGold.Completed:Wait()
+	end
 
 	if token == activeToken then
 		backdrop.Visible = false
@@ -212,6 +349,7 @@ local function playOpeningAnimation(loot: any)
 
 	local tierId = if typeof(loot.tierId) == "string" then loot.tierId else "Common"
 	local gold = math.floor(loot.gold)
+	local grimoireDropped = loot.grimoireDropped == true
 
 	ensureUI()
 	activeToken += 1
@@ -226,6 +364,10 @@ local function playOpeningAnimation(loot: any)
 	goldLabel.Text = `+{gold} Gold`
 	goldLabel.TextTransparency = 1
 	goldLabel.TextStrokeTransparency = 1
+	grimoireLabel.Text = "+1 Grimoire"
+	grimoireLabel.TextTransparency = 1
+	grimoireLabel.TextStrokeTransparency = 1
+	grimoireLabel.Visible = grimoireDropped
 	tapHintLabel.Visible = true
 	tapHintLabel.Text = `Tap the chest to open! (0/{REQUIRED_TAPS})`
 
@@ -287,7 +429,7 @@ local function playOpeningAnimation(loot: any)
 		tapHintLabel.Visible = false
 
 		task.spawn(function()
-			runOpenSequence(token, model, basePivot, parts, gold)
+			runOpenSequence(token, model, basePivot, parts, gold, grimoireDropped)
 		end)
 	end)
 end

@@ -286,6 +286,16 @@ local function scheduleSave(player: Player)
 	end)
 end
 
+function PlayerDataService.saveProfileNow(player: Player)
+	local pending = pendingSaveTasks[player]
+	if pending then
+		task.cancel(pending)
+		pendingSaveTasks[player] = nil
+	end
+
+	PlayerDataService.saveProfile(player)
+end
+
 function PlayerDataService.sendProfile(player: Player)
 	local profile = profiles[player]
 	if profile then
@@ -450,7 +460,7 @@ function PlayerDataService.tryInfuseWeapon(player: Player, weaponId: string, spe
 	profile.grimoireCount -= InfuserConfig.INFUSION_GRIMOIRE_COST
 	profile.weaponInfusions[weaponId] = spellId
 	PlayerDataService.sendProfile(player)
-	scheduleSave(player)
+	PlayerDataService.saveProfileNow(player)
 	return true, nil
 end
 
@@ -476,7 +486,7 @@ function PlayerDataService.tryPurgeWeaponInfusion(player: Player, weaponId: stri
 	profile.gold -= cost
 	profile.weaponInfusions[weaponId] = nil
 	PlayerDataService.sendProfile(player)
-	scheduleSave(player)
+	PlayerDataService.saveProfileNow(player)
 	return true, nil
 end
 
@@ -493,7 +503,7 @@ function PlayerDataService.addGrimoire(player: Player, amount: number)
 
 	profile.grimoireCount += math.floor(amount)
 	PlayerDataService.sendProfile(player)
-	scheduleSave(player)
+	PlayerDataService.saveProfileNow(player)
 end
 
 function PlayerDataService.grantOwnedSpell(player: Player, spellId: string): boolean
@@ -540,7 +550,7 @@ function PlayerDataService.tryUseGrimoire(player: Player): (boolean, string?, st
 	end
 
 	PlayerDataService.sendProfile(player)
-	scheduleSave(player)
+	PlayerDataService.saveProfileNow(player)
 
 	local spell = SpellConfig.getSpell(spellId)
 	local message = if isNew

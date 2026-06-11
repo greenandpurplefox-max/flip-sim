@@ -12,6 +12,7 @@ local StaminaService = require(script.Parent.StaminaService)
 local SpellService = {}
 
 local PROJECTILE_LIFETIME = 2.5
+local PROJECTILE_TARGET_RANGE = 140
 
 local lastActiveCastAt: { [Player]: number } = {}
 
@@ -337,6 +338,43 @@ local function getMonsterRoot(monster: Model): BasePart?
 	return monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
+local function getProjectileDirection(player: Player, origin: Vector3, fallback: Vector3): Vector3
+	local folder = getMonstersFolder()
+	if not folder then
+		return fallback
+	end
+
+	local closestDistance = PROJECTILE_TARGET_RANGE
+	local targetPosition: Vector3? = nil
+
+	for _, monster in folder:GetChildren() do
+		if not monster:IsA("Model") or not canDamageMonster(monster, player) then
+			continue
+		end
+
+		local humanoid = monster:FindFirstChildOfClass("Humanoid")
+		local monsterRoot = getMonsterRoot(monster)
+		if not humanoid or humanoid.Health <= 0 or not monsterRoot then
+			continue
+		end
+
+		local distance = (monsterRoot.Position - origin).Magnitude
+		if distance < closestDistance then
+			closestDistance = distance
+			targetPosition = monsterRoot.Position + Vector3.new(0, 1.2, 0)
+		end
+	end
+
+	if targetPosition then
+		local direction = targetPosition - origin
+		if direction.Magnitude > 0.05 then
+			return direction.Unit
+		end
+	end
+
+	return fallback
+end
+
 local function spawnProjectile(
 	player: Player,
 	origin: Vector3,
@@ -380,17 +418,18 @@ local function spawnProjectile(
 	end)
 end
 
-local function fireForwardProjectiles(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
+local function fireProjectileSpell(player: Player, stats: SpellUpgradeConfig.EffectiveSpellStats)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not root then
 		return
 	end
 
-	local direction = flattenLookVector(root)
+	local fallbackDirection = flattenLookVector(root)
 	local count = if stats.isUltimate then 2 else 1
 	for index = 0, count - 1 do
-		local origin = root.Position + Vector3.new(0, 1.2, 0) + direction * (1.5 + index * 1.2)
+		local origin = root.Position + Vector3.new(0, 1.2, 0) + fallbackDirection * (1.5 + index * 1.2)
+		local direction = getProjectileDirection(player, origin, fallbackDirection)
 		spawnProjectile(player, origin, direction, stats)
 	end
 end
@@ -447,7 +486,7 @@ local function castInfusedSpell(player: Player, spellId: string): boolean
 	if (stats.aoeRadius or 0) > 0 then
 		castFrostNova(player, stats)
 	else
-		fireForwardProjectiles(player, stats)
+		fireProjectileSpell(player, stats)
 	end
 	notifyCastEffect(player, spellId, stats)
 	return true
