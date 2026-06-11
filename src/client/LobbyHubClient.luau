@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local LobbyHubClient = {}
 
@@ -36,9 +37,7 @@ function LobbyHubClient.init()
 	walletFrame.BorderSizePixel = 0
 	walletFrame.Parent = screenGui
 
-	local walletCorner = Instance.new("UICorner")
-	walletCorner.CornerRadius = UDim.new(0, 10)
-	walletCorner.Parent = walletFrame
+	UiCorner.apply(walletFrame, 10)
 
 	local walletStroke = Instance.new("UIStroke")
 	walletStroke.Color = GOLD
@@ -62,9 +61,7 @@ function LobbyHubClient.init()
 	hintFrame.BorderSizePixel = 0
 	hintFrame.Parent = screenGui
 
-	local hintCorner = Instance.new("UICorner")
-	hintCorner.CornerRadius = UDim.new(0, 10)
-	hintCorner.Parent = hintFrame
+	UiCorner.apply(hintFrame, 10)
 
 	local hintStroke = Instance.new("UIStroke")
 	hintStroke.Color = GOLD

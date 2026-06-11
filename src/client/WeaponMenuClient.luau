@@ -6,6 +6,7 @@ local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig)
 local TreasureChestPreview = require(script.Parent.TreasureChestPreview)
+local UiCorner = require(script.Parent.UiCorner)
 
 local WeaponMenuClient = {}
 
@@ -75,9 +76,7 @@ function WeaponMenuClient.init()
 	menuButton.TextSize = 22
 	menuButton.Parent = screenGui
 
-	local menuCorner = Instance.new("UICorner")
-	menuCorner.CornerRadius = UDim.new(0, 10)
-	menuCorner.Parent = menuButton
+	UiCorner.apply(menuButton, 10)
 
 	local panel = Instance.new("Frame")
 	panel.Name = "WeaponPanel"
@@ -89,9 +88,7 @@ function WeaponMenuClient.init()
 	panel.Visible = false
 	panel.Parent = screenGui
 
-	local panelCorner = Instance.new("UICorner")
-	panelCorner.CornerRadius = UDim.new(0, 12)
-	panelCorner.Parent = panel
+	UiCorner.apply(panel, 12)
 
 	local title = Instance.new("TextLabel")
 	title.BackgroundTransparency = 1
@@ -158,9 +155,7 @@ function WeaponMenuClient.init()
 	chestsTab.Parent = tabBar
 
 	for _, tab in { equipTab, upgradeTab, chestsTab } do
-		local tabCorner = Instance.new("UICorner")
-		tabCorner.CornerRadius = UDim.new(0, 8)
-		tabCorner.Parent = tab
+		UiCorner.apply(tab, 8)
 	end
 
 	local list = Instance.new("ScrollingFrame")
@@ -211,9 +206,7 @@ function WeaponMenuClient.init()
 	grimoireBar.Visible = false
 	grimoireBar.Parent = panel
 
-	local grimoireCorner = Instance.new("UICorner")
-	grimoireCorner.CornerRadius = UDim.new(0, 8)
-	grimoireCorner.Parent = grimoireBar
+	UiCorner.apply(grimoireBar, 8)
 
 	local grimoireLabel = Instance.new("TextLabel")
 	grimoireLabel.BackgroundTransparency = 1
@@ -239,9 +232,7 @@ function WeaponMenuClient.init()
 	useGrimoireButton.TextSize = 14
 	useGrimoireButton.Parent = grimoireBar
 
-	local useGrimoireCorner = Instance.new("UICorner")
-	useGrimoireCorner.CornerRadius = UDim.new(0, 8)
-	useGrimoireCorner.Parent = useGrimoireButton
+	UiCorner.apply(useGrimoireButton, 8)
 
 	useGrimoireButton.MouseButton1Click:Connect(function()
 		if loadoutLocked or currentPhase ~= "Lobby" or grimoireCount <= 0 then
@@ -300,9 +291,7 @@ function WeaponMenuClient.init()
 			row.LayoutOrder = index
 			row.Parent = chestList
 
-			local rowCorner = Instance.new("UICorner")
-			rowCorner.CornerRadius = UDim.new(0, 8)
-			rowCorner.Parent = row
+			UiCorner.apply(row, 8)
 
 			local previewHost = Instance.new("Frame")
 			previewHost.BackgroundTransparency = 1
@@ -345,9 +334,7 @@ function WeaponMenuClient.init()
 			openButton.TextSize = 16
 			openButton.Parent = row
 
-			local openCorner = Instance.new("UICorner")
-			openCorner.CornerRadius = UDim.new(0, 8)
-			openCorner.Parent = openButton
+			UiCorner.apply(openButton, 8)
 
 			openButton.MouseButton1Click:Connect(function()
 				if loadoutLocked or currentPhase ~= "Lobby" then
@@ -447,9 +434,7 @@ function WeaponMenuClient.init()
 		button.LayoutOrder = index
 		button.Parent = list
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = button
+		UiCorner.apply(button, 8)
 
 		button.MouseButton1Click:Connect(function()
 			if loadoutLocked or currentPhase ~= "Lobby" then

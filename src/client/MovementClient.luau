@@ -8,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local MovementConfig = require(ReplicatedStorage.Shared.MovementConfig)
 local StaminaConfig = require(ReplicatedStorage.Shared.StaminaConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local MovementClient = {}
 
@@ -61,9 +62,7 @@ local function createShiftLockCursor(): ScreenGui
 		line.BorderSizePixel = 0
 		line.Parent = center
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = line
+		UiCorner.apply(line, UDim.new(1, 0))
 	end
 
 	createLine("Horizontal", UDim2.fromOffset(18, 2), UDim2.new(0.5, -9, 0.5, -1))
@@ -87,9 +86,7 @@ local function createShiftLockCursor(): ScreenGui
 	dot.BorderSizePixel = 0
 	dot.Parent = center
 
-	local dotCorner = Instance.new("UICorner")
-	dotCorner.CornerRadius = UDim.new(1, 0)
-	dotCorner.Parent = dot
+	UiCorner.apply(dot, UDim.new(1, 0))
 
 	return screenGui
 end

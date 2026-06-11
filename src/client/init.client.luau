@@ -1,3 +1,4 @@
+local UiStyleFix = require(script.UiStyleFix)
 local DungeonRunClient = require(script.DungeonRunClient)
 local BlacksmithDialogueClient = require(script.BlacksmithDialogueClient)
 local TreasureChestClient = require(script.TreasureChestClient)
@@ -12,6 +13,7 @@ local HealthBarUI = require(script.HealthBarUI)
 local BossHealthBarUI = require(script.BossHealthBarUI)
 local MovementClient = require(script.MovementClient)
 
+UiStyleFix.init()
 WeaponClient.init()
 LobbyHubClient.init()
 BlacksmithDialogueClient.init()

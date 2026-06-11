@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local BossConfig = require(ReplicatedStorage.Shared.BossConfig)
 local DungeonConfig = require(ReplicatedStorage.Shared.DungeonConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local BossHealthBarUI = {}
 
@@ -49,9 +50,7 @@ local function disconnectBoss()
 end
 
 local function addCorner(instance: GuiObject, radius: number)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, radius)
-	corner.Parent = instance
+	UiCorner.apply(instance, radius)
 end
 
 local function addStroke(instance: GuiObject, color: Color3, thickness: number, transparency: number?)

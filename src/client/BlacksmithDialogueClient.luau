@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local BlacksmithConfig = require(ReplicatedStorage.Shared.BlacksmithConfig)
 local BobConfig = require(ReplicatedStorage.Shared.BobConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local UiCorner = require(script.Parent.UiCorner)
 local InfuserMenuClient = require(script.Parent.InfuserMenuClient)
 local WeaponMenuClient = require(script.Parent.WeaponMenuClient)
 
@@ -51,9 +52,7 @@ function BlacksmithDialogueClient.init()
 	panel.BorderSizePixel = 0
 	panel.Parent = screenGui
 
-	local panelCorner = Instance.new("UICorner")
-	panelCorner.CornerRadius = UDim.new(0, 14)
-	panelCorner.Parent = panel
+	UiCorner.apply(panel, 14)
 
 	local panelStroke = Instance.new("UIStroke")
 	panelStroke.Color = GOLD
@@ -108,9 +107,7 @@ function BlacksmithDialogueClient.init()
 	continueButton.TextSize = 16
 	continueButton.Parent = panel
 
-	local continueCorner = Instance.new("UICorner")
-	continueCorner.CornerRadius = UDim.new(0, 10)
-	continueCorner.Parent = continueButton
+	UiCorner.apply(continueButton, 10)
 
 	local leaveButton = Instance.new("TextButton")
 	leaveButton.AnchorPoint = Vector2.new(0, 1)
@@ -124,9 +121,7 @@ function BlacksmithDialogueClient.init()
 	leaveButton.TextSize = 16
 	leaveButton.Parent = panel
 
-	local leaveCorner = Instance.new("UICorner")
-	leaveCorner.CornerRadius = UDim.new(0, 10)
-	leaveCorner.Parent = leaveButton
+	UiCorner.apply(leaveButton, 10)
 
 	local function renderLine()
 		if not activeNpc then

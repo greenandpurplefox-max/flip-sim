@@ -7,6 +7,7 @@ local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local InfuserMenuClient = {}
 
@@ -70,9 +71,7 @@ function InfuserMenuClient.init()
 	panel.Visible = false
 	panel.Parent = screenGui
 
-	local panelCorner = Instance.new("UICorner")
-	panelCorner.CornerRadius = UDim.new(0, 12)
-	panelCorner.Parent = panel
+	UiCorner.apply(panel, 12)
 
 	local panelStroke = Instance.new("UIStroke")
 	panelStroke.Color = ACCENT
@@ -102,9 +101,7 @@ function InfuserMenuClient.init()
 	closeButton.TextSize = 18
 	closeButton.Parent = panel
 
-	local closeCorner = Instance.new("UICorner")
-	closeCorner.CornerRadius = UDim.new(0, 8)
-	closeCorner.Parent = closeButton
+	UiCorner.apply(closeButton, 8)
 
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.BackgroundTransparency = 1
@@ -213,9 +210,7 @@ function InfuserMenuClient.init()
 	infuseButton.AutoButtonColor = false
 	infuseButton.Parent = actionBar
 
-	local infuseCorner = Instance.new("UICorner")
-	infuseCorner.CornerRadius = UDim.new(0, 10)
-	infuseCorner.Parent = infuseButton
+	UiCorner.apply(infuseButton, 10)
 
 	local purgeButton = Instance.new("TextButton")
 	purgeButton.AnchorPoint = Vector2.new(1, 0.5)
@@ -230,9 +225,7 @@ function InfuserMenuClient.init()
 	purgeButton.AutoButtonColor = false
 	purgeButton.Parent = actionBar
 
-	local purgeCorner = Instance.new("UICorner")
-	purgeCorner.CornerRadius = UDim.new(0, 10)
-	purgeCorner.Parent = purgeButton
+	UiCorner.apply(purgeButton, 10)
 
 	type Row = {
 		button: TextButton,
@@ -416,9 +409,7 @@ function InfuserMenuClient.init()
 		button.LayoutOrder = index
 		button.Parent = weaponList
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = button
+		UiCorner.apply(button, 8)
 
 		local stroke = Instance.new("UIStroke")
 		stroke.Color = PANEL_LIGHT
@@ -452,9 +443,7 @@ function InfuserMenuClient.init()
 		button.LayoutOrder = index
 		button.Parent = spellList
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = button
+		UiCorner.apply(button, 8)
 
 		local stroke = Instance.new("UIStroke")
 		stroke.Color = PANEL_LIGHT

@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
 local StaminaConfig = require(ReplicatedStorage.Shared.StaminaConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local SpellClient = {}
 
@@ -41,9 +42,7 @@ function SpellClient.init()
 	castHud.Visible = false
 	castHud.Parent = screenGui
 
-	local castHudCorner = Instance.new("UICorner")
-	castHudCorner.CornerRadius = UDim.new(0, 10)
-	castHudCorner.Parent = castHud
+	UiCorner.apply(castHud, 10)
 
 	local castHudStroke = Instance.new("UIStroke")
 	castHudStroke.Color = Color3.fromRGB(160, 96, 255)
@@ -137,9 +136,7 @@ function SpellClient.init()
 		ringStroke.Transparency = 0.15
 		ringStroke.Parent = ring
 
-		local ringCorner = Instance.new("UICorner")
-		ringCorner.CornerRadius = UDim.new(1, 0)
-		ringCorner.Parent = ring
+		UiCorner.apply(ring, UDim.new(1, 0))
 
 		TweenService:Create(ring, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Size = UDim2.fromOffset(420, 420),

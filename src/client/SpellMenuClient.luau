@@ -5,6 +5,7 @@ local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
 local SpellConfig = require(ReplicatedStorage.Shared.SpellConfig)
 local SpellUpgradeConfig = require(ReplicatedStorage.Shared.SpellUpgradeConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local SpellMenuClient = {}
 
@@ -62,9 +63,7 @@ function SpellMenuClient.init()
 	menuButton.TextSize = 22
 	menuButton.Parent = screenGui
 
-	local menuCorner = Instance.new("UICorner")
-	menuCorner.CornerRadius = UDim.new(0, 10)
-	menuCorner.Parent = menuButton
+	UiCorner.apply(menuButton, 10)
 
 	local panel = Instance.new("Frame")
 	panel.Name = "SpellPanel"
@@ -76,9 +75,7 @@ function SpellMenuClient.init()
 	panel.Visible = false
 	panel.Parent = screenGui
 
-	local panelCorner = Instance.new("UICorner")
-	panelCorner.CornerRadius = UDim.new(0, 12)
-	panelCorner.Parent = panel
+	UiCorner.apply(panel, 12)
 
 	local title = Instance.new("TextLabel")
 	title.BackgroundTransparency = 1
@@ -135,9 +132,7 @@ function SpellMenuClient.init()
 	upgradeTab.Parent = tabBar
 
 	for _, tab in { equipTab, upgradeTab } do
-		local tabCorner = Instance.new("UICorner")
-		tabCorner.CornerRadius = UDim.new(0, 8)
-		tabCorner.Parent = tab
+		UiCorner.apply(tab, 8)
 	end
 
 	local list = Instance.new("ScrollingFrame")
@@ -273,9 +268,7 @@ function SpellMenuClient.init()
 		button.LayoutOrder = index
 		button.Parent = list
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = button
+		UiCorner.apply(button, 8)
 
 		local badge = Instance.new("Frame")
 		badge.Size = UDim2.fromOffset(6, 78)
@@ -283,9 +276,7 @@ function SpellMenuClient.init()
 		badge.BackgroundColor3 = ACTIVE_BADGE
 		badge.Parent = button
 
-		local badgeCorner = Instance.new("UICorner")
-		badgeCorner.CornerRadius = UDim.new(0, 8)
-		badgeCorner.Parent = badge
+		UiCorner.apply(badge, 8)
 
 		button.MouseButton1Click:Connect(function()
 			if loadoutLocked or currentPhase ~= "Lobby" or ownedSpells[stats.id] ~= true then

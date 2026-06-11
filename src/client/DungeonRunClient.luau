@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CardConfig = require(ReplicatedStorage.Shared.CardConfig)
 local DungeonConfig = require(ReplicatedStorage.Shared.DungeonConfig)
 local LobbyConfig = require(ReplicatedStorage.Shared.LobbyConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local DungeonRunClient = {}
 
@@ -42,9 +43,7 @@ local function createUI()
 	statusLabel.ZIndex = 8
 	statusLabel.Parent = screenGui
 
-	local statusCorner = Instance.new("UICorner")
-	statusCorner.CornerRadius = UDim.new(0, 10)
-	statusCorner.Parent = statusLabel
+	UiCorner.apply(statusLabel, 10)
 
 	local statusStroke = Instance.new("UIStroke")
 	statusStroke.Color = GOLD
@@ -61,9 +60,7 @@ local function createUI()
 	cardPanel.Visible = false
 	cardPanel.Parent = screenGui
 
-	local panelCorner = Instance.new("UICorner")
-	panelCorner.CornerRadius = UDim.new(0, 14)
-	panelCorner.Parent = cardPanel
+	UiCorner.apply(cardPanel, 14)
 
 	local panelStroke = Instance.new("UIStroke")
 	panelStroke.Color = GOLD
@@ -120,9 +117,7 @@ local function createUI()
 		button.LayoutOrder = index
 		button.Parent = list
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 10)
-		corner.Parent = button
+		UiCorner.apply(button, 10)
 
 		table.insert(cardButtons, button)
 	end

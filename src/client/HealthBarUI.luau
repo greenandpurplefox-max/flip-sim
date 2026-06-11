@@ -5,6 +5,7 @@ local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 
 local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -78,10 +79,7 @@ local function addStroke(instance: GuiObject, color: Color3, thickness: number, 
 end
 
 local function addCorner(instance: GuiObject, radius: number)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, radius)
-	corner.Parent = instance
-	return corner
+	UiCorner.apply(instance, radius)
 end
 
 local function createGem(parent: Instance, position: UDim2, zIndex: number)

@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local TreasureChestPreview = require(script.Parent.TreasureChestPreview)
+local UiCorner = require(script.Parent.UiCorner)
 
 local TreasureChestClient = {}
 
@@ -114,9 +115,7 @@ local function spawnGoldBurst(parent: Instance, tierGlow: Color3)
 		coin.ZIndex = 5
 		coin.Parent = parent
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = coin
+		UiCorner.apply(coin, UDim.new(1, 0))
 
 		local angle = (index / 18) * math.pi * 2 + math.random() * 0.35
 		local distance = 90 + math.random(30, 110)

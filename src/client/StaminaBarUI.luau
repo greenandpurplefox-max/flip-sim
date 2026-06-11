@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local StaminaConfig = require(ReplicatedStorage.Shared.StaminaConfig)
+local UiCorner = require(script.Parent.UiCorner)
 
 local StaminaBarUI = {}
 
@@ -95,9 +96,7 @@ local function mountBar(character: Model)
 	frame.Size = UDim2.fromScale(1, 1)
 	frame.Parent = gui
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = frame
+	UiCorner.apply(frame, 6)
 
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = PALETTE.gold
@@ -114,9 +113,7 @@ local function mountBar(character: Model)
 	inset.ClipsDescendants = true
 	inset.Parent = frame
 
-	local insetCorner = Instance.new("UICorner")
-	insetCorner.CornerRadius = UDim.new(0, 4)
-	insetCorner.Parent = inset
+	UiCorner.apply(inset, 4)
 
 	fillBar = Instance.new("Frame")
 	fillBar.Name = "Fill"
@@ -127,9 +124,7 @@ local function mountBar(character: Model)
 	fillBar.BorderSizePixel = 0
 	fillBar.Parent = inset
 
-	local fillCorner = Instance.new("UICorner")
-	fillCorner.CornerRadius = UDim.new(0, 4)
-	fillCorner.Parent = fillBar
+	UiCorner.apply(fillBar, 4)
 
 	local title = Instance.new("TextLabel")
 	title.BackgroundTransparency = 1
