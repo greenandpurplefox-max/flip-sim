@@ -11407,7 +11407,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local TreasureChestPreview = require(script.Parent.TreasureChestPreview)
-local UiCorner = require(script.Parent.UiCorner)
 
 local TreasureChestClient = {}
 
@@ -11524,137 +11523,262 @@ local function ensureUI()
 	viewportHost.Parent = container
 end
 
+local function weld(part0: BasePart, part1: BasePart)
+	local weldConstraint = Instance.new("WeldConstraint")
+	weldConstraint.Part0 = part0
+	weldConstraint.Part1 = part1
+	weldConstraint.Parent = part0
+end
+
+local function createViewportCoin(color: Color3, accent: Color3): Model
+	local coinModel = Instance.new("Model")
+	coinModel.Name = "GoldCoin"
+
+	local disc = Instance.new("Part")
+	disc.Name = "Disc"
+	disc.Shape = Enum.PartType.Cylinder
+	disc.Size = Vector3.new(0.07, 0.34, 0.34)
+	disc.Color = color
+	disc.Material = Enum.Material.Metal
+	disc.Anchored = true
+	disc.CanCollide = false
+	disc.Parent = coinModel
+
+	local rim = Instance.new("Part")
+	rim.Name = "Rim"
+	rim.Shape = Enum.PartType.Cylinder
+	rim.Size = Vector3.new(0.045, 0.36, 0.36)
+	rim.Color = accent
+	rim.Material = Enum.Material.Neon
+	rim.Anchored = true
+	rim.CanCollide = false
+	rim.Transparency = 0.12
+	rim.Parent = coinModel
+
+	local face = Instance.new("Part")
+	face.Name = "Face"
+	face.Shape = Enum.PartType.Cylinder
+	face.Size = Vector3.new(0.02, 0.22, 0.22)
+	face.Color = GOLD_BRIGHT
+	face.Material = Enum.Material.Neon
+	face.Anchored = true
+	face.CanCollide = false
+	face.Transparency = 0.25
+	face.Parent = coinModel
+
+	disc.CFrame = CFrame.new()
+	rim.CFrame = disc.CFrame
+	face.CFrame = disc.CFrame * CFrame.new(0.028, 0, 0)
+
+	weld(disc, rim)
+	weld(disc, face)
+
+	coinModel.PrimaryPart = disc
+	return coinModel
+end
+
+local function animateViewportPart(
+	model: Model,
+	mid: Vector3,
+	endPos: Vector3,
+	duration: number,
+	spin: Vector3
+)
+	local root = model.PrimaryPart
+	if not root then
+		model:Destroy()
+		return
+	end
+
+	local startCFrame = model:GetPivot()
+	local startTime = os.clock()
+	local connection: RBXScriptConnection
+
+	connection = RunService.RenderStepped:Connect(function()
+		if not model.Parent then
+			connection:Disconnect()
+			return
+		end
+
+		local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+		local eased = smoothstep(alpha)
+		local arcAlpha = math.sin(eased * math.pi)
+		local position = startCFrame.Position:Lerp(mid, arcAlpha):Lerp(endPos, eased)
+		local spinOffset = CFrame.Angles(spin.X * eased, spin.Y * eased, spin.Z * eased)
+		model:PivotTo(CFrame.new(position) * (startCFrame - startCFrame.Position) * spinOffset)
+
+		if alpha >= 1 then
+			connection:Disconnect()
+			model:Destroy()
+		end
+	end)
+end
+
 local function spawnViewportGoldStream(
 	model: Model,
 	parts: TreasureChestPreview.ChestModelParts,
 	gold: number,
 	tierGlow: Color3
 )
-	local origin = parts.lidOpenCFrame.Position + Vector3.new(0, 0.15, 0.35)
-	local coinCount = math.clamp(math.floor(gold / 6), 16, 42)
+	local origin = parts.lidOpenCFrame.Position + Vector3.new(0, 0.12, 0.42)
+	local coinCount = math.clamp(math.floor(gold / 5), 20, 48)
 
 	for index = 1, coinCount do
-		task.delay((index - 1) * 0.035, function()
+		task.delay((index - 1) * 0.03, function()
 			if not model.Parent then
 				return
 			end
 
-			local coin = Instance.new("Part")
-			coin.Name = `GoldCoin_{index}`
-			coin.Size = Vector3.new(0.32, 0.1, 0.32)
-			coin.Color = if index % 4 == 0 then tierGlow else GOLD_BRIGHT
-			coin.Material = Enum.Material.Neon
-			coin.Anchored = true
-			coin.CanCollide = false
-			coin.CFrame = CFrame.new(origin)
-				* CFrame.new(math.random(-20, 20) / 100, math.random(-5, 10) / 100, math.random(-15, 15) / 100)
-				* CFrame.Angles(math.random() * math.pi, math.random() * math.pi, math.random() * math.pi)
-			coin.Parent = model
+			local coinModel = createViewportCoin(
+				if index % 5 == 0 then tierGlow else GOLD,
+				if index % 3 == 0 then GOLD_BRIGHT else tierGlow
+			)
+			coinModel:PivotTo(
+				CFrame.new(origin)
+					* CFrame.new(math.random(-18, 18) / 100, math.random(-4, 8) / 100, math.random(-12, 12) / 100)
+					* CFrame.Angles(math.random() * math.pi, math.random() * math.pi, math.random() * math.pi)
+			)
+			coinModel.Parent = model
 
-			local horizontal = Vector3.new(math.random(-18, 18) / 10, 0, math.random(-18, 18) / 10)
-			local rise = Vector3.new(0, math.random(12, 28) / 10, 0)
-			local fall = Vector3.new(horizontal.X, -math.random(28, 52) / 10, horizontal.Z)
-			local mid = origin + rise + horizontal * 0.45
+			local horizontal = Vector3.new(math.random(-22, 22) / 10, 0, math.random(-22, 22) / 10)
+			local rise = Vector3.new(0, math.random(14, 32) / 10, 0)
+			local fall = Vector3.new(horizontal.X, -math.random(32, 58) / 10, horizontal.Z)
+			local mid = origin + rise + horizontal * 0.5
 			local endPos = origin + fall
+			local duration = 0.65 + math.random() * 0.4
+			local spin = Vector3.new(math.random(4, 9), math.random(5, 11), math.random(3, 8))
 
-			local duration = 0.55 + math.random() * 0.35
-			local startTime = os.clock()
-			local startCFrame = coin.CFrame
-			local startRotation = startCFrame - startCFrame.Position
-
-			local connection: RBXScriptConnection
-			connection = RunService.RenderStepped:Connect(function()
-				if not coin.Parent then
-					connection:Disconnect()
-					return
-				end
-
-				local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
-				local eased = smoothstep(alpha)
-				local arcAlpha = math.sin(eased * math.pi)
-				local position = startCFrame.Position:Lerp(mid, arcAlpha):Lerp(endPos, eased)
-				coin.CFrame = CFrame.new(position) * startRotation * CFrame.Angles(0, eased * math.pi * 2, 0)
-
-				if alpha >= 1 then
-					connection:Disconnect()
-					coin:Destroy()
-				end
-			end)
+			animateViewportPart(coinModel, mid, endPos, duration, spin)
 		end)
 	end
 end
 
+local function createViewportGrimoireModel(): Model
+	local grimoireModel = Instance.new("Model")
+	grimoireModel.Name = "GrimoireDrop"
+
+	local cover = Instance.new("Part")
+	cover.Name = "Cover"
+	cover.Size = Vector3.new(0.62, 0.82, 0.1)
+	cover.Color = GRIMOIRE
+	cover.Material = Enum.Material.SmoothPlastic
+	cover.Anchored = true
+	cover.CanCollide = false
+	cover.Parent = grimoireModel
+
+	local spine = Instance.new("Part")
+	spine.Name = "Spine"
+	spine.Size = Vector3.new(0.12, 0.82, 0.14)
+	spine.Color = Color3.fromRGB(92, 58, 128)
+	spine.Material = Enum.Material.SmoothPlastic
+	spine.Anchored = true
+	spine.CanCollide = false
+	spine.Parent = grimoireModel
+
+	local pages = Instance.new("Part")
+	pages.Name = "Pages"
+	pages.Size = Vector3.new(0.56, 0.76, 0.08)
+	pages.Color = Color3.fromRGB(236, 224, 196)
+	pages.Material = Enum.Material.SmoothPlastic
+	pages.Anchored = true
+	pages.CanCollide = false
+	pages.Parent = grimoireModel
+
+	local clasp = Instance.new("Part")
+	clasp.Name = "Clasp"
+	clasp.Size = Vector3.new(0.14, 0.14, 0.14)
+	clasp.Shape = Enum.PartType.Ball
+	clasp.Color = GRIMOIRE_BRIGHT
+	clasp.Material = Enum.Material.Neon
+	clasp.Anchored = true
+	clasp.CanCollide = false
+	clasp.Parent = grimoireModel
+
+	local rune = Instance.new("Part")
+	rune.Name = "Rune"
+	rune.Size = Vector3.new(0.24, 0.24, 0.04)
+	rune.Color = GRIMOIRE_BRIGHT
+	rune.Material = Enum.Material.Neon
+	rune.Anchored = true
+	rune.CanCollide = false
+	rune.Parent = grimoireModel
+
+	cover.CFrame = CFrame.new()
+	spine.CFrame = cover.CFrame * CFrame.new(-0.33, 0, 0)
+	pages.CFrame = cover.CFrame * CFrame.new(0.02, 0, -0.04)
+	clasp.CFrame = cover.CFrame * CFrame.new(0.18, -0.24, 0.08)
+	rune.CFrame = cover.CFrame * CFrame.new(0.08, 0.12, 0.06)
+
+	weld(cover, spine)
+	weld(cover, pages)
+	weld(cover, clasp)
+	weld(cover, rune)
+
+	local light = Instance.new("PointLight")
+	light.Color = GRIMOIRE_BRIGHT
+	light.Brightness = 2.2
+	light.Range = 6
+	light.Parent = cover
+
+	grimoireModel.PrimaryPart = cover
+	return grimoireModel
+end
+
 local function spawnViewportGrimoire(model: Model, parts: TreasureChestPreview.ChestModelParts)
-	local origin = parts.lidOpenCFrame.Position + Vector3.new(0, 0.35, 0.2)
+	local origin = parts.lidOpenCFrame.Position + Vector3.new(0, 0.28, 0.28)
+	local grimoireModel = createViewportGrimoireModel()
+	grimoireModel:PivotTo(CFrame.new(origin) * CFrame.Angles(math.rad(-24), math.rad(18), math.rad(10)))
+	grimoireModel.Parent = model
 
-	local book = Instance.new("Part")
-	book.Name = "GrimoireDrop"
-	book.Size = Vector3.new(0.55, 0.75, 0.12)
-	book.Color = GRIMOIRE
-	book.Material = Enum.Material.Neon
-	book.Anchored = true
-	book.CanCollide = false
-	book.CFrame = CFrame.new(origin) * CFrame.Angles(math.rad(-18), math.rad(24), math.rad(8))
-	book.Parent = model
+	local horizontal = Vector3.new(0.55, 0, -0.35)
+	local mid = origin + Vector3.new(0.25, 1.35, -0.15)
+	local endPos = origin + horizontal + Vector3.new(0.9, 1.85, -0.55)
+	local duration = 1.15
+	local startPivot = grimoireModel:GetPivot()
+	local startTime = os.clock()
 
-	local target = origin + Vector3.new(0.8, 1.6, -0.4)
-	TweenService:Create(book, TweenInfo.new(0.85, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		CFrame = CFrame.new(target) * CFrame.Angles(math.rad(-28), math.rad(40), math.rad(-12)),
-		Transparency = 0.15,
-	}):Play()
+	local connection: RBXScriptConnection
+	connection = RunService.RenderStepped:Connect(function()
+		if not grimoireModel.Parent then
+			connection:Disconnect()
+			return
+		end
 
-	task.delay(1.1, function()
-		if book.Parent then
-			TweenService:Create(book, TweenInfo.new(0.35), { Transparency = 1 }):Play()
-			task.delay(0.4, function()
-				if book.Parent then
-					book:Destroy()
+		local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+		local eased = smoothstep(alpha)
+		local arcAlpha = math.sin(eased * math.pi)
+		local position = startPivot.Position:Lerp(mid, arcAlpha):Lerp(endPos, eased)
+		grimoireModel:PivotTo(
+			CFrame.new(position)
+				* CFrame.Angles(
+					math.rad(-24 + eased * 18),
+					math.rad(18 + eased * 50),
+					math.rad(10 - eased * 22)
+				)
+		)
+
+		for _, descendant in grimoireModel:GetDescendants() do
+			if descendant:IsA("BasePart") and descendant.Name == "Rune" or descendant.Name == "Clasp" then
+				descendant.Transparency = 0.1 + math.sin(os.clock() * 8) * 0.08
+			end
+		end
+
+		if alpha >= 1 then
+			connection:Disconnect()
+			for _, descendant in grimoireModel:GetDescendants() do
+				if descendant:IsA("BasePart") then
+					TweenService:Create(descendant, TweenInfo.new(0.4), { Transparency = 1 }):Play()
+				elseif descendant:IsA("PointLight") then
+					TweenService:Create(descendant, TweenInfo.new(0.4), { Brightness = 0 }):Play()
+				end
+			end
+			task.delay(0.45, function()
+				if grimoireModel.Parent then
+					grimoireModel:Destroy()
 				end
 			end)
 		end
 	end)
-end
-
-local function spawnGoldBurst(parent: Instance, tierGlow: Color3, gold: number)
-	local origin = UDim2.new(0.5, 0, 0.58, 0)
-	local burstCount = math.clamp(math.floor(gold / 10), 14, 28)
-
-	for index = 1, burstCount do
-		local coin = Instance.new("Frame")
-		coin.Name = `GoldCoin_{index}`
-		coin.AnchorPoint = Vector2.new(0.5, 0.5)
-		coin.BackgroundColor3 = if index % 3 == 0 then tierGlow else GOLD
-		coin.BorderSizePixel = 0
-		coin.Position = origin
-		coin.Rotation = math.random(-25, 25)
-		coin.Size = UDim2.fromOffset(14 + math.random(0, 6), 14 + math.random(0, 6))
-		coin.ZIndex = 5
-		coin.Parent = parent
-
-		UiCorner.apply(coin, UDim.new(1, 0))
-
-		local angle = (index / burstCount) * math.pi * 2 + math.random() * 0.35
-		local distance = 70 + math.random(40, 130)
-		local fall = math.random(40, 120)
-		local target = UDim2.new(
-			0.5,
-			math.cos(angle) * distance,
-			0.58,
-			math.sin(angle) * distance * 0.35 + fall
-		)
-
-		TweenService:Create(coin, TweenInfo.new(0.85 + math.random() * 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Position = target,
-			Rotation = coin.Rotation + math.random(-120, 120),
-			BackgroundTransparency = 1,
-		}):Play()
-
-		task.delay(1.1, function()
-			if coin.Parent then
-				coin:Destroy()
-			end
-		end)
-	end
 end
 
 local function playTapWobble(model: Model, basePivot: CFrame, intensity: number)
@@ -11696,7 +11820,6 @@ local function runOpenSequence(
 
 	parts.lid.CFrame = parts.lidOpenCFrame
 	spawnViewportGoldStream(model, parts, gold, parts.glow.Color)
-	spawnGoldBurst(container, parts.glow.Color, gold)
 	if grimoireDropped then
 		spawnViewportGrimoire(model, parts)
 	end
