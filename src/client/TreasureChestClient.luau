@@ -250,13 +250,14 @@ local function spawnViewportGoldStream(
 	end
 end
 
-local function createViewportGrimoireModel(): Model
+local function createViewportGrimoireModel(scale: number?): Model
+	local scaleFactor = scale or 1
 	local grimoireModel = Instance.new("Model")
 	grimoireModel.Name = "GrimoireDrop"
 
 	local cover = Instance.new("Part")
 	cover.Name = "Cover"
-	cover.Size = Vector3.new(0.62, 0.82, 0.1)
+	cover.Size = Vector3.new(0.62, 0.82, 0.1) * scaleFactor
 	cover.Color = GRIMOIRE
 	cover.Material = Enum.Material.SmoothPlastic
 	cover.Anchored = true
@@ -265,7 +266,7 @@ local function createViewportGrimoireModel(): Model
 
 	local spine = Instance.new("Part")
 	spine.Name = "Spine"
-	spine.Size = Vector3.new(0.12, 0.82, 0.14)
+	spine.Size = Vector3.new(0.12, 0.82, 0.14) * scaleFactor
 	spine.Color = Color3.fromRGB(92, 58, 128)
 	spine.Material = Enum.Material.SmoothPlastic
 	spine.Anchored = true
@@ -274,7 +275,7 @@ local function createViewportGrimoireModel(): Model
 
 	local pages = Instance.new("Part")
 	pages.Name = "Pages"
-	pages.Size = Vector3.new(0.56, 0.76, 0.08)
+	pages.Size = Vector3.new(0.56, 0.76, 0.08) * scaleFactor
 	pages.Color = Color3.fromRGB(236, 224, 196)
 	pages.Material = Enum.Material.SmoothPlastic
 	pages.Anchored = true
@@ -283,7 +284,7 @@ local function createViewportGrimoireModel(): Model
 
 	local clasp = Instance.new("Part")
 	clasp.Name = "Clasp"
-	clasp.Size = Vector3.new(0.14, 0.14, 0.14)
+	clasp.Size = Vector3.new(0.14, 0.14, 0.14) * scaleFactor
 	clasp.Shape = Enum.PartType.Ball
 	clasp.Color = GRIMOIRE_BRIGHT
 	clasp.Material = Enum.Material.Neon
@@ -293,7 +294,7 @@ local function createViewportGrimoireModel(): Model
 
 	local rune = Instance.new("Part")
 	rune.Name = "Rune"
-	rune.Size = Vector3.new(0.24, 0.24, 0.04)
+	rune.Size = Vector3.new(0.24, 0.24, 0.04) * scaleFactor
 	rune.Color = GRIMOIRE_BRIGHT
 	rune.Material = Enum.Material.Neon
 	rune.Anchored = true
@@ -321,10 +322,71 @@ local function createViewportGrimoireModel(): Model
 	return grimoireModel
 end
 
-local function spawnViewportGrimoire(model: Model, parts: TreasureChestPreview.ChestModelParts)
-	local origin = parts.lidOpenCFrame.Position + Vector3.new(0, 0.28, 0.28)
+local function setChestInteriorReveal(parts: TreasureChestPreview.ChestModelParts, alpha: number)
+	alpha = math.clamp(alpha, 0, 1)
+
+	if parts.innerGold then
+		for _, child in parts.model:GetDescendants() do
+			if child:IsA("BasePart") and string.sub(child.Name, 1, 9) == "InnerGold" then
+				child.Transparency = 1 - alpha * 0.85
+			end
+		end
+
+		local light = parts.innerGold:FindFirstChild("InnerGoldLight") :: PointLight?
+		if light then
+			light.Brightness = alpha * 2.8
+		end
+		return
+	end
+
+	parts.glow.Transparency = 0.35 + alpha * 0.25
+end
+
+local function createInteriorGrimoire(parts: TreasureChestPreview.ChestModelParts, parent: Model): Model?
+	if not parts.interiorCFrame then
+		return nil
+	end
+
+	local grimoireModel = createViewportGrimoireModel(0.72)
+	grimoireModel:PivotTo(parts.interiorCFrame * CFrame.Angles(math.rad(-10), math.rad(28), math.rad(8)))
+	grimoireModel.Parent = parent
+
+	for _, descendant in grimoireModel:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.Transparency = 1
+		elseif descendant:IsA("PointLight") then
+			descendant.Brightness = 0
+		end
+	end
+
+	return grimoireModel
+end
+
+local function revealInteriorGrimoire(grimoireModel: Model, alpha: number)
+	local reveal = math.clamp((alpha - 0.3) / 0.5, 0, 1)
+	for _, descendant in grimoireModel:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.Transparency = 1 - reveal * 0.95
+		elseif descendant:IsA("PointLight") then
+			descendant.Brightness = reveal * 2.2
+		end
+	end
+end
+
+local function spawnViewportGrimoire(
+	model: Model,
+	parts: TreasureChestPreview.ChestModelParts,
+	startCFrame: CFrame?
+)
+	local origin = if startCFrame
+		then startCFrame.Position
+		else parts.lidOpenCFrame.Position + Vector3.new(0, 0.28, 0.28)
 	local grimoireModel = createViewportGrimoireModel()
-	grimoireModel:PivotTo(CFrame.new(origin) * CFrame.Angles(math.rad(-24), math.rad(18), math.rad(10)))
+	if startCFrame then
+		grimoireModel:PivotTo(startCFrame)
+	else
+		grimoireModel:PivotTo(CFrame.new(origin) * CFrame.Angles(math.rad(-24), math.rad(18), math.rad(10)))
+	end
 	grimoireModel.Parent = model
 
 	local horizontal = Vector3.new(0.55, 0, -0.35)
@@ -399,6 +461,8 @@ local function runOpenSequence(
 )
 	local openDuration = 0.38
 	local openStart = os.clock()
+	local interiorGrimoire = if grimoireDropped then createInteriorGrimoire(parts, model) else nil
+
 	while os.clock() - openStart < openDuration do
 		if token ~= activeToken then
 			return
@@ -406,7 +470,10 @@ local function runOpenSequence(
 
 		local alpha = smoothstep((os.clock() - openStart) / openDuration)
 		parts.lid.CFrame = parts.lidClosedCFrame:Lerp(parts.lidOpenCFrame, alpha)
-		parts.glow.Transparency = 0.35 + alpha * 0.25
+		setChestInteriorReveal(parts, alpha)
+		if interiorGrimoire then
+			revealInteriorGrimoire(interiorGrimoire, alpha)
+		end
 		model:PivotTo(basePivot)
 		RunService.RenderStepped:Wait()
 	end
@@ -416,9 +483,26 @@ local function runOpenSequence(
 	end
 
 	parts.lid.CFrame = parts.lidOpenCFrame
+	setChestInteriorReveal(parts, 1)
+	if interiorGrimoire then
+		revealInteriorGrimoire(interiorGrimoire, 1)
+	end
+
+	if interiorGrimoire then
+		task.wait(0.45)
+	end
+
 	spawnViewportGoldStream(model, parts, gold, parts.glow.Color)
 	if grimoireDropped then
-		spawnViewportGrimoire(model, parts)
+		local launchCFrame = if interiorGrimoire
+			then interiorGrimoire:GetPivot()
+			elseif parts.interiorCFrame
+			then parts.interiorCFrame
+			else nil
+		if interiorGrimoire then
+			interiorGrimoire:Destroy()
+		end
+		spawnViewportGrimoire(model, parts, launchCFrame)
 	end
 
 	TweenService:Create(goldLabel, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
@@ -513,7 +597,7 @@ local function playOpeningAnimation(loot: any)
 	viewport.CurrentCamera = camera
 
 	parts.lid.CFrame = parts.lidClosedCFrame
-	parts.glow.Transparency = 0.35
+	setChestInteriorReveal(parts, 0)
 
 	local tapButton = Instance.new("TextButton")
 	tapButton.Name = "TapTarget"
