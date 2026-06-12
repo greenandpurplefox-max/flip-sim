@@ -6,6 +6,7 @@ local TreasureConfig = require(ReplicatedStorage.Shared.TreasureConfig)
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 local WeaponUpgradeConfig = require(ReplicatedStorage.Shared.WeaponUpgradeConfig)
 local TreasureChestPreview = require(script.Parent.TreasureChestPreview)
+local GrimoireOpenClient = require(script.Parent.GrimoireOpenClient)
 local UiCorner = require(script.Parent.UiCorner)
 
 local WeaponMenuClient = {}
@@ -18,6 +19,7 @@ local TEXT = Color3.fromRGB(244, 228, 196)
 local TEXT_DIM = Color3.fromRGB(170, 154, 128)
 local LOCKED = Color3.fromRGB(110, 110, 110)
 local ACCENT = Color3.fromRGB(58, 92, 148)
+local GRIMOIRE_ACCENT = Color3.fromRGB(120, 72, 180)
 
 type ChestEntry = {
 	tierId: string,
@@ -38,7 +40,6 @@ function WeaponMenuClient.init()
 	local chestStateEvent = ReplicatedStorage:WaitForChild("TreasureChestState") :: RemoteEvent
 	local openChestEvent = ReplicatedStorage:WaitForChild("OpenTreasureChest") :: RemoteEvent
 	local chestOpenedEvent = ReplicatedStorage:WaitForChild("TreasureChestOpened") :: RemoteEvent
-	local useGrimoireEvent = ReplicatedStorage:WaitForChild("UseGrimoire") :: RemoteEvent
 	local grimoireUsedEvent = ReplicatedStorage:WaitForChild("GrimoireUsed") :: RemoteEvent
 
 	local equippedWeapon = WeaponConfig.DEFAULT_WEAPON
@@ -197,60 +198,13 @@ function WeaponMenuClient.init()
 		chestList.CanvasSize = UDim2.fromOffset(0, chestLayout.AbsoluteContentSize.Y + 8)
 	end)
 
-	local grimoireBar = Instance.new("Frame")
-	grimoireBar.Name = "GrimoireBar"
-	grimoireBar.BackgroundColor3 = PANEL_LIGHT
-	grimoireBar.BorderSizePixel = 0
-	grimoireBar.Position = UDim2.fromOffset(16, 120)
-	grimoireBar.Size = UDim2.new(1, -32, 0, 64)
-	grimoireBar.Visible = false
-	grimoireBar.Parent = panel
-
-	UiCorner.apply(grimoireBar, 8)
-
-	local grimoireLabel = Instance.new("TextLabel")
-	grimoireLabel.BackgroundTransparency = 1
-	grimoireLabel.Position = UDim2.fromOffset(12, 10)
-	grimoireLabel.Size = UDim2.new(1, -140, 0, 44)
-	grimoireLabel.Font = Enum.Font.GothamBold
-	grimoireLabel.Text = "Grimoires: 0"
-	grimoireLabel.TextColor3 = Color3.fromRGB(180, 120, 255)
-	grimoireLabel.TextSize = 15
-	grimoireLabel.TextWrapped = true
-	grimoireLabel.TextXAlignment = Enum.TextXAlignment.Left
-	grimoireLabel.Parent = grimoireBar
-
-	local useGrimoireButton = Instance.new("TextButton")
-	useGrimoireButton.AnchorPoint = Vector2.new(1, 0.5)
-	useGrimoireButton.Position = UDim2.new(1, -8, 0.5, 0)
-	useGrimoireButton.Size = UDim2.fromOffset(112, 40)
-	useGrimoireButton.BackgroundColor3 = Color3.fromRGB(120, 72, 180)
-	useGrimoireButton.BorderSizePixel = 0
-	useGrimoireButton.Font = Enum.Font.GothamBold
-	useGrimoireButton.Text = "Use Grimoire"
-	useGrimoireButton.TextColor3 = Color3.new(1, 1, 1)
-	useGrimoireButton.TextSize = 14
-	useGrimoireButton.Parent = grimoireBar
-
-	UiCorner.apply(useGrimoireButton, 8)
-
-	useGrimoireButton.MouseButton1Click:Connect(function()
-		if loadoutLocked or currentPhase ~= "Lobby" or grimoireCount <= 0 then
-			return
-		end
-		useGrimoireEvent:FireServer()
-	end)
-
-	chestList.Position = UDim2.fromOffset(16, 192)
-	chestList.Size = UDim2.new(1, -32, 1, -208)
-
 	local emptyChestLabel = Instance.new("TextLabel")
 	emptyChestLabel.Name = "EmptyChests"
 	emptyChestLabel.BackgroundTransparency = 1
 	emptyChestLabel.Size = UDim2.new(1, -32, 0, 80)
 	emptyChestLabel.Position = UDim2.fromOffset(16, 200)
 	emptyChestLabel.Font = Enum.Font.Gotham
-	emptyChestLabel.Text = "No chests yet.\nClear dungeon rooms for a chance to find treasure."
+	emptyChestLabel.Text = "No chests or grimoires yet.\nClear dungeon rooms for treasure and grimoires."
 	emptyChestLabel.TextColor3 = TEXT_DIM
 	emptyChestLabel.TextSize = 15
 	emptyChestLabel.TextWrapped = true
@@ -264,6 +218,10 @@ function WeaponMenuClient.init()
 		return WeaponUpgradeConfig.getEffectiveStats(weaponId, level)
 	end
 
+	local function getChestTabCount(): number
+		return #lobbyChests + grimoireCount
+	end
+
 	local function renderChestList()
 		for _, child in chestList:GetChildren() do
 			if child:IsA("Frame") then
@@ -271,24 +229,20 @@ function WeaponMenuClient.init()
 			end
 		end
 
-		emptyChestLabel.Visible = activeTab == "Chests" and #lobbyChests == 0
-		chestList.Visible = activeTab == "Chests" and #lobbyChests > 0
-		grimoireBar.Visible = activeTab == "Chests"
-		grimoireLabel.Text = if grimoireCount > 0
-			then `Grimoires: {grimoireCount}\nUse one to learn a random spell.`
-			else "Grimoires: 0\nBetter chests drop them more often (10-42%)."
-		useGrimoireButton.BackgroundColor3 = if grimoireCount > 0 and not loadoutLocked
-			then Color3.fromRGB(120, 72, 180)
-			else LOCKED
-		useGrimoireButton.AutoButtonColor = grimoireCount > 0 and not loadoutLocked
+		local totalEntries = getChestTabCount()
+		emptyChestLabel.Visible = activeTab == "Chests" and totalEntries == 0
+		chestList.Visible = activeTab == "Chests" and totalEntries > 0
+
+		local layoutOrder = 0
 
 		for index, chest in lobbyChests do
+			layoutOrder += 1
 			local tier = TreasureConfig.getTier(chest.tierId)
 			local row = Instance.new("Frame")
 			row.Size = UDim2.new(1, -4, 0, 96)
 			row.BackgroundColor3 = PANEL_LIGHT
 			row.BorderSizePixel = 0
-			row.LayoutOrder = index
+			row.LayoutOrder = layoutOrder
 			row.Parent = chestList
 
 			UiCorner.apply(row, 8)
@@ -341,6 +295,79 @@ function WeaponMenuClient.init()
 					return
 				end
 				openChestEvent:FireServer(index)
+			end)
+		end
+
+		for grimoireIndex = 1, grimoireCount do
+			layoutOrder += 1
+			local row = Instance.new("Frame")
+			row.Size = UDim2.new(1, -4, 0, 96)
+			row.BackgroundColor3 = PANEL_LIGHT
+			row.BorderSizePixel = 0
+			row.LayoutOrder = layoutOrder
+			row.Parent = chestList
+
+			UiCorner.apply(row, 8)
+
+			local previewHost = Instance.new("Frame")
+			previewHost.BackgroundTransparency = 1
+			previewHost.Position = UDim2.fromOffset(8, 8)
+			previewHost.Size = UDim2.fromOffset(80, 80)
+			previewHost.Parent = row
+			GrimoireOpenClient.mountPreview(previewHost, 80)
+
+			local nameLabel = Instance.new("TextLabel")
+			nameLabel.BackgroundTransparency = 1
+			nameLabel.Position = UDim2.fromOffset(96, 14)
+			nameLabel.Size = UDim2.new(1, -220, 0, 24)
+			nameLabel.Font = Enum.Font.GothamBold
+			nameLabel.Text = "Grimoire"
+			nameLabel.TextColor3 = Color3.fromRGB(220, 180, 255)
+			nameLabel.TextSize = 17
+			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+			nameLabel.Parent = row
+
+			local detailLabel = Instance.new("TextLabel")
+			detailLabel.BackgroundTransparency = 1
+			detailLabel.Position = UDim2.fromOffset(96, 40)
+			detailLabel.Size = UDim2.new(1, -220, 0, 36)
+			detailLabel.Font = Enum.Font.Gotham
+			detailLabel.Text = "Open to learn a random spell."
+			detailLabel.TextColor3 = TEXT_DIM
+			detailLabel.TextSize = 14
+			detailLabel.TextWrapped = true
+			detailLabel.TextXAlignment = Enum.TextXAlignment.Left
+			detailLabel.Parent = row
+
+			local openButton = Instance.new("TextButton")
+			openButton.AnchorPoint = Vector2.new(1, 0.5)
+			openButton.Position = UDim2.new(1, -8, 0.5, 0)
+			openButton.Size = UDim2.fromOffset(96, 40)
+			openButton.BackgroundColor3 = GRIMOIRE_ACCENT
+			openButton.BorderSizePixel = 0
+			openButton.Font = Enum.Font.GothamBold
+			openButton.Text = "Open"
+			openButton.TextColor3 = Color3.new(1, 1, 1)
+			openButton.TextSize = 16
+			openButton.Parent = row
+
+			UiCorner.apply(openButton, 8)
+
+			openButton.MouseButton1Click:Connect(function()
+				if loadoutLocked or currentPhase ~= "Lobby" or grimoireCount <= 0 then
+					return
+				end
+
+				panel.Visible = false
+				menuOpen = false
+				GrimoireOpenClient.open(function()
+					if currentPhase == "Lobby" then
+						activeTab = "Chests"
+						menuOpen = true
+						panel.Visible = true
+					end
+					updateMenuState()
+				end)
 			end)
 		end
 	end
@@ -399,7 +426,7 @@ function WeaponMenuClient.init()
 		equipTab.BackgroundColor3 = if activeTab == "Equip" then GOLD_DIM else PANEL_LIGHT
 		upgradeTab.BackgroundColor3 = if activeTab == "Upgrade" then GOLD_DIM else PANEL_LIGHT
 		chestsTab.BackgroundColor3 = if activeTab == "Chests" then GOLD_DIM else PANEL_LIGHT
-		chestsTab.Text = if #lobbyChests > 0 then `Chests ({#lobbyChests})` else "Chests"
+		chestsTab.Text = if getChestTabCount() > 0 then `Chests ({getChestTabCount()})` else "Chests"
 
 		list.Visible = activeTab ~= "Chests"
 		renderChestList()
@@ -411,10 +438,11 @@ function WeaponMenuClient.init()
 		elseif activeTab == "Upgrade" then
 			statusLabel.Text = `Spend gold to upgrade weapons. Wallet: {walletGold}`
 		elseif activeTab == "Chests" then
-			if #lobbyChests > 0 then
-				statusLabel.Text = `{#lobbyChests} chest(s) ready. Grimoires: {grimoireCount}.`
+			if getChestTabCount() > 0 then
+				statusLabel.Text =
+					`{#lobbyChests} chest(s), {grimoireCount} grimoire(s). Open them here to claim rewards.`
 			else
-				statusLabel.Text = `Open chests for gold and grimoires. You have {grimoireCount}.`
+				statusLabel.Text = "Find chests and grimoires in the dungeon, then open them here."
 			end
 		else
 			statusLabel.Text = "Find chests in the dungeon, then open them here."
@@ -534,7 +562,7 @@ function WeaponMenuClient.init()
 			if phase == "Dungeon" then
 				menuOpen = false
 				panel.Visible = false
-			elseif #lobbyChests > 0 then
+			elseif #lobbyChests > 0 or grimoireCount > 0 then
 				activeTab = "Chests"
 				menuOpen = true
 				panel.Visible = true
@@ -559,7 +587,7 @@ function WeaponMenuClient.init()
 			end
 		end
 
-		if currentPhase == "Lobby" and #lobbyChests > 0 then
+		if currentPhase == "Lobby" and getChestTabCount() > 0 then
 			activeTab = "Chests"
 			menuOpen = true
 			panel.Visible = true
