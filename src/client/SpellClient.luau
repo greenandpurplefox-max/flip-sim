@@ -22,6 +22,7 @@ function SpellClient.init()
 	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
 
 	local inDungeon = false
+	local inTrainingZone = false
 	local castBound = false
 	local infusedSpellId = ""
 	local spellLevels: { [string]: number } = {}
@@ -91,9 +92,13 @@ function SpellClient.init()
 		return getCurrentStamina() >= stats.staminaCost
 	end
 
+	local function canUseCombatSpells(): boolean
+		return inDungeon or inTrainingZone
+	end
+
 	local function updateCastHud()
 		local stats = getInfusedStats()
-		if not stats or not inDungeon then
+		if not stats or not canUseCombatSpells() then
 			castHud.Visible = false
 			return
 		end
@@ -210,7 +215,7 @@ function SpellClient.init()
 	end
 
 	local function onCastAction(_actionName: string, inputState: Enum.UserInputState)
-		if inputState ~= Enum.UserInputState.Begin or not inDungeon then
+		if inputState ~= Enum.UserInputState.Begin or not canUseCombatSpells() then
 			return Enum.ContextActionResult.Pass
 		end
 
@@ -262,9 +267,17 @@ function SpellClient.init()
 
 	phaseStateEvent.OnClientEvent:Connect(function(phase: string)
 		inDungeon = phase == "Dungeon"
-		setCastBinding(inDungeon)
+		setCastBinding(canUseCombatSpells())
 		updateCastHud()
 	end)
+
+	player:GetAttributeChangedSignal("InTrainingZone"):Connect(function()
+		inTrainingZone = player:GetAttribute("InTrainingZone") == true
+		setCastBinding(canUseCombatSpells())
+		updateCastHud()
+	end)
+
+	inTrainingZone = player:GetAttribute("InTrainingZone") == true
 
 	spellCastEffectEvent.OnClientEvent:Connect(function(_spellId: string, _spellName: string, color: Color3)
 		if typeof(color) ~= "Color3" then
@@ -278,15 +291,15 @@ function SpellClient.init()
 	player:GetAttributeChangedSignal("GamePhase"):Connect(function()
 		local phase = player:GetAttribute("GamePhase")
 		inDungeon = phase == "Dungeon"
-		setCastBinding(inDungeon)
+		setCastBinding(canUseCombatSpells())
 		updateCastHud()
 	end)
 
 	local initialPhase = player:GetAttribute("GamePhase")
 	if initialPhase == "Dungeon" then
 		inDungeon = true
-		setCastBinding(true)
 	end
+	setCastBinding(canUseCombatSpells())
 
 	updateCastHud()
 end

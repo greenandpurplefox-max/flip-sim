@@ -48,7 +48,12 @@ function InfuserMenuClient.init()
 	local loadoutLocked = false
 	local menuOpen = false
 	local currentPhase = "Lobby"
+	local inTrainingZone = false
 	local pendingAction = false
+
+	local function showLobbyMenus(): boolean
+		return currentPhase == "Lobby" and not inTrainingZone
+	end
 
 	for _, spell in SpellConfig.getSpellList() do
 		spellLevels[spell.id] = 1
@@ -265,7 +270,7 @@ function InfuserMenuClient.init()
 			and not weaponHasInfusion(selectedWeaponId)
 			and grimoireCount >= InfuserConfig.INFUSION_GRIMOIRE_COST
 			and not loadoutLocked
-			and currentPhase == "Lobby"
+			and showLobbyMenus()
 			and not pendingAction
 	end
 
@@ -275,7 +280,7 @@ function InfuserMenuClient.init()
 			and weaponHasInfusion(selectedWeaponId)
 			and walletGold >= InfuserConfig.PURGE_COST
 			and not loadoutLocked
-			and currentPhase == "Lobby"
+			and showLobbyMenus()
 			and not pendingAction
 	end
 
@@ -601,8 +606,18 @@ function InfuserMenuClient.init()
 		end
 	end)
 
+	player:GetAttributeChangedSignal("InTrainingZone"):Connect(function()
+		inTrainingZone = player:GetAttribute("InTrainingZone") == true
+		if inTrainingZone then
+			setMenuOpen(false)
+		end
+		updateMenuState()
+	end)
+
+	inTrainingZone = player:GetAttribute("InTrainingZone") == true
+
 	InfuserMenuClient._open = function()
-		if loadoutLocked or currentPhase ~= "Lobby" then
+		if loadoutLocked or not showLobbyMenus() then
 			return
 		end
 		setMenuOpen(true)

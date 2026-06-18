@@ -54,6 +54,7 @@ function WeaponMenuClient.init()
 		[LobbyConfig.STARTER_WEAPON] = true,
 	}
 	local currentPhase = "Lobby"
+	local inTrainingZone = false
 
 	for _, weapon in WeaponConfig.getWeaponList() do
 		weaponLevels[weapon.id] = 1
@@ -417,8 +418,12 @@ function WeaponMenuClient.init()
 		end
 	end
 
+	local function showLobbyMenus(): boolean
+		return currentPhase == "Lobby" and not inTrainingZone
+	end
+
 	local function updateMenuState()
-		local inLobby = currentPhase == "Lobby"
+		local inLobby = showLobbyMenus()
 		menuButton.Visible = inLobby or not LobbyConfig.USE_LOBBY
 		menuButton.BackgroundColor3 = if loadoutLocked or not inLobby then LOCKED else ACCENT
 		menuButton.AutoButtonColor = not loadoutLocked and inLobby
@@ -562,7 +567,7 @@ function WeaponMenuClient.init()
 			if phase == "Dungeon" then
 				menuOpen = false
 				panel.Visible = false
-			elseif #lobbyChests > 0 or grimoireCount > 0 then
+			elseif showLobbyMenus() and (#lobbyChests > 0 or grimoireCount > 0) then
 				activeTab = "Chests"
 				menuOpen = true
 				panel.Visible = true
@@ -570,6 +575,17 @@ function WeaponMenuClient.init()
 			updateMenuState()
 		end
 	end)
+
+	player:GetAttributeChangedSignal("InTrainingZone"):Connect(function()
+		inTrainingZone = player:GetAttribute("InTrainingZone") == true
+		if inTrainingZone then
+			menuOpen = false
+			panel.Visible = false
+		end
+		updateMenuState()
+	end)
+
+	inTrainingZone = player:GetAttribute("InTrainingZone") == true
 
 	chestStateEvent.OnClientEvent:Connect(function(payload)
 		lobbyChests = {}
@@ -587,7 +603,7 @@ function WeaponMenuClient.init()
 			end
 		end
 
-		if currentPhase == "Lobby" and getChestTabCount() > 0 then
+		if showLobbyMenus() and getChestTabCount() > 0 then
 			activeTab = "Chests"
 			menuOpen = true
 			panel.Visible = true
@@ -625,7 +641,7 @@ function WeaponMenuClient.init()
 	end)
 
 	WeaponMenuClient._openToTab = function(tab: string)
-		if loadoutLocked or currentPhase ~= "Lobby" then
+		if loadoutLocked or not showLobbyMenus() then
 			return
 		end
 

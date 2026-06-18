@@ -22,6 +22,11 @@ function LobbyHubClient.init()
 
 	local currentPhase = "Lobby"
 	local walletGold = LobbyConfig.STARTER_GOLD
+	local inTrainingZone = false
+
+	local function showLobbyHub(): boolean
+		return currentPhase == "Lobby" and not inTrainingZone
+	end
 
 	local screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "LobbyHubUI"
@@ -80,9 +85,9 @@ function LobbyHubClient.init()
 	hintLabel.Parent = hintFrame
 
 	local function renderPhase()
-		local inLobby = currentPhase == "Lobby"
-		walletFrame.Visible = inLobby
-		hintFrame.Visible = inLobby
+		local visible = showLobbyHub()
+		walletFrame.Visible = visible
+		hintFrame.Visible = visible
 	end
 
 	local function renderWallet()
@@ -102,6 +107,13 @@ function LobbyHubClient.init()
 			renderPhase()
 		end
 	end)
+
+	player:GetAttributeChangedSignal("InTrainingZone"):Connect(function()
+		inTrainingZone = player:GetAttribute("InTrainingZone") == true
+		renderPhase()
+	end)
+
+	inTrainingZone = player:GetAttribute("InTrainingZone") == true
 
 	renderPhase()
 	renderWallet()

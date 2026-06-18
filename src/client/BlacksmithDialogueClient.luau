@@ -32,6 +32,7 @@ function BlacksmithDialogueClient.init()
 	local phaseStateEvent = ReplicatedStorage:WaitForChild("PlayerPhaseState") :: RemoteEvent
 
 	local currentPhase = "Lobby"
+	local inTrainingZone = false
 	local dialogueOpen = false
 	local dialogueIndex = 1
 	local activeNpc: DialogueNpc? = nil
@@ -134,6 +135,10 @@ function BlacksmithDialogueClient.init()
 		continueButton.Text = if dialogueIndex >= #activeNpc.lines then "Done" else "Continue"
 	end
 
+	local function showLobbyMenus(): boolean
+		return currentPhase == "Lobby" and not inTrainingZone
+	end
+
 	local function closeDialogue()
 		dialogueOpen = false
 		activeNpc = nil
@@ -141,7 +146,7 @@ function BlacksmithDialogueClient.init()
 	end
 
 	local function openDialogue(npc: DialogueNpc)
-		if currentPhase ~= "Lobby" then
+		if not showLobbyMenus() then
 			return
 		end
 
@@ -190,6 +195,15 @@ function BlacksmithDialogueClient.init()
 		end
 	end)
 
+	player:GetAttributeChangedSignal("InTrainingZone"):Connect(function()
+		inTrainingZone = player:GetAttribute("InTrainingZone") == true
+		if inTrainingZone then
+			closeDialogue()
+		end
+	end)
+
+	inTrainingZone = player:GetAttribute("InTrainingZone") == true
+
 	local function bindDialogueNpc(model: Model, npc: DialogueNpc)
 		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not root then
@@ -202,7 +216,7 @@ function BlacksmithDialogueClient.init()
 		end
 
 		prompt.Triggered:Connect(function(triggerPlayer)
-			if triggerPlayer ~= player or currentPhase ~= "Lobby" then
+			if triggerPlayer ~= player or not showLobbyMenus() then
 				return
 			end
 
@@ -226,7 +240,7 @@ function BlacksmithDialogueClient.init()
 		end
 
 		prompt.Triggered:Connect(function(triggerPlayer)
-			if triggerPlayer ~= player or currentPhase ~= "Lobby" then
+			if triggerPlayer ~= player or not showLobbyMenus() then
 				return
 			end
 
@@ -246,7 +260,7 @@ function BlacksmithDialogueClient.init()
 		end
 
 		prompt.Triggered:Connect(function(triggerPlayer)
-			if triggerPlayer ~= player or currentPhase ~= "Lobby" then
+			if triggerPlayer ~= player or not showLobbyMenus() then
 				return
 			end
 

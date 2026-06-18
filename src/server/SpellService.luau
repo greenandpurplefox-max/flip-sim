@@ -8,6 +8,7 @@ local CardService = require(script.Parent.CardService)
 local GamePhaseService = require(script.Parent.GamePhaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local StaminaService = require(script.Parent.StaminaService)
+local TrainingZoneService = require(script.Parent.TrainingZoneService)
 
 local SpellService = {}
 
@@ -324,6 +325,14 @@ local function applySpellDamage(player: Player, monster: Model, stats: SpellUpgr
 	damage = math.max(1, math.floor(damage * modifiers.damageMult))
 	CardService.applyLifesteal(player, damage)
 	humanoid:TakeDamage(damage)
+
+	if TrainingZoneService.isTrainingDummy(monster) then
+		TrainingZoneService.notifyDummyDamage(
+			player,
+			damage,
+			TrainingZoneService.getDummyDamagePosition(monster)
+		)
+	end
 end
 
 local function flattenLookVector(root: BasePart): Vector3
@@ -493,7 +502,13 @@ local function castInfusedSpell(player: Player, spellId: string): boolean
 end
 
 local function tryCastActiveSpell(player: Player): boolean
-	if not isPlayerActive(player) or not GamePhaseService.isInDungeon(player) then
+	if not isPlayerActive(player) then
+		return false
+	end
+
+	local inDungeon = GamePhaseService.isInDungeon(player)
+	local inTrainingZone = GamePhaseService.isInLobby(player) and player:GetAttribute("InTrainingZone") == true
+	if not inDungeon and not inTrainingZone then
 		return false
 	end
 

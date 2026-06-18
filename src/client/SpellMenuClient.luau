@@ -40,6 +40,7 @@ function SpellMenuClient.init()
 		[LobbyConfig.STARTER_ACTIVE_SPELL] = true,
 	}
 	local currentPhase = "Lobby"
+	local inTrainingZone = false
 
 	for _, spell in SpellConfig.getSpellList() do
 		spellLevels[spell.id] = 1
@@ -229,8 +230,12 @@ function SpellMenuClient.init()
 		list.Visible = ownedCount > 0
 	end
 
+	local function showLobbyMenus(): boolean
+		return currentPhase == "Lobby" and not inTrainingZone
+	end
+
 	local function updateMenuState()
-		local inLobby = currentPhase == "Lobby"
+		local inLobby = showLobbyMenus()
 		menuButton.Visible = inLobby or not LobbyConfig.USE_LOBBY
 		menuButton.BackgroundColor3 = if loadoutLocked or not inLobby then LOCKED else ACCENT
 		menuButton.AutoButtonColor = not loadoutLocked and inLobby
@@ -381,8 +386,19 @@ function SpellMenuClient.init()
 		end
 	end)
 
+	player:GetAttributeChangedSignal("InTrainingZone"):Connect(function()
+		inTrainingZone = player:GetAttribute("InTrainingZone") == true
+		if inTrainingZone then
+			menuOpen = false
+			panel.Visible = false
+		end
+		updateMenuState()
+	end)
+
+	inTrainingZone = player:GetAttribute("InTrainingZone") == true
+
 	SpellMenuClient._openToTab = function(tab: string)
-		if loadoutLocked or currentPhase ~= "Lobby" then
+		if loadoutLocked or not showLobbyMenus() then
 			return
 		end
 

@@ -17,6 +17,7 @@ local CardService = require(script.Parent.CardService)
 local GamePhaseService = require(script.Parent.GamePhaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local SpellService = require(script.Parent.SpellService)
+local TrainingZoneService = require(script.Parent.TrainingZoneService)
 
 local WeaponService = {}
 
@@ -630,6 +631,13 @@ local function applyMonsterDamage(
 
 	if attacker then
 		getSwordHitEvent():FireClient(attacker)
+		if TrainingZoneService.isTrainingDummy(monster) then
+			TrainingZoneService.notifyDummyDamage(
+				attacker,
+				damage,
+				TrainingZoneService.getDummyDamagePosition(monster)
+			)
+		end
 	end
 end
 

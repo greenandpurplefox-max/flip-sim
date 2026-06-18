@@ -175,7 +175,7 @@ local function startWaveTimeout()
 		end
 
 		for _, child in monstersFolder:GetChildren() do
-			if child:IsA("Model") and child.Name == "WaveMonster" then
+			if child:IsA("Model") and child.Name == "WaveMonster" and child:GetAttribute("TrainingDummy") ~= true then
 				child:Destroy()
 			end
 		end
@@ -1041,7 +1041,7 @@ function WaveService.init()
 	end
 
 	for _, child in monstersFolder:GetChildren() do
-		if child:IsA("Model") and child.Name == "WaveMonster" then
+		if child:IsA("Model") and child.Name == "WaveMonster" and child:GetAttribute("TrainingDummy") ~= true then
 			table.insert(activeMonsters, child)
 			waveInProgress = true
 			waveStatus = "fighting"
