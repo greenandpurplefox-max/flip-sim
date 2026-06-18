@@ -161,12 +161,6 @@ local function sanitizeProfile(data: any): PlayerProfile
 		end
 	end
 
-	for weaponId, spellId in profile.weaponInfusions do
-		if not profile.ownedSpells[spellId] then
-			profile.weaponInfusions[weaponId] = nil
-		end
-	end
-
 	profile.grimoireCount = if typeof(data.grimoireCount) == "number"
 		then math.max(0, math.floor(data.grimoireCount))
 		else defaults.grimoireCount
@@ -201,6 +195,12 @@ local function sanitizeProfile(data: any): PlayerProfile
 	for spellId, unlocked in profile.unlockedSpells do
 		if unlocked then
 			profile.ownedSpells[spellId] = true
+		end
+	end
+
+	for weaponId, spellId in profile.weaponInfusions do
+		if not profile.ownedSpells[spellId] or not profile.unlockedWeapons[weaponId] then
+			profile.weaponInfusions[weaponId] = nil
 		end
 	end
 
