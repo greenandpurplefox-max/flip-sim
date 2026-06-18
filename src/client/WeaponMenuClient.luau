@@ -213,6 +213,7 @@ function WeaponMenuClient.init()
 	emptyChestLabel.Parent = panel
 
 	local weaponButtons: { [string]: TextButton } = {}
+	local updateMenuState: () -> ()
 
 	local function getEffectiveDisplayStats(weaponId: string)
 		local level = weaponLevels[weaponId] or 1
@@ -221,6 +222,10 @@ function WeaponMenuClient.init()
 
 	local function getChestTabCount(): number
 		return #lobbyChests + grimoireCount
+	end
+
+	local function showLobbyMenus(): boolean
+		return currentPhase == "Lobby" and not inTrainingZone
 	end
 
 	local function renderChestList()
@@ -362,7 +367,7 @@ function WeaponMenuClient.init()
 				panel.Visible = false
 				menuOpen = false
 				GrimoireOpenClient.open(function()
-					if currentPhase == "Lobby" then
+					if showLobbyMenus() then
 						activeTab = "Chests"
 						menuOpen = true
 						panel.Visible = true
@@ -418,11 +423,7 @@ function WeaponMenuClient.init()
 		end
 	end
 
-	local function showLobbyMenus(): boolean
-		return currentPhase == "Lobby" and not inTrainingZone
-	end
-
-	local function updateMenuState()
+	updateMenuState = function()
 		local inLobby = showLobbyMenus()
 		menuButton.Visible = inLobby or not LobbyConfig.USE_LOBBY
 		menuButton.BackgroundColor3 = if loadoutLocked or not inLobby then LOCKED else ACCENT
